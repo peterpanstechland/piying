@@ -1,0 +1,423 @@
+《皮影互动短片生成系统》项目需求说明（完整描述）
+
+本项目旨在构建一个基于 摄像头动作捕捉、手势 UI 交互、分段动作录制、自动视频渲染与下载 的完整互动体验系统。系统在本地部署运行，用户无需任何键鼠或触摸输入，仅通过 身体和手势 与界面交互。最终用户可在现场完成动作演绎，并获得一个 30 秒的皮影风格短片，通过二维码扫码下载。
+
+1. 系统整体流程概述
+
+整个体验流程共分为三个主要阶段：
+（1）等待与场景选择 →（2）多段动作捕捉 →（3）视频生成与结果展示。
+
+1.1 等待阶段（Idle）
+
+系统默认展示等待界面（宣传海报/动画）。
+
+摄像头持续检测画面中是否有用户出现：
+
+当连续检测到人体 ≥ 1 秒时，系统自动从等待界面切换到“场景选择界面”。
+
+2. 场景选择交互（无接触手势操作）
+
+用户通过 移动自己的手 在屏幕上操控一个“光标（cursor）”。
+系统通过摄像头实时检测手部位置，将其映射为 UI 层的 cursor 坐标。
+
+2.1 场景选择界面
+
+界面展示三个可选场景（Scene A / B / C），每个场景包含：
+
+场景名称
+
+场景简介
+
+小图标或主题元素
+
+2.2 手势控制规则
+
+用户手部关键点（右手腕 / 食指）被用于定位 cursor。
+
+cursor 若移动到某个场景卡片区域内并 连续停留 ≥ 5 秒，系统判定为选中该场景。
+
+选中场景后，系统调用后端创建一个 session，进入该场景对应的多段动捕流程。
+
+3. 多段动作捕捉流程（Motion Capture Segments）
+
+每个场景由 2~4 个分段动作组成（例如：出场动作、互动动作、高潮动作）。
+用户将依次完成这些动作录制，最终拼接出完整的 30 秒皮影短片。
+
+每个动作段的流程如下：
+
+指引页面
+
+显示该段要演绎的动作说明
+
+提供示例姿势图 / 文本提示
+
+5 秒倒计时
+
+全屏显示 5 → 4 → 3 → 2 → 1
+
+同时摄像头继续跟踪用户位置，准备开始录制
+
+动作录制阶段
+
+自动进入录制，不需用户手动操作
+
+每段录制持续固定时长（如 6–10 秒）
+
+系统每帧保存：
+
+时间戳（相对该段开始的秒数）
+
+人体关键点（pose landmarks）
+
+录制完成后
+
+用户可选择：
+
+重录本段
+
+进入下一段
+
+所有段录制完毕后 → 进入视频生成阶段。
+
+4. 后端处理逻辑与 Session 管理
+
+后端提供一套 API 服务，用于：
+
+创建 session
+
+接收分段动捕数据
+
+合成最终皮影短片
+
+返回视频下载 URL
+
+Session 数据结构包含：
+sessionId
+sceneId
+segments: [
+   { index, duration, poseFrames[] },
+   ...
+]
+status: pending / processing / done
+output_path
+
+后端逻辑：
+
+前端录制完每段后，POST 动捕数据到后端。
+
+当该场景所有段的 pose 数据均上传完成后，后端进入 processing 状态。
+
+后端根据：
+
+该场景底片视频（30 秒）
+
+三段时间窗口
+
+三段 pose 数据
+
+每段预设的角色位置 / 路径
+生成最终皮影短片。
+
+渲染完成后，提供 /videos/{sessionId} 供前端播放和下载。
+
+5. 皮影视频渲染（OpenCV 渲染主流程）
+
+读取底片视频 scene_base.mp4
+
+逐帧循环，计算当前帧的全局时间 t
+
+判断属于哪个动作段（如 0~8 秒 → 第 1 段）
+
+从对应 poseFrames 中取出最接近的帧并渲染皮影骨架
+
+根据场景脚本为每段定义角色路径（offset）
+
+将皮影绘制在底片帧上
+
+写入最终输出视频：final_{sessionId}.mp4
+
+皮影绘制可使用：
+
+简化版骨架（线条 + 圆点）
+
+或 PNG limb 拼接（可后续升级）
+
+6. 结果展示页面（Final Result）
+
+用户完成所有动捕段后，前端显示“生成中”界面并轮询后端状态。
+当后端返回 status = done 时进入结果页面：
+
+界面内容包括：
+
+视频播放器 <video src="/videos/{sessionId}" controls>
+
+“扫码下载”二维码：
+
+使用本地服务器局域网地址
+
+完整链接如：
+http://<local-ip>:8000/videos/<sessionId>
+
+用户可：
+
+在 PC 端直接播放
+
+扫码下载保存到手机
+
+离开后系统自动重置到“等待界面”，准备下一人体验
+
+7. 系统部署与运行环境
+
+本地 PC / 展示电脑运行系统
+
+前端通过浏览器访问本机 localhost 或局域网地址
+
+后端使用 Python + FastAPI + OpenCV
+
+前端使用 React / Vite / MediaPipe Hands + Pose
+
+所有视频与 pose 数据只做临时保存，可设置每日清理机制
+
+8. 非功能需求（NFR）
+
+整个互动过程无须鼠标/键盘，仅靠手势操作
+
+人体检测 & cursor 必须保持流畅（≥ 20 FPS）
+
+视频生成时间建议保持在 10–20 秒以内
+
+系统需稳定运行多个小时
+
+自动 idle 重置避免界面被停留在非初始状态
+
+⛳ 最终交付的体验
+
+用户走上前 →
+系统识别用户 →
+用户用手选择故事 →
+分 2–4 段动作跟拍 →
+系统自动把用户“变成皮影人” →
+输出一个完整 30 秒故事 →
+用户扫码带走视频。
+
+整个体验是 0 接触、强互动、有仪式感的沉浸式流程。
+
+
+🧩 整体模块化拆解（总共分成 7 大模块）
+
+以下是最清晰、最工程化的拆法：
+
+1. 摄像头输入 & 动作检测模块（Camera + Detection Module）
+2. 场景选择交互模块（Scene Selection Interaction）
+3. 分段动捕（Multi-Segment Motion Capture Module）
+4. 后端 Session 管理模块（Session & Data API）
+5. 皮影渲染 / 视频生成模块（Rendering & Video Synthesis）
+6. 前端 UI / 状态机模块（Front-End UI & Flow Controller）
+7. 下载与二维码模块（QR & Video Delivery）
+📦 模块 1：摄像头输入 & 动作检测模块
+
+**功能目标：**提供 人体检测 与 手部关键点，用于“检测是否有人”和“手势 cursor”。
+
+子任务：
+
+访问摄像头 (getUserMedia)
+
+持续运行 MediaPipe（Pose + Hands）
+
+输出：
+
+presence = true/false（检测到人）
+
+handPosition = {x, y}（用于 cursor）
+
+输出数据结构示例：
+{
+  "presence": true,
+  "rightHand": { "x": 0.23, "y": 0.48 }
+}
+
+📦 模块 2：场景选择交互模块（手势 cursor 选择）
+
+核心逻辑：
+
+用户通过手部位置移动 “cursor”
+
+cursor 在场景卡片上悬停 ≥ 5 秒，触发选择
+
+子任务：
+
+cursor 坐标映射到前端 canvas
+
+hit-test 碰撞检测
+
+悬停计时器
+
+选定场景后调用：
+
+POST /sessions
+
+📦 模块 3：分段动捕模块（Multi-Segment MoCap）
+
+每个场景有多个动作段，例如：
+
+Segment 1：出场动作
+
+Segment 2：互动动作
+
+Segment 3：高潮动作
+
+流程：
+指引文案 → 5 秒倒计时 → 自动开始录制 → 自动结束 → 上传 → 重录/下一段
+
+子任务：
+
+显示 segment 的指引 UI
+
+倒计时（5 秒）
+
+开始录制 pose timeline
+
+停止录制
+
+上传数据：
+
+POST /sessions/{id}/segments/{index}/pose
+
+
+提供“重录 / 下一段”选择
+
+📦 模块 4：后端 Session 管理模块（API & 状态管理）
+
+负责整个流程的数据管理：
+
+4.1 API 列表：
+Endpoint	描述
+POST /sessions	创建一个新的 session
+POST /sessions/{id}/segments/{n}/pose	上传某段动捕数据
+POST /sessions/{id}/render (可选自动触发)	触发视频生成
+GET /sessions/{id}	查询状态，如 processing / done
+GET /videos/{id}	下载/播放生成视频
+4.2 Session 状态结构：
+{
+  "id": "xxx",
+  "sceneId": "sceneA",
+  "segments": [
+    { "index": 0, "duration": 8, "poseFrames": [...] },
+    { "index": 1, "duration": 10, "poseFrames": [...] },
+    { "index": 2, "duration": 12, "poseFrames": [...] }
+  ],
+  "status": "pending / processing / done",
+  "output_path": "outputs/final_xxx.mp4"
+}
+
+📦 模块 5：皮影渲染 / 视频生成模块（核心技术模块）
+
+输入：
+
+base_scene.mp4（固定 30 秒底片视频）
+
+3 段 pose 数据
+
+每段对应的时间窗口（如场景 1 是 0–8s）
+
+每段的皮影路径规则（如：从左到右移动、固定位置等）
+
+输出：
+
+final_{sessionId}.mp4
+
+子任务：
+
+将 pose 数据映射到全局时间线
+
+逐帧读取 base 视频 (cv2.VideoCapture)
+
+每帧 overlay 皮影（draw_puppet_on_frame）
+
+有效控制 offset 路径（入场/停留/飞起）
+
+导出 mp4（cv2.VideoWriter）
+
+📦 模块 6：前端 UI + 状态机模块（最复杂模块之一）
+
+整个体验包含多个界面状态：
+
+状态机一览：
+IDLE
+↓ 人出现
+SCENE_SELECT
+↓ 悬停选中
+SEGMENT_1_GUIDE
+SEGMENT_1_COUNTDOWN
+SEGMENT_1_RECORD
+SEGMENT_1_REVIEW
+SEGMENT_2_GUIDE
+...
+SEGMENT_3_REVIEW
+↓ 全部完成
+RENDER_WAIT
+↓ 后端 done
+FINAL_RESULT
+↓ N 秒无操作
+IDLE
+
+子任务：
+
+使用 React（推荐）构建 UI 结构
+
+状态机控制所有页面
+
+前后端 API 对接
+
+保证界面无需键鼠，也能完全用手势完成流程
+
+📦 模块 7：下载与二维码模块（Final Page）
+
+后端生成视频后：
+
+前端展示 <video src="/videos/{sessionId}">
+
+自动生成二维码（QR Code）
+
+用户扫码下载（需要本地机器允许局域网 IP 访问，例如 http://192.168.X.X:8000/videos/xxx）
+
+子任务：
+
+使用 qrcode / qrcode.react 生成二维码
+
+定时器：无操作 N 秒 → 自动返回首页
+
+🧭 项目全局数据流（Data Flow）
+摄像头 → 动作检测 → 场景选择 → 分段动捕 → pose timeline
+                      ↓
+                后端 Session API
+                      ↓
+             皮影渲染（OpenCV）
+                      ↓
+                final_xxx.mp4 输出
+                      ↓
+  前端 Final Page 播放 & 二维码下载
+
+🏗️ 开发顺序（两周可执行）
+
+建议的实际开发顺序：
+
+Week 1
+
+模块 1：摄像头 + MediaPipe 检测
+
+模块 2：手势 cursor + 场景选择
+
+模块 4：Session 后端 API
+
+模块 3：单段动捕（倒计时 + pose 录制 + 上传）
+
+Week 2
+
+模块 5：皮影渲染（OpenCV pipeline）
+
+模块 6：前端整合所有页面状态
+
+模块 7：结果页 + 二维码下载
+
+端到端 workflow 测试 & 美化
