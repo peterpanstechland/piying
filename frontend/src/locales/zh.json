@@ -1,0 +1,25 @@
+{
+  "idle": {
+    "waiting": "等待用户..."
+  },
+  "sceneSelection": {
+    "title": "选择你的场景",
+    "hover": "悬停选择"
+  },
+  "recording": {
+    "guidance": "跟随指引",
+    "countdown": "{{seconds}}秒后开始...",
+    "recording": "录制中...",
+    "review": "查看你的表演"
+  },
+  "result": {
+    "processing": "正在生成你的视频...",
+    "ready": "你的视频已准备好！",
+    "scanQR": "扫描二维码下载"
+  },
+  "errors": {
+    "cameraAccess": "摄像头访问被拒绝。请允许摄像头访问。",
+    "networkError": "网络错误。正在重试...",
+    "renderFailed": "视频生成失败。请重试。"
+  }
+}

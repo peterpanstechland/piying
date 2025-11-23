@@ -1,0 +1,10 @@
+{
+  "id": "git-update-task-end",
+  "name": "Git Update on Task End",
+  "description": "Automatically commits and pushes changes to git repository when an agent task completes",
+  "eventType": "agentEnd",
+  "hookAction": "runCommand",
+  "command": "git add -A & git commit -m \"Auto-commit: Task completed\" & git push",
+  "filePatterns": null,
+  "outputPrompt": null
+}

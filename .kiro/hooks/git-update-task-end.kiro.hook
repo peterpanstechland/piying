@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Git Update on Task End",
+  "description": "Automatically commits and pushes changes to git repository when an agent task completes",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": []
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": ""
+  }
+}

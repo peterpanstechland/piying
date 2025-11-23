@@ -1,0 +1,25 @@
+{
+  "idle": {
+    "waiting": "Waiting for user..."
+  },
+  "sceneSelection": {
+    "title": "Select Your Scene",
+    "hover": "Hover to select"
+  },
+  "recording": {
+    "guidance": "Follow the guidance",
+    "countdown": "Starting in {{seconds}}...",
+    "recording": "Recording...",
+    "review": "Review your performance"
+  },
+  "result": {
+    "processing": "Generating your video...",
+    "ready": "Your video is ready!",
+    "scanQR": "Scan QR code to download"
+  },
+  "errors": {
+    "cameraAccess": "Camera access denied. Please allow camera access.",
+    "networkError": "Network error. Retrying...",
+    "renderFailed": "Video generation failed. Please try again."
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "scenes": {
+    "sceneA": {
+      "id": "sceneA",
+      "name": "武术表演",
+      "name_en": "Martial Arts Performance",
+      "description": "展示你的武术动作",
+      "description_en": "Show your martial arts moves",
+      "base_video_path": "assets/scenes/sceneA_base.mp4",
+      "icon": "🥋",
+      "segments": [
+        {
+          "duration": 8,
+          "path_type": "enter_left",
+          "offset_start": [-200, 0],
+          "offset_end": [0, 0]
+        },
+        {
+          "duration": 10,
+          "path_type": "static",
+          "offset_start": [0, 0],
+          "offset_end": [0, 0]
+        },
+        {
+          "duration": 12,
+          "path_type": "exit_right",
+          "offset_start": [0, 0],
+          "offset_end": [200, -100]
+        }
+      ]
+    },
+    "sceneB": {
+      "id": "sceneB",
+      "name": "舞蹈表演",
+      "name_en": "Dance Performance",
+      "description": "展示你的舞蹈动作",
+      "description_en": "Show your dance moves",
+      "base_video_path": "assets/scenes/sceneB_base.mp4",
+      "icon": "💃",
+      "segments": [
+        {
+          "duration": 10,
+          "path_type": "enter_center",
+          "offset_start": [0, 200],
+          "offset_end": [0, 0]
+        },
+        {
+          "duration": 15,
+          "path_type": "static",
+          "offset_start": [0, 0],
+          "offset_end": [0, 0]
+        },
+        {
+          "duration": 5,
+          "path_type": "exit_down",
+          "offset_start": [0, 0],
+          "offset_end": [0, 200]
+        }
+      ]
+    },
+    "sceneC": {
+      "id": "sceneC",
+      "name": "故事表演",
+      "name_en": "Story Performance",
+      "description": "讲述你的故事",
+      "description_en": "Tell your story",
+      "base_video_path": "assets/scenes/sceneC_base.mp4",
+      "icon": "📖",
+      "segments": [
+        {
+          "duration": 6,
+          "path_type": "enter_right",
+          "offset_start": [200, 0],
+          "offset_end": [100, 0]
+        },
+        {
+          "duration": 12,
+          "path_type": "walk_left",
+          "offset_start": [100, 0],
+          "offset_end": [-100, 0]
+        },
+        {
+          "duration": 8,
+          "path_type": "static",
+          "offset_start": [-100, 0],
+          "offset_end": [-100, 0]
+        },
+        {
+          "duration": 4,
+          "path_type": "exit_left",
+          "offset_start": [-100, 0],
+          "offset_end": [-300, 0]
+        }
+      ]
+    }
+  }
+}
