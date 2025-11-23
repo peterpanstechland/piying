@@ -69,7 +69,12 @@
   - **Property 36: Scene configuration contains required parameters**
   - **Validates: Requirements 20.2**
 
-- [ ] 4. Implement frontend camera detection service
+- [x] 4. Implement frontend camera detection service
+
+
+
+
+
   - Create CameraDetectionService class
   - Implement camera access with getUserMedia
   - Integrate MediaPipe Pose for person detection
@@ -78,11 +83,18 @@
   - Add error handling for camera access failures
   - _Requirements: 1.1, 1.3, 2.1, 14.1, 14.2, 18.1_
 
-- [ ] 4.1 Write property test for hand position mapping
+- [x] 4.1 Write property test for hand position mapping
+
+
   - **Property 2: Hand position maps to valid cursor coordinates**
   - **Validates: Requirements 2.1**
 
-- [ ] 5. Implement frontend state machine
+- [x] 5. Implement frontend state machine
+
+
+
+
+
   - Create StateMachine class with all states (IDLE, SCENE_SELECT, etc.)
   - Implement state transition logic
   - Create StateContext interface and management
@@ -90,15 +102,24 @@
   - Implement reset functionality
   - _Requirements: 13.5, 1.2, 1.4_
 
-- [ ] 5.1 Write property test for person detection transition
+- [x] 5.1 Write property test for person detection transition
+
+
   - **Property 1: Person detection triggers state transition**
   - **Validates: Requirements 1.2**
 
-- [ ] 5.2 Write property test for state transition timing
+- [x] 5.2 Write property test for state transition timing
+
+
   - **Property 21: State transitions complete within time limit**
   - **Validates: Requirements 12.2**
 
-- [ ] 6. Implement idle and scene selection UI
+- [x] 6. Implement idle and scene selection UI
+
+
+
+
+
   - Create IdlePage component with waiting interface
   - Create SceneSelectionPage component
   - Implement scene card rendering with name, description, and icon
@@ -106,11 +127,18 @@
   - Integrate state machine for page transitions
   - _Requirements: 1.1, 3.1, 3.2_
 
-- [ ] 6.1 Write property test for scene display elements
+- [x] 6.1 Write property test for scene display elements
+
+
   - **Property 4: All scenes contain required display elements**
   - **Validates: Requirements 3.2**
 
-- [ ] 7. Implement gesture cursor controller
+- [x] 7. Implement gesture cursor controller
+
+
+
+
+
   - Create GestureCursorController class
   - Implement cursor position mapping from hand coordinates
   - Add cursor rendering on canvas
@@ -119,15 +147,22 @@
   - Add visual feedback for hover state
   - _Requirements: 2.1, 2.2, 2.3, 3.3, 3.4_
 
-- [ ] 7.1 Write property test for hover selection
+- [x] 7.1 Write property test for hover selection
+
   - **Property 3: Hover selection requires continuous presence**
   - **Validates: Requirements 2.3, 2.4**
 
-- [ ] 7.2 Write property test for cursor latency
+- [x] 7.2 Write property test for cursor latency
+
   - **Property 22: Cursor latency within acceptable range**
   - **Validates: Requirements 12.3**
 
-- [ ] 8. Implement API client for frontend
+- [x] 8. Implement API client for frontend
+
+
+
+
+
   - Create APIClient class with axios
   - Implement createSession method
   - Implement uploadSegment method
@@ -137,15 +172,24 @@
   - Add local caching for failed uploads
   - _Requirements: 2.4, 18.2, 18.5_
 
-- [ ] 8.1 Write property test for API retry logic
+- [x] 8.1 Write property test for API retry logic
+
+
   - **Property 29: Failed requests trigger retry with backoff**
   - **Validates: Requirements 18.2**
 
-- [ ] 8.2 Write property test for network interruption caching
+
+
+- [x] 8.2 Write property test for network interruption caching
   - **Property 31: Network interruption triggers local caching**
   - **Validates: Requirements 18.5**
 
-- [ ] 9. Implement motion capture recorder
+- [x] 9. Implement motion capture recorder
+
+
+
+
+
   - Create MotionCaptureRecorder class
   - Implement startRecording and stopRecording methods
   - Add frame capture with timestamp recording
@@ -153,15 +197,18 @@
   - Add recording state management
   - _Requirements: 5.1, 5.2, 5.5_
 
-- [ ] 9.1 Write property test for recording duration
+- [x] 9.1 Write property test for recording duration
+
   - **Property 6: Recording captures frames for configured duration**
   - **Validates: Requirements 5.1**
 
-- [ ] 9.2 Write property test for frame data completeness
+- [x] 9.2 Write property test for frame data completeness
+
   - **Property 7: All captured frames contain required data**
   - **Validates: Requirements 5.2**
 
-- [ ] 9.3 Write property test for coordinate normalization
+- [x] 9.3 Write property test for coordinate normalization
+
   - **Property 23: Saved frames contain normalized coordinates**
   - **Validates: Requirements 14.3**
 
