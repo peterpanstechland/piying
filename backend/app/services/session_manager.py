@@ -1,0 +1,154 @@
+"""
+Session management service for CRUD operations
+"""
+import uuid
+import time
+from typing import Optional, List
+from ..models import Session, Segment, SessionStatus
+from .storage_manager import StorageManager
+
+
+class SessionManager:
+    """Manages session lifecycle and persistence"""
+    
+    def __init__(self, storage_manager: Optional[StorageManager] = None):
+        """
+        Initialize SessionManager
+        
+        Args:
+            storage_manager: Optional StorageManager instance (creates default if None)
+        """
+        self.storage_manager = storage_manager or StorageManager()
+    
+    def create_session(self, scene_id: str) -> Session:
+        """
+        Create a new session
+        
+        Args:
+            scene_id: Scene identifier for this session
+            
+        Returns:
+            Created Session object with unique ID and pending status
+        """
+        session_id = str(uuid.uuid4())
+        session = Session(
+            id=session_id,
+            scene_id=scene_id,
+            status=SessionStatus.PENDING,
+            segments=[],
+            output_path=None,
+            created_at=time.time(),
+            updated_at=time.time()
+        )
+        self.storage_manager.save_session(session)
+        return session
+    
+    def get_session(self, session_id: str) -> Optional[Session]:
+        """
+        Retrieve a session by ID
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            Session object if found, None otherwise
+        """
+        return self.storage_manager.load_session(session_id)
+    
+    def update_segment(self, session_id: str, segment: Segment) -> None:
+        """
+        Update or add a segment to a session
+        
+        Args:
+            session_id: Session identifier
+            segment: Segment data to add/update
+            
+        Raises:
+            ValueError: If session not found
+        """
+        session = self.get_session(session_id)
+        if session is None:
+            raise ValueError(f"Session {session_id} not found")
+        
+        # Find existing segment with same index or append
+        existing_index = None
+        for i, seg in enumerate(session.segments):
+            if seg.index == segment.index:
+                existing_index = i
+                break
+        
+        if existing_index is not None:
+            session.segments[existing_index] = segment
+        else:
+            session.segments.append(segment)
+        
+        # Sort segments by index
+        session.segments.sort(key=lambda s: s.index)
+        
+        session.updated_at = time.time()
+        self.storage_manager.save_session(session)
+    
+    def update_status(self, session_id: str, status: SessionStatus, output_path: Optional[str] = None) -> None:
+        """
+        Update session status
+        
+        Args:
+            session_id: Session identifier
+            status: New status
+            output_path: Optional output video path (for DONE status)
+            
+        Raises:
+            ValueError: If session not found
+        """
+        session = self.get_session(session_id)
+        if session is None:
+            raise ValueError(f"Session {session_id} not found")
+        
+        session.status = status
+        if output_path is not None:
+            session.output_path = output_path
+        session.updated_at = time.time()
+        self.storage_manager.save_session(session)
+    
+    def mark_cancelled(self, session_id: str) -> None:
+        """
+        Mark a session as cancelled
+        
+        Args:
+            session_id: Session identifier
+            
+        Raises:
+            ValueError: If session not found
+        """
+        self.update_status(session_id, SessionStatus.CANCELLED)
+    
+    def list_sessions(self, status: Optional[SessionStatus] = None) -> List[Session]:
+        """
+        List all sessions, optionally filtered by status
+        
+        Args:
+            status: Optional status filter
+            
+        Returns:
+            List of Session objects
+        """
+        sessions = []
+        for session_file in self.storage_manager.sessions_path.glob("*.json"):
+            session_id = session_file.stem
+            session = self.storage_manager.load_session(session_id)
+            if session and (status is None or session.status == status):
+                sessions.append(session)
+        
+        return sessions
+    
+    def delete_session(self, session_id: str) -> bool:
+        """
+        Delete a session file
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        return self.storage_manager.delete_session(session_id)

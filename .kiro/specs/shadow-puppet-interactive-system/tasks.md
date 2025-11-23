@@ -5,6 +5,8 @@
 
 
 
+
+
   - Create frontend project with Vite + React + TypeScript
   - Create backend project with FastAPI + Python
   - Install core dependencies (MediaPipe, OpenCV, Axios, etc.)
@@ -12,7 +14,16 @@
   - Create configuration files (tsconfig, vite.config, requirements.txt)
   - _Requirements: 13.1, 13.4_
 
-- [ ] 2. Implement backend session management and API foundation
+- [x] 2. Implement backend session management and API foundation
+
+
+
+
+
+
+
+
+
   - Create Pydantic models for Session, Segment, and PoseFrame
   - Implement SessionManager class with CRUD operations
   - Create FastAPI app with basic endpoint structure
@@ -22,19 +33,28 @@
   - Set up file-based storage for session data
   - _Requirements: 7.1, 7.2, 7.4, 7.5_
 
-- [ ] 2.1 Write property test for session creation
+- [x] 2.1 Write property test for session creation
+
+
   - **Property 10: New sessions have correct initial state**
   - **Validates: Requirements 7.5**
 
-- [ ] 2.2 Write property test for segment data round-trip
+- [x] 2.2 Write property test for segment data round-trip
+
   - **Property 8: Segment data round-trip preservation**
   - **Validates: Requirements 7.2**
 
-- [ ] 2.3 Write property test for status transition
+- [x] 2.3 Write property test for status transition
+
   - **Property 9: Complete segments trigger processing status**
   - **Validates: Requirements 7.3**
 
-- [ ] 3. Implement storage manager and configuration loader
+- [x] 3. Implement storage manager and configuration loader
+
+
+
+
+
   - Create StorageManager class for file operations
   - Implement session save/load/delete methods
   - Create ConfigLoader class for scene configuration
@@ -43,7 +63,9 @@
   - Add configuration validation and fallback logic
   - _Requirements: 20.1, 20.2, 20.3_
 
-- [ ] 3.1 Write property test for scene configuration
+- [x] 3.1 Write property test for scene configuration
+
+
   - **Property 36: Scene configuration contains required parameters**
   - **Validates: Requirements 20.2**
 
