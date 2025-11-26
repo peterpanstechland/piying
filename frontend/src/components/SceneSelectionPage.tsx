@@ -36,9 +36,7 @@ export const SceneSelectionPage = ({
   onSceneSelect,
 }: SceneSelectionPageProps) => {
   const { t, i18n } = useTranslation();
-  // Canvas for rendering video background (Layer 0)
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
-  // Canvas for rendering cursor (Layer 2 - Top)
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   
   const sceneCardsRef = useRef<Map<string, DOMRect>>(new Map());
@@ -49,10 +47,9 @@ export const SceneSelectionPage = ({
   const [hoverProgress, setHoverProgress] = useState<number>(0);
   const [cardDimensions, setCardDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
 
-  // Helper to calculate screen coordinates from normalized position based on video object-fit: cover
+  // Helper to calculate screen coordinates
   const getScreenCoordinates = useCallback((normalizedX: number, normalizedY: number, canvasWidth: number, canvasHeight: number) => {
     if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-      // Fallback if no video or video not ready
       return {
         x: normalizedX * canvasWidth,
         y: normalizedY * canvasHeight
@@ -65,17 +62,15 @@ export const SceneSelectionPage = ({
     let drawWidth, drawHeight, startX, startY;
 
     if (vRatio > cRatio) {
-      // Video is wider than screen (height fits, width cropped)
       drawHeight = canvasHeight;
       drawWidth = drawHeight * vRatio;
       startX = (canvasWidth - drawWidth) / 2;
       startY = 0;
     } else {
-      // Screen is wider than video (width fits, height cropped)
       drawWidth = canvasWidth;
       drawHeight = drawWidth / vRatio;
       startX = 0;
-      startY = (canvasHeight - drawHeight) / 2;
+      startY = (canvas.height - drawHeight) / 2;
     }
 
     return {
@@ -84,7 +79,7 @@ export const SceneSelectionPage = ({
     };
   }, [videoElement]);
 
-  // Monitor card dimensions for SVG path calculation
+  // Monitor card dimensions
   useLayoutEffect(() => {
     const observer = new ResizeObserver((entries) => {
       const newDimensions = new Map(cardDimensions);
@@ -93,13 +88,11 @@ export const SceneSelectionPage = ({
       entries.forEach((entry) => {
         const id = entry.target.id.replace('scene-card-', '');
         if (id) {
-          // Use borderBoxSize if available for better accuracy without transforms
           let width, height;
           if (entry.borderBoxSize && entry.borderBoxSize.length > 0) {
             width = entry.borderBoxSize[0].inlineSize;
             height = entry.borderBoxSize[0].blockSize;
           } else {
-            // Fallback
             const rect = entry.target.getBoundingClientRect();
             width = rect.width;
             height = rect.height;
@@ -123,23 +116,21 @@ export const SceneSelectionPage = ({
     return () => observer.disconnect();
   }, [scenes]);
 
-  // Update cursor position when hand position changes
+  // Update cursor position
   useEffect(() => {
     if (handPosition) {
       cursorControllerRef.current.updateCursorPosition(handPosition);
     }
   }, [handPosition]);
 
-  // Update hover state and progress
+  // Update hover state
   useEffect(() => {
-    // We need the window dimensions for normalized coordinate mapping
     if (!handPosition) return;
 
     const controller = cursorControllerRef.current;
     const viewWidth = window.innerWidth;
     const viewHeight = window.innerHeight;
 
-    // Build scene cards array from DOM elements
     const sceneCards: SceneCard[] = [];
     
     scenes.forEach((scene) => {
@@ -158,14 +149,11 @@ export const SceneSelectionPage = ({
       }
     });
 
-    // Update hover state
     const updateHover = () => {
       if (sceneCards.length === 0) return;
       
-      // Get current normalized position from controller
       const normalizedPos = controller.getCursorPosition();
       
-      // Convert to screen coordinates using video mapping logic
       const screenPos = getScreenCoordinates(
         normalizedPos.x, 
         normalizedPos.y, 
@@ -173,12 +161,11 @@ export const SceneSelectionPage = ({
         viewHeight
       );
       
-      // Use new method that accepts screen coordinates
       controller.updateHoverStateWithScreenPos(
         sceneCards,
         screenPos.x,
         screenPos.y,
-        5000, // 5 second hover duration
+        5000,
         (sceneId) => {
           console.log('Scene selected via hover:', sceneId);
           if (onSceneSelect) {
@@ -187,23 +174,20 @@ export const SceneSelectionPage = ({
         }
       );
 
-      // Update UI state
       setHoveredSceneId(controller.getHoveredCardId());
       setHoverProgress(controller.getHoverProgress());
     };
 
-    const intervalId = setInterval(updateHover, 50); // 20 FPS
+    const intervalId = setInterval(updateHover, 50);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [scenes, onSceneSelect, handPosition, getScreenCoordinates]); // Add getScreenCoordinates dependency
+  }, [scenes, onSceneSelect, handPosition, getScreenCoordinates]);
 
-  // Render video feed (Layer 0)
+  // Render video feed
   useEffect(() => {
-    if (!videoElement || !videoCanvasRef.current) {
-      return;
-    }
+    if (!videoElement || !videoCanvasRef.current) return;
 
     const canvas = videoCanvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -213,11 +197,8 @@ export const SceneSelectionPage = ({
     canvas.height = window.innerHeight;
 
     let animationFrameId: number;
-    let frameCount = 0;
 
     const renderVideo = () => {
-      frameCount++;
-      
       if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
         const vRatio = videoElement.videoWidth / videoElement.videoHeight;
         const cRatio = canvas.width / canvas.height;
@@ -255,7 +236,7 @@ export const SceneSelectionPage = ({
     };
   }, [videoElement]);
 
-  // Render cursor (Layer 2 - Top)
+  // Render cursor
   useEffect(() => {
     if (!cursorCanvasRef.current) return;
 
@@ -271,23 +252,12 @@ export const SceneSelectionPage = ({
     const renderCursor = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Get normalized position
       const cursorPos = cursorControllerRef.current.getCursorPosition();
-      
-      // Convert to screen coordinates using the shared helper logic
-      // Note: We calculate this every frame inside the render loop
-      // Ideally we should use the stable helper, but we can't access it easily inside this effect 
-      // without adding it to dependencies which might trigger re-renders.
-      // Since the logic is dependent on videoElement which is stable enough, we can replicate it or reference it.
-      // For cleanliness, we'll replicate the calculation here or use the helper if we make it a ref.
-      // Let's use getScreenCoordinates directly since it's memoized with useCallback based on videoElement
-      
       const screenPos = getScreenCoordinates(cursorPos.x, cursorPos.y, canvas.width, canvas.height);
       
       const cursorX = screenPos.x;
       const cursorY = screenPos.y;
 
-      // Draw cursor circle
       ctx.beginPath();
       ctx.arc(cursorX, cursorY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -296,7 +266,6 @@ export const SceneSelectionPage = ({
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Draw inner dot
       ctx.beginPath();
       ctx.arc(cursorX, cursorY, 5, 0, 2 * Math.PI);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -317,16 +286,14 @@ export const SceneSelectionPage = ({
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [getScreenCoordinates]); // Re-run if getScreenCoordinates changes (which changes when videoElement changes)
+  }, [getScreenCoordinates]);
 
   const isChineseLanguage = i18n.language === 'zh' || i18n.language === 'zh-CN';
 
   return (
     <div className="scene-selection-page">
-      {/* Layer 0: Video Background */}
       <canvas ref={videoCanvasRef} className="video-feed-layer" />
       
-      {/* Layer 1: UI Overlay */}
       <div className="scene-selection-overlay">
         <div className="scene-selection-header">
           <h1>{t('sceneSelection.title')}</h1>
@@ -339,19 +306,35 @@ export const SceneSelectionPage = ({
             const sceneName = isChineseLanguage ? scene.name : scene.name_en;
             const sceneDescription = isChineseLanguage ? scene.description : scene.description_en;
             
-            // Get card dimensions
             const dims = cardDimensions.get(scene.id) || { width: 0, height: 0 };
             
-            // Calculate rounded rectangle perimeter
-            const r = 24; 
-            const perimeter = 2 * (dims.width + dims.height); 
+            // Use a very thick stroke to simulate a solid border background
+            // This creates a "filled" progress effect behind the card
+            const strokeWidth = 24; 
             
-            // Calculate dash offset for progress
+            // Expansion amount on each side (half of the total extra size)
+            const expansion = 12;
+            
+            // SVG size needs to be larger to contain the stroke
+            const expandedWidth = dims.width + (expansion * 2);
+            const expandedHeight = dims.height + (expansion * 2);
+            
+            // Perimeter for dash array
+            const perimeter = 2 * (expandedWidth + expandedHeight); 
+            
             const progress = isHovered ? hoverProgress : 0;
             const dashOffset = perimeter * (1 - progress);
-
-            const strokeWidth = 10;
-            const halfStroke = strokeWidth / 2;
+            
+            // Radius calculation
+            // Outer radius = Inner radius (24px) + Expansion (12px)
+            const outerRadius = 36;
+            
+            // Position the rect to align with the expansion
+            // Rect coordinates are relative to the SVG
+            // We want the stroke's centerline to be at expansion distance
+            // x, y = expansion
+            const rectX = expansion;
+            const rectY = expansion;
 
             return (
               <div
@@ -359,15 +342,18 @@ export const SceneSelectionPage = ({
                 id={`scene-card-${scene.id}`}
                 className={`scene-card ${isHovered ? 'hovered' : ''}`}
               >
-                {/* SVG progress border */}
+                {/* New Background Layer */}
+                <div className="scene-card-bg" />
+
+                {/* SVG progress border - NOW BEHIND */}
                 <svg className="scene-card-border" width="100%" height="100%">
                   <rect
-                    x={halfStroke}
-                    y={halfStroke}
-                    width={Math.max(0, dims.width - strokeWidth)}
-                    height={Math.max(0, dims.height - strokeWidth)}
-                    rx={r}
-                    ry={r}
+                    x={rectX}
+                    y={rectY}
+                    width={Math.max(0, dims.width)}
+                    height={Math.max(0, dims.height)}
+                    rx={outerRadius}
+                    ry={outerRadius}
                     fill="none"
                     stroke="#76FF03"
                     strokeWidth={strokeWidth}
@@ -380,16 +366,18 @@ export const SceneSelectionPage = ({
                   />
                 </svg>
                 
-                <div className="scene-icon">{scene.icon}</div>
-                <h2 className="scene-name">{sceneName}</h2>
-                <p className="scene-description">{sceneDescription}</p>
+                {/* Content Layer */}
+                <div className="scene-card-content">
+                  <div className="scene-icon">{scene.icon}</div>
+                  <h2 className="scene-name">{sceneName}</h2>
+                  <p className="scene-description">{sceneDescription}</p>
+                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Layer 2: Cursor Top Layer */}
       <canvas ref={cursorCanvasRef} className="cursor-layer" />
     </div>
   );

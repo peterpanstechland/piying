@@ -39,9 +39,14 @@ export const SegmentGuidancePage = ({
         <video
           className="video-feed-background"
           ref={(el) => {
-            if (el && videoElement) {
+            if (el && videoElement && el.srcObject !== videoElement.srcObject) {
               el.srcObject = videoElement.srcObject;
-              el.play();
+              el.play().catch((err) => {
+                // Ignore play interruption errors
+                if (err.name !== 'AbortError') {
+                  console.error('Video play error:', err);
+                }
+              });
             }
           }}
           autoPlay

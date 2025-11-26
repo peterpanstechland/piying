@@ -4,9 +4,11 @@
   height: 100vh;
   overflow: hidden;
   background: #000;
+  /* Establish a root stacking context for the page */
+  isolation: isolate;
 }
 
-/* Layer 0: Video Background */
+/* Layer 0: Video Background - Pushed way back */
 .video-feed-layer {
   position: absolute;
   top: 0;
@@ -14,11 +16,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 0;
+  z-index: -1; /* Move behind everything in the current stacking context */
   pointer-events: none;
 }
 
-/* Layer 1: UI Overlay */
+/* Layer 1: UI Overlay - Sits on top */
 .scene-selection-overlay {
   position: absolute;
   top: 0;
@@ -29,7 +31,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.6); /* This tint should be visible */
   padding: 40px;
   z-index: 10;
 }
@@ -42,13 +44,16 @@
   width: 100%;
   height: 100%;
   z-index: 100;
-  pointer-events: none; /* Ensure clicks pass through to UI if needed */
+  pointer-events: none;
 }
 
+/* ... Headers ... */
 .scene-selection-header {
   text-align: center;
   color: white;
   margin-bottom: 60px;
+  position: relative;
+  z-index: 2; /* Ensure text is above overlay bg */
 }
 
 .scene-selection-header h1 {
@@ -72,51 +77,90 @@
   align-items: stretch;
   max-width: 1400px;
   width: 100%;
+  position: relative;
+  z-index: 2; /* Ensure cards are above overlay bg */
 }
 
 .scene-card {
   flex: 1;
   min-width: 280px;
   max-width: 400px;
-  background: #F0F4C3; /* Light yellow-green */
+  /* No background on parent */
   border-radius: 24px;
   padding: 40px 30px;
   text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease;
   cursor: pointer;
-  box-shadow: 0 6px 0 #CDDC39; /* 3D effect shadow */
   position: relative;
+  overflow: visible;
+  /* CRITICAL: Establish a new stacking context */
+  /* This prevents z-index: -1 children from going behind the card's parent */
+  z-index: 1; 
+  isolation: isolate; 
+}
+
+/* SVG Border Container - Layer 1 (Bottom of card stack) */
+.scene-card-border {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  width: calc(100% + 24px);
+  height: calc(100% + 24px);
+  pointer-events: none;
+  z-index: -1; /* Behind bg layer, but contained within card due to isolation */
   overflow: visible;
 }
 
-.scene-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 0 #AFB42B;
-}
-
-.scene-card.hovered {
-  background: #F9FBE7;
-  transform: scale(1.02);
-  box-shadow: 0 10px 0 #9E9D24;
-}
-
-/* SVG Border Container */
-.scene-card-border {
+/* New Background Layer - Layer 2 (Middle of card stack) */
+.scene-card-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  overflow: visible;
+  background: #F0F4C3;
+  border-radius: 24px;
+  box-shadow: 0 6px 0 #CDDC39;
+  z-index: 0; /* Base layer */
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Content Layer - Layer 3 (Top of card stack) */
+.scene-card-content {
+  position: relative;
+  z-index: 1; /* Above bg */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.scene-card:hover {
+  transform: translateY(-2px);
+}
+
+.scene-card:hover .scene-card-bg {
+  box-shadow: 0 8px 0 #AFB42B;
+}
+
+.scene-card.hovered {
+  transform: scale(1.02);
+}
+
+.scene-card.hovered .scene-card-bg {
+  background: #F9FBE7;
+  box-shadow: 0 10px 0 #9E9D24;
+}
+
+/* Ensure the border stroke has a glow */
 .scene-card-border rect {
   transition: stroke-dashoffset 0.1s linear;
   stroke-linecap: round;
+  filter: drop-shadow(0 0 8px #76FF03);
 }
 
+/* ... Rest of styles ... */
 .scene-icon {
   font-size: 100px;
   margin-bottom: 20px;
@@ -162,7 +206,6 @@
   }
 }
 
-/* Responsive design */
 @media (max-width: 1200px) {
   .scene-cards-container {
     gap: 30px;
