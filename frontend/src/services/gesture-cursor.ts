@@ -155,6 +155,25 @@ export class GestureCursorController {
   }
 
   /**
+   * Check which scene card (if any) the cursor is hovering over
+   * Uses pre-calculated screen coordinates
+   */
+  checkHoverScreenPos(cards: SceneCard[], screenX: number, screenY: number): string | null {
+    // Check collision with each card
+    for (const card of cards) {
+      if (
+        screenX >= card.bounds.x &&
+        screenX <= card.bounds.x + card.bounds.width &&
+        screenY >= card.bounds.y &&
+        screenY <= card.bounds.y + card.bounds.height
+      ) {
+        return card.id;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Start hover timer for a scene card
    * Callback will be invoked after the specified duration if hover is continuous
    */
@@ -245,6 +264,28 @@ export class GestureCursorController {
     callback: HoverCallback
   ): void {
     const hoveredCard = this.checkHover(cards, canvasWidth, canvasHeight);
+
+    if (hoveredCard) {
+      // Start or continue hover
+      this.startHoverTimer(hoveredCard, hoverDuration, callback);
+    } else {
+      // Not hovering over any card, cancel timer
+      this.cancelHoverTimer();
+    }
+  }
+
+  /**
+   * Update hover state using specific screen coordinates
+   * Use this when the normalized cursor position needs complex mapping to screen coordinates
+   */
+  updateHoverStateWithScreenPos(
+    cards: SceneCard[],
+    screenX: number,
+    screenY: number,
+    hoverDuration: number,
+    callback: HoverCallback
+  ): void {
+    const hoveredCard = this.checkHoverScreenPos(cards, screenX, screenY);
 
     if (hoveredCard) {
       // Start or continue hover

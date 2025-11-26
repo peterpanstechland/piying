@@ -6,17 +6,19 @@
   background: #000;
 }
 
-.scene-selection-page .video-feed {
+/* Layer 0: Video Background */
+.video-feed-layer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 1;
+  z-index: 0;
   pointer-events: none;
 }
 
+/* Layer 1: UI Overlay */
 .scene-selection-overlay {
   position: absolute;
   top: 0;
@@ -30,6 +32,17 @@
   background: rgba(0, 0, 0, 0.6);
   padding: 40px;
   z-index: 10;
+}
+
+/* Layer 2: Cursor Top Layer */
+.cursor-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  pointer-events: none; /* Ensure clicks pass through to UI if needed */
 }
 
 .scene-selection-header {
@@ -65,16 +78,15 @@
   flex: 1;
   min-width: 280px;
   max-width: 400px;
-  background: #F0F4C3;
+  background: #F0F4C3; /* Light yellow-green */
   border-radius: 24px;
   padding: 40px 30px;
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   cursor: pointer;
-  box-shadow: 0 6px 0 #CDDC39;
+  box-shadow: 0 6px 0 #CDDC39; /* 3D effect shadow */
   position: relative;
   overflow: visible;
-  border: 4px solid transparent;
 }
 
 .scene-card:hover {
@@ -88,6 +100,7 @@
   box-shadow: 0 10px 0 #9E9D24;
 }
 
+/* SVG Border Container */
 .scene-card-border {
   position: absolute;
   top: 0;
@@ -105,9 +118,10 @@
 }
 
 .scene-icon {
-  font-size: 80px;
-  margin-bottom: 10px;
-  filter: drop-shadow(2px 4px 0 rgba(0, 0, 0, 0.1));
+  font-size: 100px;
+  margin-bottom: 20px;
+  animation: sceneIconFloat 3s ease-in-out infinite;
+  filter: drop-shadow(2px 4px 0 rgba(0,0,0,0.1));
 }
 
 .scene-card.hovered .scene-icon {
@@ -115,35 +129,19 @@
 }
 
 .scene-name {
-  font-size: 42px;
+  font-size: 36px;
   font-weight: 900;
   color: #000;
-  margin: 10px 0 0 0;
-  letter-spacing: 2px;
-  text-shadow: none;
+  margin: 0 0 15px 0;
+  letter-spacing: 1px;
 }
 
 .scene-description {
   font-size: 18px;
-  color: #666;
+  color: #555;
   margin: 0;
   line-height: 1.5;
-}
-
-.hover-progress-container {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 6px;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.hover-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #8BC34A);
-  transition: width 0.1s linear;
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+  font-weight: 500;
 }
 
 @keyframes sceneIconFloat {
