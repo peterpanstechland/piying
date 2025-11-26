@@ -9,11 +9,21 @@ export interface PoseLandmark {
   visibility: number;
 }
 
+export interface PersonDetection {
+  pose: PoseLandmark[];
+  centerX: number;
+  centerY: number;
+  distanceFromCenter: number;
+}
+
 export interface DetectionResult {
   presence: boolean;
   rightHand?: { x: number; y: number };
   pose?: PoseLandmark[];
   exitGesture: boolean;
+  multiPerson: boolean;
+  allPersons: PersonDetection[];
+  trackedPersonIndex: number;
 }
 
 export type DetectionCallback = (result: DetectionResult) => void;
@@ -30,6 +40,11 @@ export class CameraDetectionService {
   // Detection state
   private lastPoseResult: PoseResults | null = null;
   private lastHandsResult: HandsResults | null = null;
+  
+  // Multi-person tracking state
+  private trackedPersonIndex: number = -1;
+  private isRecording: boolean = false;
+  private recordingStartPersonIndex: number = -1;
 
   /**
    * Initialize camera and MediaPipe models
@@ -63,6 +78,7 @@ export class CameraDetectionService {
 
       this.pose.onResults((results: PoseResults) => {
         this.lastPoseResult = results;
+        // Process results immediately when pose is detected
         this.processDetectionResults();
       });
 
@@ -82,6 +98,7 @@ export class CameraDetectionService {
 
       this.hands.onResults((results: HandsResults) => {
         this.lastHandsResult = results;
+        // Process results immediately when hands are detected
         this.processDetectionResults();
       });
 
@@ -153,6 +170,27 @@ export class CameraDetectionService {
   }
 
   /**
+   * Set recording state for multi-person tracking persistence
+   */
+  setRecordingState(isRecording: boolean): void {
+    this.isRecording = isRecording;
+    if (isRecording) {
+      // Lock tracking to current person when recording starts
+      this.recordingStartPersonIndex = this.trackedPersonIndex;
+    } else {
+      // Reset recording person when recording stops
+      this.recordingStartPersonIndex = -1;
+    }
+  }
+
+  /**
+   * Get current tracked person index
+   */
+  getTrackedPersonIndex(): number {
+    return this.trackedPersonIndex;
+  }
+
+  /**
    * Cleanup resources
    */
   cleanup(): void {
@@ -178,6 +216,9 @@ export class CameraDetectionService {
     }
 
     this.isInitialized = false;
+    this.trackedPersonIndex = -1;
+    this.isRecording = false;
+    this.recordingStartPersonIndex = -1;
   }
 
   /**
@@ -193,22 +234,35 @@ export class CameraDetectionService {
       rightHand: undefined,
       pose: undefined,
       exitGesture: false,
+      multiPerson: false,
+      allPersons: [],
+      trackedPersonIndex: -1,
     };
 
-    // Check for person presence
-    if (this.lastPoseResult?.poseLandmarks && this.lastPoseResult.poseLandmarks.length > 0) {
+    // Detect all persons in the frame
+    const allPersons = this.detectAllPersons();
+    result.allPersons = allPersons;
+    result.multiPerson = allPersons.length > 1;
+
+    if (allPersons.length > 0) {
       result.presence = true;
-      
-      // Convert pose landmarks to our format
-      result.pose = this.lastPoseResult.poseLandmarks.map((landmark) => ({
-        x: landmark.x,
-        y: landmark.y,
-        z: landmark.z,
-        visibility: landmark.visibility || 0,
-      }));
+
+      // Select which person to track
+      const trackedIndex = this.selectTrackedPerson(allPersons);
+      this.trackedPersonIndex = trackedIndex;
+      result.trackedPersonIndex = trackedIndex;
+
+      // Use the tracked person's pose
+      if (trackedIndex >= 0 && trackedIndex < allPersons.length) {
+        result.pose = allPersons[trackedIndex].pose;
+      }
 
       // Check for exit gesture (both hands above head)
       result.exitGesture = this.detectExitGesture();
+    } else {
+      // No person detected
+      result.presence = false;
+      this.trackedPersonIndex = -1;
     }
 
     // Extract right hand position for cursor control
@@ -237,6 +291,95 @@ export class CameraDetectionService {
 
     // Invoke callback with results
     this.callback(result);
+  }
+
+  /**
+   * Detect all persons in the current frame
+   * Note: MediaPipe Pose currently only detects one person per frame
+   * This method is structured to support future multi-person detection
+   */
+  private detectAllPersons(): PersonDetection[] {
+    const persons: PersonDetection[] = [];
+
+    if (this.lastPoseResult?.poseLandmarks && this.lastPoseResult.poseLandmarks.length > 0) {
+      // Convert pose landmarks to our format
+      const pose = this.lastPoseResult.poseLandmarks.map((landmark) => ({
+        x: landmark.x,
+        y: landmark.y,
+        z: landmark.z,
+        visibility: landmark.visibility || 0,
+      }));
+
+      // Calculate center point (average of all visible landmarks)
+      let sumX = 0;
+      let sumY = 0;
+      let count = 0;
+
+      for (const landmark of pose) {
+        if (landmark.visibility > 0.5) {
+          sumX += landmark.x;
+          sumY += landmark.y;
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        const centerX = sumX / count;
+        const centerY = sumY / count;
+
+        // Calculate distance from frame center (0.5, 0.5)
+        const distanceFromCenter = Math.sqrt(
+          Math.pow(centerX - 0.5, 2) + Math.pow(centerY - 0.5, 2)
+        );
+
+        persons.push({
+          pose,
+          centerX,
+          centerY,
+          distanceFromCenter,
+        });
+      }
+    }
+
+    return persons;
+  }
+
+  /**
+   * Select which person to track based on current state
+   */
+  private selectTrackedPerson(allPersons: PersonDetection[]): number {
+    if (allPersons.length === 0) {
+      return -1;
+    }
+
+    // If recording, persist tracking of the original person
+    if (this.isRecording && this.recordingStartPersonIndex >= 0) {
+      // Check if the originally tracked person is still present
+      // Since MediaPipe Pose only detects one person, we assume continuity
+      // In a true multi-person system, we'd match by position/features
+      if (this.recordingStartPersonIndex < allPersons.length) {
+        return this.recordingStartPersonIndex;
+      }
+      // Original person left, return -1 to indicate tracking lost
+      return -1;
+    }
+
+    // Not recording: select person closest to center
+    if (allPersons.length === 1) {
+      return 0;
+    }
+
+    let closestIndex = 0;
+    let minDistance = allPersons[0].distanceFromCenter;
+
+    for (let i = 1; i < allPersons.length; i++) {
+      if (allPersons[i].distanceFromCenter < minDistance) {
+        minDistance = allPersons[i].distanceFromCenter;
+        closestIndex = i;
+      }
+    }
+
+    return closestIndex;
   }
 
   /**

@@ -6,16 +6,60 @@
     "title": "Select Your Scene",
     "hover": "Hover to select"
   },
+  "guidance": {
+    "title": "Get Ready",
+    "segment": "Segment {{current}} of {{total}}",
+    "segment1": {
+      "action": "Opening Pose",
+      "description": "Strike your opening pose"
+    },
+    "segment2": {
+      "action": "Main Performance",
+      "description": "Show your best moves"
+    },
+    "segment3": {
+      "action": "Closing Pose",
+      "description": "End with a flourish"
+    },
+    "tips": {
+      "position": "Position yourself in the center",
+      "ready": "Get ready to perform"
+    },
+    "starting": "Starting soon..."
+  },
+  "countdown": {
+    "getReady": "Get Ready!",
+    "go": "GO!"
+  },
   "recording": {
-    "guidance": "Follow the guidance",
-    "countdown": "Starting in {{seconds}}...",
-    "recording": "Recording...",
-    "review": "Review your performance"
+    "recording": "RECORDING",
+    "remaining": "seconds remaining",
+    "hint": "Keep performing!"
+  },
+  "review": {
+    "title": "Segment Complete!",
+    "segmentComplete": "Segment {{current}} of {{total}} recorded",
+    "recorded": "Recorded",
+    "frames": "frames",
+    "rerecord": "Re-record",
+    "continue": "Continue",
+    "finish": "Finish",
+    "nextSegment": "Next: Segment {{next}}",
+    "allComplete": "All segments complete!",
+    "uploading": "Uploading",
+    "uploadFailed": "Upload failed. Please try again."
   },
   "result": {
     "processing": "Generating your video...",
+    "processingHint": "This will take 10-20 seconds",
     "ready": "Your video is ready!",
-    "scanQR": "Scan QR code to download"
+    "scanQR": "Scan QR code to download",
+    "autoReset": "Auto-reset in {{seconds}} seconds"
+  },
+  "multiPerson": {
+    "detected": "Multiple people detected",
+    "trackingCenter": "Tracking person at center",
+    "trackingOriginal": "Tracking original person"
   },
   "errors": {
     "cameraAccess": "Camera access denied. Please allow camera access.",

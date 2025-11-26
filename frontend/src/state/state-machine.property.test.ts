@@ -135,8 +135,10 @@ describe('StateMachine Property Tests', () => {
               }
             }
             
-            // Property: Should only transition if second period reaches 1 second
-            if (secondDetectionDuration >= 1000) {
+            // Property: Should only transition if accumulated continuous time reaches 1 second
+            // Note: Due to rounding, actual accumulated time may be less than secondDetectionDuration
+            const actualAccumulatedTime = detectionCount * detectionInterval;
+            if (actualAccumulatedTime >= 1000) {
               expect(stateMachine.getCurrentState()).toBe(AppState.SCENE_SELECT);
             } else {
               expect(stateMachine.getCurrentState()).toBe(AppState.IDLE);

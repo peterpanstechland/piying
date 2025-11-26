@@ -6,16 +6,60 @@
     "title": "选择你的场景",
     "hover": "悬停选择"
   },
+  "guidance": {
+    "title": "准备开始",
+    "segment": "第 {{current}} 段，共 {{total}} 段",
+    "segment1": {
+      "action": "开场姿势",
+      "description": "摆出你的开场姿势"
+    },
+    "segment2": {
+      "action": "主要表演",
+      "description": "展示你最好的动作"
+    },
+    "segment3": {
+      "action": "结束姿势",
+      "description": "以精彩动作结束"
+    },
+    "tips": {
+      "position": "请站在中央位置",
+      "ready": "准备好表演"
+    },
+    "starting": "即将开始..."
+  },
+  "countdown": {
+    "getReady": "准备好！",
+    "go": "开始！"
+  },
   "recording": {
-    "guidance": "跟随指引",
-    "countdown": "{{seconds}}秒后开始...",
-    "recording": "录制中...",
-    "review": "查看你的表演"
+    "recording": "录制中",
+    "remaining": "秒剩余",
+    "hint": "继续表演！"
+  },
+  "review": {
+    "title": "段落完成！",
+    "segmentComplete": "已录制第 {{current}} 段，共 {{total}} 段",
+    "recorded": "已录制",
+    "frames": "帧",
+    "rerecord": "重新录制",
+    "continue": "继续",
+    "finish": "完成",
+    "nextSegment": "下一段：第 {{next}} 段",
+    "allComplete": "所有段落已完成！",
+    "uploading": "上传中",
+    "uploadFailed": "上传失败。请重试。"
   },
   "result": {
     "processing": "正在生成你的视频...",
+    "processingHint": "这将需要10-20秒",
     "ready": "你的视频已准备好！",
-    "scanQR": "扫描二维码下载"
+    "scanQR": "扫描二维码下载",
+    "autoReset": "{{seconds}} 秒后自动重置"
+  },
+  "multiPerson": {
+    "detected": "检测到多人",
+    "trackingCenter": "跟踪中心位置的人",
+    "trackingOriginal": "继续跟踪原始人员"
   },
   "errors": {
     "cameraAccess": "摄像头访问被拒绝。请允许摄像头访问。",

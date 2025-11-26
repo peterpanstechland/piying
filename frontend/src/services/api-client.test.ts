@@ -124,8 +124,30 @@ describe('APIClient', () => {
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/api/sessions/session-id/segments/0',
-        segmentData
+        segmentData,
+        expect.objectContaining({
+          onUploadProgress: expect.any(Function)
+        })
       );
+    });
+
+    it('should call progress callback during upload', async () => {
+      const progressCallback = jest.fn();
+      
+      mockAxiosInstance.post.mockImplementation((url, data, config) => {
+        // Simulate upload progress
+        if (config?.onUploadProgress) {
+          config.onUploadProgress({ loaded: 50, total: 100 });
+          config.onUploadProgress({ loaded: 100, total: 100 });
+        }
+        return Promise.resolve({ data: { success: true } });
+      });
+
+      await client.uploadSegment('session-id', 0, segmentData, progressCallback);
+
+      expect(progressCallback).toHaveBeenCalledWith(50);
+      expect(progressCallback).toHaveBeenCalledWith(100);
+      expect(progressCallback).toHaveBeenCalledTimes(2);
     });
 
     it('should cache upload on network error', async () => {

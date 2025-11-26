@@ -1,0 +1,48 @@
+.multi-person-warning {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 152, 0, 0.95);
+  color: white;
+  padding: 15px 30px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.warning-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.warning-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.warning-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.warning-subtitle {
+  font-size: 14px;
+  opacity: 0.9;
+}

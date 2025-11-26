@@ -1,0 +1,233 @@
+.segment-review-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-feed-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+}
+
+.review-overlay {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 60px 40px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+
+.review-header {
+  text-align: center;
+  color: #fff;
+}
+
+.review-header h1 {
+  font-size: 48px;
+  font-weight: bold;
+  margin: 0 0 20px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.segment-info {
+  font-size: 24px;
+  color: #00ff00;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.review-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  max-width: 900px;
+}
+
+.review-stats {
+  display: flex;
+  gap: 80px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.stat-icon {
+  font-size: 80px;
+  color: #00ff00;
+}
+
+.stat-value {
+  font-size: 72px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.stat-label {
+  font-size: 24px;
+  color: #e0e0e0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.review-actions {
+  display: flex;
+  gap: 40px;
+}
+
+.review-button {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 25px 50px;
+  font-size: 28px;
+  font-weight: bold;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.review-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+}
+
+.review-button:active {
+  transform: translateY(-1px);
+}
+
+.rerecord-button {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff4444 100%);
+  color: #fff;
+}
+
+.rerecord-button:hover {
+  background: linear-gradient(135deg, #ff8888 0%, #ff6666 100%);
+}
+
+.continue-button {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: #fff;
+}
+
+.continue-button:hover {
+  background: linear-gradient(135deg, #66bb6a 0%, #5cb85c 100%);
+}
+
+.button-icon {
+  font-size: 32px;
+}
+
+.button-text {
+  font-size: 28px;
+}
+
+.review-footer {
+  text-align: center;
+}
+
+.review-hint {
+  font-size: 24px;
+  color: #ffd700;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Upload progress and error styles */
+.upload-progress {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50 0%, #45a049 100%);
+  transition: width 0.3s ease;
+  border-radius: 10px;
+}
+
+.progress-text {
+  font-size: 20px;
+  color: #fff;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.upload-error {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+  background: rgba(255, 68, 68, 0.2);
+  border: 2px solid #ff4444;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  text-align: center;
+}
+
+.error-message {
+  font-size: 24px;
+  color: #ff6b6b;
+  margin: 0 0 10px 0;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.error-hint {
+  font-size: 18px;
+  color: #ffcccc;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.review-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.review-button:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}

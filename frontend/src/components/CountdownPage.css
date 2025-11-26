@@ -1,0 +1,110 @@
+.countdown-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-feed-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+}
+
+.countdown-overlay {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.countdown-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.countdown-label {
+  font-size: 36px;
+  font-weight: bold;
+  color: #fff;
+  margin: 0 0 40px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.countdown-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 180px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9);
+  animation: countdownPulse 1s ease-in-out;
+  z-index: 20;
+}
+
+.countdown-number.go {
+  font-size: 120px;
+  color: #00ff00;
+  animation: goAnimation 0.5s ease-out;
+}
+
+@keyframes countdownPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes goAnimation {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.countdown-progress-ring {
+  position: relative;
+  width: 300px;
+  height: 300px;
+}
+
+.countdown-progress-ring svg {
+  transform: scaleX(-1); /* Flip horizontally for clockwise animation */
+}

@@ -4,7 +4,7 @@
  * Includes retry logic with exponential backoff and local caching for offline resilience
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 // API base URL - default value, can be overridden in constructor
 // In production, this will be set via environment variable
@@ -130,17 +130,29 @@ export class APIClient {
    * @param sessionId - Session identifier
    * @param segmentIndex - Segment index
    * @param data - Segment data with frames
+   * @param onProgress - Optional callback for upload progress (0-100)
    */
   async uploadSegment(
     sessionId: string,
     segmentIndex: number,
-    data: SegmentData
+    data: SegmentData,
+    onProgress?: (progress: number) => void
   ): Promise<void> {
     try {
       await this.retryRequest(async () => {
         const response = await this.client.post(
           `/api/sessions/${sessionId}/segments/${segmentIndex}`,
-          data
+          data,
+          {
+            onUploadProgress: (progressEvent) => {
+              if (onProgress && progressEvent.total) {
+                const percentCompleted = Math.round(
+                  (progressEvent.loaded * 100) / progressEvent.total
+                );
+                onProgress(percentCompleted);
+              }
+            },
+          }
         );
         return response.data;
       });

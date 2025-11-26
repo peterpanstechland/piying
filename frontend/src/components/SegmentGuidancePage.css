@@ -1,0 +1,132 @@
+.segment-guidance-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-feed-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+}
+
+.guidance-overlay {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 60px 40px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+
+.guidance-header {
+  text-align: center;
+  color: #fff;
+}
+
+.guidance-header h1 {
+  font-size: 48px;
+  font-weight: bold;
+  margin: 0 0 20px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.segment-counter {
+  font-size: 24px;
+  color: #ffd700;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.guidance-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 800px;
+  text-align: center;
+}
+
+.guidance-icon {
+  font-size: 120px;
+  margin-bottom: 40px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.guidance-action {
+  font-size: 42px;
+  font-weight: bold;
+  color: #fff;
+  margin: 0 0 30px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.guidance-description {
+  font-size: 28px;
+  color: #e0e0e0;
+  margin: 0 0 50px 0;
+  line-height: 1.6;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.guidance-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.guidance-tips p {
+  font-size: 20px;
+  color: #fff;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.guidance-footer {
+  text-align: center;
+}
+
+.guidance-hint {
+  font-size: 24px;
+  color: #ffd700;
+  margin: 0;
+  animation: blink 1.5s ease-in-out infinite;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

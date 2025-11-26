@@ -18,12 +18,16 @@ export const createTestI18n = () => {
           translation: {
             'sceneSelection.title': 'Select Your Scene',
             'sceneSelection.hover': 'Hover to select',
+            'countdown.getReady': 'Get Ready',
+            'countdown.go': 'GO!',
           },
         },
         zh: {
           translation: {
             'sceneSelection.title': '选择你的场景',
             'sceneSelection.hover': '悬停选择',
+            'countdown.getReady': '准备好',
+            'countdown.go': '开始！',
           },
         },
       },

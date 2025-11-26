@@ -147,6 +147,7 @@ describe('CameraDetectionService', () => {
       
       // Trigger callbacks with no detection
       poseCallback({ poseLandmarks: null });
+      handsCallback({ multiHandLandmarks: [], multiHandedness: [] });
       
       // Should have at least one result
       expect(results.length).toBeGreaterThan(0);
@@ -155,6 +156,9 @@ describe('CameraDetectionService', () => {
       expect(lastResult.rightHand).toBeUndefined();
       expect(lastResult.pose).toBeUndefined();
       expect(lastResult.exitGesture).toBe(false);
+      expect(lastResult.multiPerson).toBe(false);
+      expect(lastResult.allPersons).toEqual([]);
+      expect(lastResult.trackedPersonIndex).toBe(-1);
     });
 
     it('should detect person presence when pose landmarks are available', async () => {
@@ -176,7 +180,12 @@ describe('CameraDetectionService', () => {
       ];
       
       // Trigger callback with person detection
+      const { Hands } = require('@mediapipe/hands');
+      const handsInstance = Hands.mock.results[0].value;
+      const handsCallback = handsInstance.onResults.mock.calls[0][0];
+      
       poseCallback({ poseLandmarks: mockLandmarks });
+      handsCallback({ multiHandLandmarks: [], multiHandedness: [] });
 
       expect(results.length).toBeGreaterThan(0);
       const lastResult = results[results.length - 1];
@@ -188,6 +197,9 @@ describe('CameraDetectionService', () => {
         z: 0,
         visibility: 0.9,
       });
+      expect(lastResult.multiPerson).toBe(false);
+      expect(lastResult.allPersons).toHaveLength(1);
+      expect(lastResult.trackedPersonIndex).toBe(0);
     });
 
     it('should extract right hand position for cursor control', async () => {
@@ -216,6 +228,11 @@ describe('CameraDetectionService', () => {
       ];
       
       // Trigger callback with hand detection
+      const { Pose } = require('@mediapipe/pose');
+      const poseInstance = Pose.mock.results[0].value;
+      const poseCallback = poseInstance.onResults.mock.calls[0][0];
+      
+      poseCallback({ poseLandmarks: null });
       handsCallback({
         multiHandLandmarks: [mockHandLandmarks],
         multiHandedness: [{ label: 'Right' }],
@@ -226,6 +243,9 @@ describe('CameraDetectionService', () => {
       expect(lastResult.rightHand).toBeDefined();
       expect(lastResult.rightHand?.x).toBe(0.68);
       expect(lastResult.rightHand?.y).toBe(0.42);
+      expect(lastResult.multiPerson).toBe(false);
+      expect(lastResult.allPersons).toEqual([]);
+      expect(lastResult.trackedPersonIndex).toBe(-1);
     });
   });
 });
