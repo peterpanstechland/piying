@@ -257,7 +257,15 @@ function App() {
   }, []); // Empty deps - function is stable
 
   // Handle scene selection
-  const handleSceneSelect = async (sceneId: string) => {
+  const handleSceneSelect = useCallback(async (sceneId: string) => {
+    const currentState = stateMachineRef.current?.getCurrentState();
+    
+    // Prevent duplicate selections - only allow from SCENE_SELECT state
+    if (currentState !== AppState.SCENE_SELECT) {
+      console.log('Ignoring scene selection - not in SCENE_SELECT state');
+      return;
+    }
+    
     console.log('Scene selected:', sceneId);
     const selectedScene = scenes.find((s) => s.id === sceneId);
     
@@ -293,7 +301,7 @@ function App() {
         );
       }
     }
-  };
+  }, [scenes]);
 
   // Handle guidance complete - transition to countdown
   const handleGuidanceComplete = () => {

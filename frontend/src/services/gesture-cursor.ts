@@ -30,6 +30,11 @@ export class GestureCursorController {
   private rafId: number | null = null;
   private smoothingFactor: number = 0.3; // Lower = smoother but more lag
   private testMode: boolean = false;
+
+  // Debounce Logic Variables
+  private hoverLossTimestamp: number = 0; // Time when hover was lost
+  private gracePeriodTimer: number | null = null;
+  private readonly GRACE_PERIOD: number = 300; // 300ms to tolerate flickering
   
   /**
    * Enable test mode - disables smooth animation for immediate updates
@@ -159,13 +164,21 @@ export class GestureCursorController {
    * Uses pre-calculated screen coordinates
    */
   checkHoverScreenPos(cards: SceneCard[], screenX: number, screenY: number): string | null {
+    // Collision buffer/tolerance in pixels to make selection easier
+    const tolerance = 20;
+
     // Check collision with each card
     for (const card of cards) {
+      // Determine if we are currently hovering this card (sticky selection)
+      // If so, we might want an even larger tolerance to prevent flickering
+      const isCurrentTarget = this.hoveredCardId === card.id;
+      const effectiveTolerance = isCurrentTarget ? tolerance + 10 : tolerance;
+
       if (
-        screenX >= card.bounds.x &&
-        screenX <= card.bounds.x + card.bounds.width &&
-        screenY >= card.bounds.y &&
-        screenY <= card.bounds.y + card.bounds.height
+        screenX >= card.bounds.x - effectiveTolerance &&
+        screenX <= card.bounds.x + card.bounds.width + effectiveTolerance &&
+        screenY >= card.bounds.y - effectiveTolerance &&
+        screenY <= card.bounds.y + card.bounds.height + effectiveTolerance
       ) {
         return card.id;
       }
@@ -178,37 +191,80 @@ export class GestureCursorController {
    * Callback will be invoked after the specified duration if hover is continuous
    */
   startHoverTimer(cardId: string, duration: number, callback: HoverCallback): void {
-    // If already hovering over the same card, don't restart timer
-    if (this.hoveredCardId === cardId && this.hoverTimer !== null) {
-      return;
+    // If already hovering over the same card, clear any pending loss timer
+    if (this.hoveredCardId === cardId) {
+      if (this.gracePeriodTimer !== null) {
+        clearTimeout(this.gracePeriodTimer);
+        this.gracePeriodTimer = null;
+      }
+      // If timer is already running, do nothing (continue counting)
+      if (this.hoverTimer !== null) {
+        return;
+      }
     }
 
-    // Cancel any existing timer
-    this.cancelHoverTimer();
+    // If switching to a different card, cancel everything immediately
+    if (this.hoveredCardId !== null && this.hoveredCardId !== cardId) {
+      this.cancelHoverTimer(true); // Force cancel
+    }
+
+    // Cancel any existing timer if we are starting fresh
+    if (this.hoveredCardId !== cardId) {
+      this.cancelHoverTimer(true);
+    }
 
     // Start new hover
     this.hoveredCardId = cardId;
-    this.hoverStartTime = performance.now();
     this.hoverDuration = duration;
     this.hoverCallback = callback;
 
-    // Set timer to trigger callback after duration
-    this.hoverTimer = window.setTimeout(() => {
-      if (this.hoveredCardId === cardId && this.hoverCallback) {
-        this.hoverCallback(cardId);
-        this.cancelHoverTimer();
-      }
-    }, duration);
+    // Only set start time if not already set (preserving progress during grace period)
+    if (this.hoverStartTime === 0) {
+      this.hoverStartTime = performance.now();
+    }
+    
+    // Ensure timer is running
+    if (this.hoverTimer === null) {
+      // Calculate remaining time
+      const elapsed = performance.now() - this.hoverStartTime;
+      const remaining = Math.max(0, duration - elapsed);
+      
+      this.hoverTimer = window.setTimeout(() => {
+        if (this.hoveredCardId === cardId && this.hoverCallback) {
+          this.hoverCallback(cardId);
+          this.cancelHoverTimer(true);
+        }
+      }, remaining);
+    }
   }
 
   /**
    * Cancel current hover timer
+   * @param force If true, cancels immediately without grace period
    */
-  cancelHoverTimer(): void {
+  cancelHoverTimer(force: boolean = false): void {
+    if (!force && this.hoveredCardId !== null) {
+      // Start grace period if not already started
+      if (this.gracePeriodTimer === null) {
+        this.gracePeriodTimer = window.setTimeout(() => {
+          // Grace period over, really cancel now
+          this.cancelHoverTimer(true);
+        }, this.GRACE_PERIOD);
+      }
+      return; // Don't cancel yet
+    }
+
+    // Real cancellation logic
+    if (this.gracePeriodTimer !== null) {
+      clearTimeout(this.gracePeriodTimer);
+      this.gracePeriodTimer = null;
+    }
+    
     if (this.hoverTimer !== null) {
       clearTimeout(this.hoverTimer);
       this.hoverTimer = null;
     }
+    
     this.hoveredCardId = null;
     this.hoverStartTime = 0;
     this.hoverCallback = null;
@@ -239,7 +295,7 @@ export class GestureCursorController {
    * Reset controller state
    */
   reset(): void {
-    this.cancelHoverTimer();
+    this.cancelHoverTimer(true);
     
     // Cancel any pending animation frames
     if (this.rafId !== null) {
@@ -270,7 +326,7 @@ export class GestureCursorController {
       this.startHoverTimer(hoveredCard, hoverDuration, callback);
     } else {
       // Not hovering over any card, cancel timer
-      this.cancelHoverTimer();
+      this.cancelHoverTimer(false); // Allow grace period
     }
   }
 
@@ -292,7 +348,7 @@ export class GestureCursorController {
       this.startHoverTimer(hoveredCard, hoverDuration, callback);
     } else {
       // Not hovering over any card, cancel timer
-      this.cancelHoverTimer();
+      this.cancelHoverTimer(false); // Allow grace period
     }
   }
 }

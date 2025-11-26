@@ -70,7 +70,7 @@ export const SceneSelectionPage = ({
       drawWidth = canvasWidth;
       drawHeight = drawWidth / vRatio;
       startX = 0;
-      startY = (canvas.height - drawHeight) / 2;
+      startY = (canvasHeight - drawHeight) / 2;
     }
 
     return {
@@ -255,8 +255,44 @@ export const SceneSelectionPage = ({
       const cursorPos = cursorControllerRef.current.getCursorPosition();
       const screenPos = getScreenCoordinates(cursorPos.x, cursorPos.y, canvas.width, canvas.height);
       
+      // Define cursor coordinates explicitly
       const cursorX = screenPos.x;
       const cursorY = screenPos.y;
+
+      // DEBUG: Draw bounding boxes to visualize hit areas
+      // Set to true to debug alignment issues
+      const isDebug = false; 
+      
+      if (isDebug) {
+        const sceneCards: SceneCard[] = [];
+        scenes.forEach((scene) => {
+          const element = document.getElementById(`scene-card-${scene.id}`);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            sceneCards.push({
+              id: scene.id,
+              bounds: {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+              },
+            });
+          }
+        });
+
+        sceneCards.forEach(card => {
+          // Draw the bounding box the cursor needs to be inside
+          // Add tolerance visualization (20px default + 10px stickiness)
+          ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(card.bounds.x, card.bounds.y, card.bounds.width, card.bounds.height);
+          
+          // Draw tolerance zone
+          ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+          ctx.strokeRect(card.bounds.x - 20, card.bounds.y - 20, card.bounds.width + 40, card.bounds.height + 40);
+        });
+      }
 
       ctx.beginPath();
       ctx.arc(cursorX, cursorY, 20, 0, 2 * Math.PI);
@@ -286,7 +322,7 @@ export const SceneSelectionPage = ({
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [getScreenCoordinates]);
+  }, [getScreenCoordinates, scenes]); // Added scenes dependency for debug rendering
 
   const isChineseLanguage = i18n.language === 'zh' || i18n.language === 'zh-CN';
 
@@ -308,33 +344,28 @@ export const SceneSelectionPage = ({
             
             const dims = cardDimensions.get(scene.id) || { width: 0, height: 0 };
             
-            // Use a very thick stroke to simulate a solid border background
-            // This creates a "filled" progress effect behind the card
+            // CONFIG: Stroke and Offset for perfect alignment
             const strokeWidth = 24; 
+            const expansion = 12; // Visual expansion desired
             
-            // Expansion amount on each side (half of the total extra size)
-            const expansion = 12;
-            
-            // SVG size needs to be larger to contain the stroke
-            const expandedWidth = dims.width + (expansion * 2);
-            const expandedHeight = dims.height + (expansion * 2);
+            // Shadow compensation: Card has deep shadow
+            const shadowOffset = 3; 
             
             // Perimeter for dash array
-            const perimeter = 2 * (expandedWidth + expandedHeight); 
+            const pathWidth = dims.width + (expansion * 2);
+            const pathHeight = dims.height + (expansion * 2);
+            const perimeter = 2 * (pathWidth + pathHeight); 
             
             const progress = isHovered ? hoverProgress : 0;
             const dashOffset = perimeter * (1 - progress);
             
             // Radius calculation
-            // Outer radius = Inner radius (24px) + Expansion (12px)
-            const outerRadius = 36;
+            // Outer radius (visual) = Inner Radius (12px) + Expansion (12px) = 24px
+            const pathRadius = 12 + expansion; // 24px
             
-            // Position the rect to align with the expansion
-            // Rect coordinates are relative to the SVG
-            // We want the stroke's centerline to be at expansion distance
-            // x, y = expansion
-            const rectX = expansion;
-            const rectY = expansion;
+            // Rect Position
+            const rectX = 12; // Center horizontally in the expansion zone
+            const rectY = 12 + shadowOffset; // Shift down to balance shadow
 
             return (
               <div
@@ -352,10 +383,10 @@ export const SceneSelectionPage = ({
                     y={rectY}
                     width={Math.max(0, dims.width)}
                     height={Math.max(0, dims.height)}
-                    rx={outerRadius}
-                    ry={outerRadius}
+                    rx={pathRadius}
+                    ry={pathRadius}
                     fill="none"
-                    stroke="#76FF03"
+                    stroke="#ff6f00"
                     strokeWidth={strokeWidth}
                     strokeDasharray={perimeter}
                     strokeDashoffset={dashOffset}
