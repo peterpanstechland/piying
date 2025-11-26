@@ -1,20 +1,30 @@
 """
 Session management API endpoints
 """
-from fastapi import APIRouter, HTTPException, status
+import logging
+from pathlib import Path
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from fastapi.responses import FileResponse
 from ..models import (
     CreateSessionRequest,
     CreateSessionResponse,
     SessionStatusResponse,
     Segment,
     UploadSegmentResponse,
+    SessionStatus,
 )
 from ..services import SessionManager
+from ..services.video_renderer import VideoRenderer
+from ..config import ConfigLoader
+from ..utils.logger import log_error_with_context
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
-# Initialize session manager
+# Initialize session manager and config loader
 session_manager = SessionManager()
+config_loader = ConfigLoader()
 
 
 @router.post("", response_model=CreateSessionResponse, status_code=status.HTTP_201_CREATED)
@@ -115,7 +125,10 @@ async def upload_segment(session_id: str, segment_index: int, segment: Segment):
 @router.delete("/{session_id}")
 async def delete_session(session_id: str):
     """
-    Delete a session (for cleanup/cancellation)
+    Delete/cancel a session
+    
+    Marks the session as cancelled before deletion to maintain proper lifecycle tracking.
+    This is used when a user abandons a session or explicitly exits.
     
     Args:
         session_id: Session identifier
@@ -126,6 +139,23 @@ async def delete_session(session_id: str):
     Raises:
         HTTPException: 404 if session not found
     """
+    # Verify session exists
+    session = session_manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found"
+        )
+    
+    # Mark as cancelled before deletion (per Requirements 17.5)
+    try:
+        session_manager.mark_cancelled(session_id)
+        logger.info(f"Session {session_id} marked as cancelled")
+    except Exception as e:
+        logger.error(f"Failed to mark session {session_id} as cancelled: {str(e)}")
+        # Continue with deletion even if marking fails
+    
+    # Delete the session file
     deleted = session_manager.delete_session(session_id)
     if not deleted:
         raise HTTPException(
@@ -133,4 +163,137 @@ async def delete_session(session_id: str):
             detail=f"Session {session_id} not found"
         )
     
-    return {"success": True, "message": "Session deleted successfully"}
+    return {"success": True, "message": "Session cancelled and deleted successfully"}
+
+
+async def _render_video_background(session_id: str):
+    """
+    Background task to render video
+    
+    Args:
+        session_id: Session identifier
+    """
+    try:
+        logger.info(
+            f"Starting background video rendering for session {session_id}",
+            extra={"context": {"session_id": session_id, "event_type": "render_started"}}
+        )
+        
+        # Get session
+        session = session_manager.get_session(session_id)
+        if session is None:
+            logger.error(
+                f"Session {session_id} not found for rendering",
+                extra={"context": {"session_id": session_id, "error_type": "session_not_found"}}
+            )
+            return
+        
+        # Update status to processing
+        session_manager.update_status(session_id, SessionStatus.PROCESSING)
+        logger.info(
+            f"Session {session_id} status updated to PROCESSING",
+            extra={"context": {"session_id": session_id, "status": "processing"}}
+        )
+        
+        # Get scene configuration
+        scene_config = config_loader.get_scene(session.scene_id)
+        if scene_config is None:
+            log_error_with_context(
+                logger,
+                f"Scene configuration not found for scene {session.scene_id}",
+                ValueError(f"Scene {session.scene_id} not found"),
+                session_id=session_id,
+                scene_id=session.scene_id,
+                error_type="scene_not_found"
+            )
+            session_manager.update_status(session_id, SessionStatus.FAILED)
+            return
+        
+        # Initialize renderer
+        renderer = VideoRenderer(scene_config)
+        
+        # Render video
+        output_path = renderer.render_video(session)
+        logger.info(
+            f"Video rendering completed for session {session_id}: {output_path}",
+            extra={"context": {"session_id": session_id, "output_path": output_path}}
+        )
+        
+        # Update session status to done with output path
+        session_manager.update_status(session_id, SessionStatus.DONE, output_path)
+        logger.info(
+            f"Session {session_id} status updated to DONE",
+            extra={"context": {"session_id": session_id, "status": "done"}}
+        )
+        
+    except Exception as e:
+        log_error_with_context(
+            logger,
+            f"Video rendering failed for session {session_id}",
+            e,
+            session_id=session_id,
+            error_type="render_failed"
+        )
+        try:
+            session_manager.update_status(session_id, SessionStatus.FAILED)
+        except Exception as update_error:
+            log_error_with_context(
+                logger,
+                "Failed to update session status to FAILED",
+                update_error,
+                session_id=session_id,
+                error_type="status_update_failed"
+            )
+
+
+@router.post("/{session_id}/render")
+async def trigger_render(session_id: str, background_tasks: BackgroundTasks):
+    """
+    Trigger video rendering for a session
+    
+    Args:
+        session_id: Session identifier
+        background_tasks: FastAPI background tasks
+        
+    Returns:
+        Success response with status
+        
+    Raises:
+        HTTPException: 404 if session not found, 400 if session not ready
+    """
+    # Verify session exists
+    session = session_manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found"
+        )
+    
+    # Check if session has segments
+    if not session.segments:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Session has no segments to render"
+        )
+    
+    # Check if already processing or done
+    if session.status in [SessionStatus.PROCESSING, SessionStatus.DONE]:
+        return {
+            "success": True,
+            "status": session.status.value,
+            "message": f"Session is already {session.status.value}"
+        }
+    
+    # Add rendering task to background
+    background_tasks.add_task(_render_video_background, session_id)
+    
+    logger.info(f"Render task queued for session {session_id}")
+    
+    return {
+        "success": True,
+        "status": "processing",
+        "message": "Rendering started"
+    }
+
+
+

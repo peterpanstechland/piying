@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GestureCursorController, SceneCard } from '../services/gesture-cursor';
 import './SceneSelectionPage.css';
@@ -39,9 +39,39 @@ export const SceneSelectionPage = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneCardsRef = useRef<Map<string, DOMRect>>(new Map());
   const cursorControllerRef = useRef<GestureCursorController>(new GestureCursorController());
+  const cardsContainerRef = useRef<HTMLDivElement>(null);
   
   const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
   const [hoverProgress, setHoverProgress] = useState<number>(0);
+  const [cardDimensions, setCardDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
+
+  // Monitor card dimensions for SVG path calculation
+  useLayoutEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      const newDimensions = new Map(cardDimensions);
+      let hasChanges = false;
+      
+      entries.forEach((entry) => {
+        const id = entry.target.id.replace('scene-card-', '');
+        if (id) {
+          const { width, height } = entry.contentRect;
+          newDimensions.set(id, { width, height });
+          hasChanges = true;
+        }
+      });
+      
+      if (hasChanges) {
+        setCardDimensions(newDimensions);
+      }
+    });
+    
+    scenes.forEach((scene) => {
+      const element = document.getElementById(`scene-card-${scene.id}`);
+      if (element) observer.observe(element);
+    });
+    
+    return () => observer.disconnect();
+  }, [scenes]);
 
   // Update cursor position when hand position changes
   useEffect(() => {
@@ -52,19 +82,22 @@ export const SceneSelectionPage = ({
 
   // Update hover state and progress
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !handPosition) return;
 
     const canvas = canvasRef.current;
     const controller = cursorControllerRef.current;
 
-    // Build scene cards array from DOM elements
+    // Build scene cards array from DOM elements with canvas-relative coordinates
     const sceneCards: SceneCard[] = [];
+    const canvasRect = canvas.getBoundingClientRect();
+    
     sceneCardsRef.current.forEach((bounds, id) => {
+      // Convert screen coordinates to canvas coordinates
       sceneCards.push({
         id,
         bounds: {
-          x: bounds.left,
-          y: bounds.top,
+          x: bounds.left - canvasRect.left,
+          y: bounds.top - canvasRect.top,
           width: bounds.width,
           height: bounds.height,
         },
@@ -73,12 +106,16 @@ export const SceneSelectionPage = ({
 
     // Update hover state
     const updateHover = () => {
+      // Only update if we have valid scene cards
+      if (sceneCards.length === 0) return;
+      
       controller.updateHoverState(
         sceneCards,
-        canvas.width,
-        canvas.height,
+        canvasRect.width,
+        canvasRect.height,
         5000, // 5 second hover duration
         (sceneId) => {
+          console.log('Scene selected via hover:', sceneId);
           if (onSceneSelect) {
             onSceneSelect(sceneId);
           }
@@ -96,7 +133,7 @@ export const SceneSelectionPage = ({
     return () => {
       clearInterval(intervalId);
     };
-  }, [scenes, onSceneSelect]);
+  }, [scenes, onSceneSelect, handPosition]);
 
   // Render video feed to canvas
   useEffect(() => {
@@ -108,12 +145,20 @@ export const SceneSelectionPage = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Set canvas size once
+    canvas.width = 1280;
+    canvas.height = 720;
+
     let animationFrameId: number;
+    let frameCount = 0;
 
     const renderFrame = () => {
-      if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-        canvas.width = videoElement.videoWidth;
-        canvas.height = videoElement.videoHeight;
+      frameCount++;
+      
+      // Render at 15 FPS (skip every other frame)
+      if (frameCount % 2 === 0 && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // Draw video frame
         ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
@@ -181,11 +226,22 @@ export const SceneSelectionPage = ({
           <p className="scene-selection-hint">{t('sceneSelection.hover')}</p>
         </div>
 
-        <div className="scene-cards-container">
+        <div className="scene-cards-container" ref={cardsContainerRef}>
           {scenes.map((scene) => {
             const isHovered = hoveredSceneId === scene.id;
             const sceneName = isChineseLanguage ? scene.name : scene.name_en;
             const sceneDescription = isChineseLanguage ? scene.description : scene.description_en;
+            
+            // Get card dimensions
+            const dims = cardDimensions.get(scene.id) || { width: 0, height: 0 };
+            
+            // Calculate rounded rectangle perimeter (approximate)
+            const r = 20; // border radius
+            const perimeter = 2 * (dims.width + dims.height) - 8 * r + 2 * Math.PI * r;
+            
+            // Calculate dash offset for progress
+            const progress = isHovered ? hoverProgress : 0;
+            const dashOffset = perimeter * (1 - progress);
 
             return (
               <div
@@ -193,18 +249,30 @@ export const SceneSelectionPage = ({
                 id={`scene-card-${scene.id}`}
                 className={`scene-card ${isHovered ? 'hovered' : ''}`}
               >
+                {/* SVG progress border */}
+                <svg className="scene-card-border" width="100%" height="100%">
+                  <rect
+                    x="2"
+                    y="2"
+                    width={Math.max(0, dims.width - 4)}
+                    height={Math.max(0, dims.height - 4)}
+                    rx="20"
+                    ry="20"
+                    fill="none"
+                    stroke="#76FF03"
+                    strokeWidth="4"
+                    strokeDasharray={perimeter}
+                    strokeDashoffset={dashOffset}
+                    style={{
+                      opacity: isHovered ? 1 : 0,
+                      transition: isHovered ? 'none' : 'opacity 0.3s',
+                    }}
+                  />
+                </svg>
+                
                 <div className="scene-icon">{scene.icon}</div>
                 <h2 className="scene-name">{sceneName}</h2>
                 <p className="scene-description">{sceneDescription}</p>
-                
-                {isHovered && (
-                  <div className="hover-progress-container">
-                    <div 
-                      className="hover-progress-bar"
-                      style={{ width: `${hoverProgress * 100}%` }}
-                    />
-                  </div>
-                )}
               </div>
             );
           })}

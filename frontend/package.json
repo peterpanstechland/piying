@@ -5,15 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --project tsconfig.build.json && vite build",
     "preview": "vite preview",
     "test": "jest",
     "test:property": "jest --testMatch='**/*.property.test.ts'"
   },
   "dependencies": {
-    "@mediapipe/camera_utils": "^0.3.1620248357",
-    "@mediapipe/hands": "^0.4.1646424915",
-    "@mediapipe/pose": "^0.5.1675469404",
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
     "axios": "^1.6.2",
     "i18next": "^23.7.6",
     "qrcode.react": "^3.1.0",

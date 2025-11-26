@@ -3,9 +3,13 @@ Session management service for CRUD operations
 """
 import uuid
 import time
+import logging
 from typing import Optional, List
 from ..models import Session, Segment, SessionStatus
 from .storage_manager import StorageManager
+from ..utils.logger import log_session_event
+
+logger = logging.getLogger(__name__)
 
 
 class SessionManager:
@@ -41,6 +45,16 @@ class SessionManager:
             updated_at=time.time()
         )
         self.storage_manager.save_session(session)
+        
+        # Log session creation
+        log_session_event(
+            logger,
+            "created",
+            session_id,
+            scene_id=scene_id,
+            status=session.status.value
+        )
+        
         return session
     
     def get_session(self, session_id: str) -> Optional[Session]:
@@ -104,11 +118,31 @@ class SessionManager:
         if session is None:
             raise ValueError(f"Session {session_id} not found")
         
+        old_status = session.status
         session.status = status
         if output_path is not None:
             session.output_path = output_path
         session.updated_at = time.time()
         self.storage_manager.save_session(session)
+        
+        # Log status change
+        event_type = "status_changed"
+        if status == SessionStatus.DONE:
+            event_type = "completed"
+        elif status == SessionStatus.CANCELLED:
+            event_type = "cancelled"
+        elif status == SessionStatus.FAILED:
+            event_type = "failed"
+        
+        log_session_event(
+            logger,
+            event_type,
+            session_id,
+            scene_id=session.scene_id,
+            old_status=old_status.value,
+            new_status=status.value,
+            output_path=output_path
+        )
     
     def mark_cancelled(self, session_id: str) -> None:
         """
@@ -120,6 +154,7 @@ class SessionManager:
         Raises:
             ValueError: If session not found
         """
+        logger.info(f"Marking session {session_id} as cancelled")
         self.update_status(session_id, SessionStatus.CANCELLED)
     
     def list_sessions(self, status: Optional[SessionStatus] = None) -> List[Session]:

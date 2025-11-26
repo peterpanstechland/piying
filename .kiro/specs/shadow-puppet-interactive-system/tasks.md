@@ -212,7 +212,11 @@
   - **Property 23: Saved frames contain normalized coordinates**
   - **Validates: Requirements 14.3**
 
-- [ ] 10. Implement motion capture UI flow
+- [x] 10. Implement motion capture UI flow
+
+
+
+
   - Create SegmentGuidancePage component
   - Create CountdownPage component with 5-second timer
   - Create RecordingPage component with recording indicator
@@ -221,15 +225,29 @@
   - Add automatic transitions between guidance, countdown, and recording
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.3, 6.1_
 
-- [ ] 10.1 Write property test for countdown trigger
+- [x] 10.1 Write property test for countdown trigger
+
+
   - **Property 5: Countdown triggers automatic recording**
   - **Validates: Requirements 4.4**
 
-- [ ] 10.2 Write property test for re-record behavior
+- [x] 10.2 Write property test for re-record behavior
+
+
+
+
+
   - **Property 6.2: Re-record discards data and resets**
   - **Validates: Requirements 6.2**
 
-- [ ] 11. Implement segment upload and progress tracking
+- [x] 11. Implement segment upload and progress tracking
+
+
+
+
+
+
+
   - Add segment upload after recording completion
   - Implement upload progress indicator
   - Add error handling for upload failures
@@ -237,14 +255,34 @@
   - Add logic to transition to render wait after all segments
   - _Requirements: 5.4, 7.2_
 
-- [ ] 11.1 Write property test for timestamp precision
+- [x] 11.1 Write property test for timestamp precision
+
+
+
+
   - **Property 24: Timestamp precision preserved in upload**
   - **Validates: Requirements 14.4**
 
-- [ ] 12. Checkpoint - Ensure all tests pass
+- [x] 12. Checkpoint - Ensure all tests pass
+
+
+
+
+
+
+
+
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Implement backend video rendering engine
+- [x] 13. Implement backend video rendering engine
+
+
+
+
+
   - Create VideoRenderer class
   - Implement render_video method with OpenCV pipeline
   - Add base video loading and frame iteration
@@ -254,31 +292,47 @@
   - Add video encoding with H.264 codec
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 15.1, 15.2, 15.4_
 
-- [ ] 13.1 Write property test for time window mapping
+- [x] 13.1 Write property test for time window mapping
+
+
   - **Property 11: Rendered video uses correct time windows**
   - **Validates: Requirements 8.2**
 
-- [ ] 13.2 Write property test for rendering completion
+- [x] 13.2 Write property test for rendering completion
+
+
   - **Property 12: Rendering completion updates status and creates file**
   - **Validates: Requirements 8.4**
 
-- [ ] 13.3 Write property test for video resolution
+- [x] 13.3 Write property test for video resolution
+
   - **Property 25: Rendered video matches base video resolution**
   - **Validates: Requirements 15.1**
 
-- [ ] 13.4 Write property test for video frame rate
+- [x] 13.4 Write property test for video frame rate
+
   - **Property 26: Rendered video maintains target frame rate**
   - **Validates: Requirements 15.2**
 
-- [ ] 13.5 Write property test for video codec
+- [x] 13.5 Write property test for video codec
+
   - **Property 27: Rendered video uses H.264 codec**
   - **Validates: Requirements 15.4**
 
-- [ ] 13.6 Write property test for scene parameters
+- [x] 13.6 Write property test for scene parameters
+
   - **Property 37: Rendering applies scene-specific parameters**
   - **Validates: Requirements 20.4**
 
-- [ ] 14. Implement render trigger and async processing
+- [x] 14. Implement render trigger and async processing
+
+
+
+
+
+
+
+
   - Add POST /api/sessions/{session_id}/render endpoint
   - Implement async video rendering with background task
   - Add status updates during rendering (processing -> done/failed)
@@ -287,15 +341,24 @@
   - Set correct content-type headers for video responses
   - _Requirements: 8.1, 8.4, 8.5, 15.5, 18.3_
 
-- [ ] 14.1 Write property test for rendering failure handling
+- [x] 14.1 Write property test for rendering failure handling
+
+
+
   - **Property 30: Rendering failures update status and log**
   - **Validates: Requirements 18.3**
 
-- [ ] 14.2 Write property test for video content-type
+- [x] 14.2 Write property test for video content-type
+
   - **Property 28: Video responses include correct content-type**
   - **Validates: Requirements 15.5**
 
-- [ ] 15. Implement frontend render wait and result pages
+- [x] 15. Implement frontend render wait and result pages
+
+
+
+
+
   - Create RenderWaitPage component with loading animation
   - Implement status polling with 2-second intervals
   - Create FinalResultPage component
@@ -304,23 +367,34 @@
   - Add automatic reset timer (30 seconds)
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 10.1, 10.2, 10.4_
 
-- [ ] 15.1 Write property test for video URL format
+- [x] 15.1 Write property test for video URL format
+
+
   - **Property 13: Video URL follows naming convention**
   - **Validates: Requirements 9.4**
 
-- [ ] 15.2 Write property test for QR code URL format
+- [x] 15.2 Write property test for QR code URL format
+
+
   - **Property 14: QR code contains correct URL format**
   - **Validates: Requirements 10.2**
 
-- [ ] 15.3 Write property test for polling interval
+- [x] 15.3 Write property test for polling interval
+
+
   - **Property 9.5: Polling interval not exceeding 2 seconds**
   - **Validates: Requirements 9.5**
 
-- [ ] 15.4 Write property test for inactivity timeout
+- [x] 15.4 Write property test for inactivity timeout
+
+
   - **Property 10.4: Inactivity timeout triggers reset**
   - **Validates: Requirements 10.4**
 
-- [ ] 16. Implement timeout and exit gesture handling
+- [-] 16. Implement timeout and exit gesture handling
+
+
+
   - Add person absence detection with configurable timeouts
   - Implement timeout countdown warning UI
   - Add timeout cancellation on person return
@@ -329,38 +403,72 @@
   - Implement session cancellation on exit
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 16.1, 16.2, 16.3, 16.4, 16.5_
 
-- [ ] 16.1 Write property test for timeout logic
+- [x] 16.1 Write property test for timeout logic
+
+
   - **Property 15: Inactivity timeout triggers reset**
   - **Validates: Requirements 11.1, 11.2**
 
-- [ ] 16.2 Write property test for timeout cancellation
+- [x] 16.2 Write property test for timeout cancellation
+
+
+
+
+
   - **Property 16: Timeout cancellation on user return**
   - **Validates: Requirements 11.5**
 
-- [ ] 16.3 Write property test for exit gesture detection
+- [x] 16.3 Write property test for exit gesture detection
+
+
+
+
+
+
+
+
   - **Property 17: Exit gesture requires sustained pose**
   - **Validates: Requirements 16.1**
 
-- [ ] 16.4 Write property test for exit confirmation
+- [x] 16.4 Write property test for exit confirmation
+
+
+
+
+
   - **Property 18: Exit confirmation requires additional duration**
   - **Validates: Requirements 16.3**
 
-- [ ] 17. Implement session cleanup and reset logic
+- [x] 17. Implement session cleanup and reset logic
+
+
+
+
+
   - Add frontend state cleanup on reset
   - Implement backend session cancellation endpoint
   - Add session status update to "cancelled"
   - Implement resource cleanup for abandoned sessions
   - _Requirements: 11.3, 17.2, 17.5_
 
-- [ ] 17.1 Write property test for reset cleanup
+- [x] 17.1 Write property test for reset cleanup
+
+
   - **Property 19: Reset clears frontend state and notifies backend**
   - **Validates: Requirements 17.2**
 
-- [ ] 17.2 Write property test for abandoned session status
+- [x] 17.2 Write property test for abandoned session status
+
+
   - **Property 20: Abandoned sessions marked as cancelled**
   - **Validates: Requirements 17.5**
 
-- [ ] 18. Implement multi-person tracking logic
+- [x] 18. Implement multi-person tracking logic
+
+
+
+
+
   - Add multi-person detection in CameraDetectionService
   - Implement center-person selection algorithm
   - Add tracking persistence during recording
@@ -369,23 +477,39 @@
   - Add visual indicator for tracked person
   - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5_
 
-- [ ] 18.1 Write property test for center person tracking
+- [x] 18.1 Write property test for center person tracking
+
+
   - **Property 32: Multi-person detection tracks center person**
   - **Validates: Requirements 19.1**
 
-- [ ] 18.2 Write property test for tracking switch
+- [x] 18.2 Write property test for tracking switch
+
+
   - **Property 33: Tracking switches when tracked person leaves**
   - **Validates: Requirements 19.2**
 
-- [ ] 18.3 Write property test for recording persistence
+- [x] 18.3 Write property test for recording persistence
+
+
   - **Property 34: Recording persists original person tracking**
   - **Validates: Requirements 19.3**
 
-- [ ] 18.4 Write property test for departure pause
+- [x] 18.4 Write property test for departure pause
+
+
   - **Property 35: Tracked person departure pauses recording**
   - **Validates: Requirements 19.4**
 
-- [ ] 19. Implement storage cleanup and disk management
+- [x] 19. Implement storage cleanup and disk management
+
+
+
+
+
+
+
+
   - Create cleanup scheduler with APScheduler
   - Implement daily cleanup for files older than 7 days
   - Add disk space monitoring on backend startup
@@ -394,23 +518,38 @@
   - Ensure metadata deletion with video files
   - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5_
 
-- [ ] 19.1 Write property test for age-based cleanup
+- [x] 19.1 Write property test for age-based cleanup
+
+
   - **Property 38: Cleanup deletes files older than threshold**
   - **Validates: Requirements 21.2**
 
-- [ ] 19.2 Write property test for emergency cleanup
+- [x] 19.2 Write property test for emergency cleanup
+
+
   - **Property 39: Emergency cleanup frees space to threshold**
   - **Validates: Requirements 21.3**
 
-- [ ] 19.3 Write property test for metadata deletion
+- [x] 19.3 Write property test for metadata deletion
+
+
   - **Property 40: Video deletion removes associated metadata**
   - **Validates: Requirements 21.4**
 
-- [ ] 19.4 Write property test for cleanup logging
+- [x] 19.4 Write property test for cleanup logging
+
+
   - **Property 41: Cleanup logs metrics**
   - **Validates: Requirements 21.5**
 
-- [ ] 20. Implement logging and monitoring
+- [x] 20. Implement logging and monitoring
+
+
+
+
+
+
+
   - Set up structured logging with Python logging module
   - Add log entries for all key operations
   - Implement error logging with stack traces
@@ -419,23 +558,38 @@
   - Create GET /api/health endpoint with system metrics
   - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5_
 
-- [ ] 20.1 Write property test for log entry structure
+- [x] 20.1 Write property test for log entry structure
+
+
   - **Property 42: Log entries contain required fields**
   - **Validates: Requirements 22.1**
 
-- [ ] 20.2 Write property test for error log completeness
+- [x] 20.2 Write property test for error log completeness
+
+
+
+
   - **Property 43: Error logs include stack traces**
   - **Validates: Requirements 22.2**
 
-- [ ] 20.3 Write property test for lifecycle logging
+- [x] 20.3 Write property test for lifecycle logging
+
+
   - **Property 44: Session lifecycle events are logged**
   - **Validates: Requirements 22.3**
 
-- [ ] 20.4 Write property test for render logging
+- [x] 20.4 Write property test for render logging
+
+
   - **Property 45: Render completion logs performance metrics**
   - **Validates: Requirements 22.4**
 
-- [ ] 21. Implement internationalization (i18n)
+- [x] 21. Implement internationalization (i18n)
+
+
+
+
+
   - Set up i18next in frontend
   - Create language resource files (en.json, zh.json)
   - Implement language loading from settings
@@ -445,19 +599,30 @@
   - Add logging for missing translation keys
   - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5_
 
-- [ ] 21.1 Write property test for translation source
+- [x] 21.1 Write property test for translation source
+
+
   - **Property 46: UI text comes from translation files**
   - **Validates: Requirements 23.2**
 
-- [ ] 21.2 Write property test for language switching
+- [x] 21.2 Write property test for language switching
+
+
   - **Property 47: Language change updates UI without reload**
   - **Validates: Requirements 23.3**
 
-- [ ] 21.3 Write property test for translation fallback
+- [x] 21.3 Write property test for translation fallback
+
+
   - **Property 48: Missing translations fall back to English**
   - **Validates: Requirements 23.4**
 
-- [ ] 22. Create sample assets and test data
+- [x] 22. Create sample assets and test data
+
+
+
+
+
   - Create 3 sample base videos (30 seconds each) for scenes A, B, C
   - Design scene icons and theme elements
   - Create example pose images for segment guidance
@@ -465,7 +630,12 @@
   - Set up complete scenes.json configuration
   - _Requirements: 3.1, 3.2, 4.2_
 
-- [ ] 23. Implement error handling and user feedback
+- [x] 23. Implement error handling and user feedback
+
+
+
+
+
   - Add error boundary components in React
   - Create error message components with retry options
   - Implement toast notifications for transient errors
@@ -475,7 +645,11 @@
   - Test network failure scenarios
   - _Requirements: 18.1, 18.2, 18.4_
 
-- [ ] 24. Performance optimization and testing
+- [x] 24. Performance optimization and testing
+
+
+
+
   - Optimize MediaPipe detection to maintain 20+ FPS
   - Add requestAnimationFrame for smooth cursor updates
   - Implement throttling for detection callbacks
@@ -484,8 +658,13 @@
   - Measure and optimize cursor latency
   - Test system stability over extended periods
   - _Requirements: 1.3, 2.5, 5.5, 12.1, 12.2, 12.3, 17.1, 17.3_
+-
 
-- [ ] 25. Final integration and deployment setup
+- [x] 25. Final integration and deployment setup
+
+
+
+
   - Create production build scripts for frontend
   - Set up backend startup script with uvicorn
   - Create systemd service file for auto-start
@@ -496,5 +675,43 @@
   - Verify QR code download works from mobile devices
   - _Requirements: 10.3, 10.5_
 
-- [ ] 26. Final checkpoint - Ensure all tests pass
-  - Ensure all tests pass, ask the user if questions arise.
+- [x] 26. Run and verify backend tests
+
+
+
+
+  - Run pytest for all backend tests
+  - Verify all property-based tests pass
+  - Verify all unit tests pass
+  - Check test coverage report
+  - Fix any failing backend tests
+  - _Requirements: All backend requirements_
+
+- [x] 27. Run and verify frontend tests
+
+
+
+
+
+
+
+  - Run npm test for all frontend tests
+  - Verify all property-based tests pass
+  - Verify all unit tests pass
+  - Check test coverage report
+  - Fix any failing frontend tests
+  - _Requirements: All frontend requirements_
+
+- [x] 28. End-to-end integration verification
+
+
+
+
+  - Test complete user flow from idle to video download
+  - Verify camera detection and gesture controls work
+  - Test scene selection and motion capture
+  - Verify video rendering and QR code generation
+  - Test timeout and exit gesture handling
+  - Verify multi-person tracking scenarios
+  - Test error handling and recovery
+  - _Requirements: 1.1-23.5_

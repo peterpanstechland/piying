@@ -136,13 +136,17 @@ class StorageManager:
         # Clean up old session files
         for session_file in self.sessions_path.glob("*.json"):
             if session_file.stat().st_mtime < cutoff_time:
-                file_size = session_file.stat().st_size
+                session_file_size = session_file.stat().st_size
                 session_id = session_file.stem
+                
+                # Get video file size before deletion
+                video_file = self.outputs_path / f"final_{session_id}.mp4"
+                video_file_size = video_file.stat().st_size if video_file.exists() else 0
                 
                 # Delete session and associated video
                 if self.delete_session(session_id):
                     files_deleted += 1
-                    space_freed += file_size
+                    space_freed += session_file_size + video_file_size
         
         # Clean up orphaned video files
         for video_file in self.outputs_path.glob("final_*.mp4"):

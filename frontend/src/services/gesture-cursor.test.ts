@@ -4,7 +4,13 @@ describe('GestureCursorController', () => {
   let controller: GestureCursorController;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     controller = new GestureCursorController();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   describe('updateCursorPosition', () => {
@@ -18,6 +24,8 @@ describe('GestureCursorController', () => {
 
     it('should clamp coordinates to [0, 1] range', () => {
       controller.updateCursorPosition({ x: 1.5, y: -0.5 });
+      controller.forceUpdatePosition(); // Force immediate update for testing
+      
       const position = controller.getCursorPosition();
       
       expect(position.x).toBe(1);
@@ -55,6 +63,8 @@ describe('GestureCursorController', () => {
 
     it('should detect hover when cursor is inside a card', () => {
       controller.updateCursorPosition({ x: 0.25, y: 0.25 }); // 200, 150 on 800x600 canvas
+      controller.forceUpdatePosition(); // Force immediate update for testing
+      
       const hoveredCard = controller.checkHover(sceneCards, 800, 600);
       
       expect(hoveredCard).toBe('scene1');
@@ -86,13 +96,15 @@ describe('GestureCursorController', () => {
       expect(controller.getHoverProgress()).toBeLessThanOrEqual(1);
     });
 
-    it('should call callback after hover duration', (done) => {
-      const callback = jest.fn(() => {
-        expect(callback).toHaveBeenCalledWith('scene1');
-        done();
-      });
+    it('should call callback after hover duration', () => {
+      const callback = jest.fn();
       
       controller.startHoverTimer('scene1', 100, callback);
+      
+      // Advance timers to trigger the callback
+      jest.advanceTimersByTime(100);
+      
+      expect(callback).toHaveBeenCalledWith('scene1');
     });
 
     it('should cancel hover timer', () => {
@@ -132,6 +144,8 @@ describe('GestureCursorController', () => {
       const callback = jest.fn();
       
       controller.updateCursorPosition({ x: 0.25, y: 0.25 }); // Inside scene1
+      controller.forceUpdatePosition(); // Force immediate update for testing
+      
       controller.updateHoverState(sceneCards, 800, 600, 5000, callback);
       
       expect(controller.getHoveredCardId()).toBe('scene1');
@@ -142,11 +156,13 @@ describe('GestureCursorController', () => {
       
       // Start hovering
       controller.updateCursorPosition({ x: 0.25, y: 0.25 });
+      controller.forceUpdatePosition(); // Force immediate update for testing
       controller.updateHoverState(sceneCards, 800, 600, 5000, callback);
       expect(controller.getHoveredCardId()).toBe('scene1');
       
       // Move outside
       controller.updateCursorPosition({ x: 0.05, y: 0.05 });
+      controller.forceUpdatePosition(); // Force immediate update for testing
       controller.updateHoverState(sceneCards, 800, 600, 5000, callback);
       expect(controller.getHoveredCardId()).toBeNull();
     });
@@ -170,10 +186,11 @@ describe('GestureCursorController', () => {
   });
 
   describe('getCursorLatency', () => {
-    it('should return latency since last update', async () => {
+    it('should return latency since last update', () => {
       controller.updateCursorPosition({ x: 0.5, y: 0.5 });
       
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Advance time by 50ms
+      jest.advanceTimersByTime(50);
       
       const latency = controller.getCursorLatency();
       expect(latency).toBeGreaterThanOrEqual(40);

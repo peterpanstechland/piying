@@ -38,18 +38,17 @@ const initializeI18n = async () => {
       },
       // Log missing translation keys
       saveMissing: true,
-      missingKeyHandler: (lngs, ns, key, fallbackValue) => {
+      missingKeyHandler: (lngs, _ns, key, _fallbackValue) => {
         console.warn(`Missing translation key: ${key} for language: ${lngs[0]}`);
       },
     });
 
   // Render app after i18n is initialized
+  // Note: StrictMode disabled for camera performance
   ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <I18nextProvider i18n={i18n}>
-        <App />
-      </I18nextProvider>
-    </React.StrictMode>,
+    <I18nextProvider i18n={i18n}>
+      <App />
+    </I18nextProvider>,
   );
 };
 

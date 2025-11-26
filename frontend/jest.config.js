@@ -5,6 +5,7 @@ export default {
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '^.*/config/env$': '<rootDir>/src/config/__mocks__/env.ts',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [
@@ -19,5 +20,17 @@ export default {
       lines: 70,
       statements: 70,
     },
+  },
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'react',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    },
+  },
+  testEnvironmentOptions: {
+    customExportConditions: ['node', 'node-addons'],
   },
 };

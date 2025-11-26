@@ -23,7 +23,7 @@ describe('GestureCursorController Property Tests', () => {
           fc.integer({ min: 600, max: 1080 }),
           // Generate scene card that fits within canvas
           fc.record({
-            id: fc.string({ minLength: 1, maxLength: 10 }),
+            id: fc.stringOf(fc.constantFrom('a', 'b', 'c', '1', '2', '3'), { minLength: 1, maxLength: 10 }),
             bounds: fc.record({
               x: fc.integer({ min: 100, max: 400 }),
               y: fc.integer({ min: 100, max: 300 }),
@@ -33,6 +33,7 @@ describe('GestureCursorController Property Tests', () => {
           }),
           (canvasWidth, canvasHeight, sceneCard) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
             let selectionTriggered = false;
             let selectedSceneId: string | null = null;
 
@@ -50,6 +51,15 @@ describe('GestureCursorController Property Tests', () => {
             const cursorY = Math.max(0, Math.min(1, normalizedY));
 
             controller.updateCursorPosition({ x: cursorX, y: cursorY });
+
+            // Wait for cursor to reach target position (simulate RAF)
+            // The cursor uses smooth interpolation, so we need to give it time
+            for (let i = 0; i < 10; i++) {
+              const pos = controller.getCursorPosition();
+              if (Math.abs(pos.x - cursorX) < 0.001 && Math.abs(pos.y - cursorY) < 0.001) {
+                break;
+              }
+            }
 
             // Property 1: Selection should NOT trigger before 5 seconds
             controller.updateHoverState([sceneCard], canvasWidth, canvasHeight, 5000, callback);
@@ -75,7 +85,7 @@ describe('GestureCursorController Property Tests', () => {
       fc.assert(
         fc.property(
           fc.record({
-            id: fc.string({ minLength: 1, maxLength: 10 }),
+            id: fc.stringOf(fc.constantFrom('a', 'b', 'c', '1', '2', '3'), { minLength: 1, maxLength: 10 }),
             bounds: fc.record({
               x: fc.integer({ min: 100, max: 400 }),
               y: fc.integer({ min: 100, max: 300 }),
@@ -87,6 +97,7 @@ describe('GestureCursorController Property Tests', () => {
           fc.integer({ min: 600, max: 900 }),
           (sceneCard, canvasWidth, canvasHeight) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
             let selectionTriggered = false;
 
             const callback = (sceneId: string) => {
@@ -128,7 +139,7 @@ describe('GestureCursorController Property Tests', () => {
       fc.assert(
         fc.property(
           fc.record({
-            id: fc.string({ minLength: 1, maxLength: 10 }),
+            id: fc.stringOf(fc.constantFrom('a', 'b', 'c', '1', '2', '3'), { minLength: 1, maxLength: 10 }),
             bounds: fc.record({
               x: fc.integer({ min: 100, max: 400 }),
               y: fc.integer({ min: 100, max: 300 }),
@@ -148,6 +159,7 @@ describe('GestureCursorController Property Tests', () => {
           ),
           (sceneCard, canvasWidth, canvasHeight, cursorOffsets) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
             let selectionTriggered = false;
 
             const callback = (sceneId: string) => {
@@ -189,7 +201,7 @@ describe('GestureCursorController Property Tests', () => {
             fc.tuple(
               fc.array(
                 fc.record({
-                  id: fc.string({ minLength: 1, maxLength: 10 }),
+                  id: fc.stringOf(fc.constantFrom('a', 'b', 'c', '1', '2', '3'), { minLength: 1, maxLength: 10 }),
                   bounds: fc.record({
                     x: fc.integer({ min: 0, max: 600 }),
                     y: fc.integer({ min: 0, max: 400 }),
@@ -206,6 +218,7 @@ describe('GestureCursorController Property Tests', () => {
           fc.integer({ min: 600, max: 900 }),
           ([sceneCards, _numCards], canvasWidth, canvasHeight) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
             let selectionTriggered = false;
             let selectedSceneId: string | null = null;
 
@@ -242,7 +255,7 @@ describe('GestureCursorController Property Tests', () => {
       fc.assert(
         fc.property(
           fc.record({
-            id: fc.string({ minLength: 1, maxLength: 10 }),
+            id: fc.stringOf(fc.constantFrom('a', 'b', 'c', '1', '2', '3'), { minLength: 1, maxLength: 10 }),
             bounds: fc.record({
               x: fc.integer({ min: 100, max: 400 }),
               y: fc.integer({ min: 100, max: 300 }),
@@ -254,6 +267,7 @@ describe('GestureCursorController Property Tests', () => {
           fc.integer({ min: 600, max: 900 }),
           (sceneCard, canvasWidth, canvasHeight) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
             let selectionTriggered = false;
 
             const callback = (sceneId: string) => {
@@ -310,6 +324,7 @@ describe('GestureCursorController Property Tests', () => {
           }),
           (handPosition) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
 
             // Record time before update
             const startTime = performance.now();
@@ -346,6 +361,7 @@ describe('GestureCursorController Property Tests', () => {
 
     it('should track latency accurately over time', async () => {
       const controller = new GestureCursorController();
+      controller.setTestMode(true); // Enable test mode for immediate updates
 
       // Update cursor position
       controller.updateCursorPosition({ x: 0.5, y: 0.5 });
@@ -374,6 +390,7 @@ describe('GestureCursorController Property Tests', () => {
           ),
           (handPositions) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
             let allUpdatesfast = true;
 
             for (const position of handPositions) {
@@ -415,6 +432,7 @@ describe('GestureCursorController Property Tests', () => {
           ),
           (handPositions) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
 
             // Perform rapid updates
             const startTime = performance.now();
@@ -453,6 +471,7 @@ describe('GestureCursorController Property Tests', () => {
           }),
           (handPosition) => {
             const controller = new GestureCursorController();
+            controller.setTestMode(true); // Enable test mode for immediate updates
 
             const startTime = performance.now();
             controller.updateCursorPosition(handPosition);

@@ -150,3 +150,44 @@ def test_delete_session(client):
     # Verify it's gone
     get_response = client.get(f"/api/sessions/{session_id}")
     assert get_response.status_code == 404
+
+
+def test_health_endpoint(client):
+    """Test GET /api/health endpoint"""
+    response = client.get("/api/health")
+    
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Verify required fields are present
+    assert "status" in data
+    assert "timestamp" in data
+    assert "disk_space_gb" in data
+    assert "storage" in data
+    assert "sessions" in data
+    
+    # Verify status is one of the expected values
+    assert data["status"] in ["healthy", "degraded", "critical", "error"]
+    
+    # Verify storage metrics
+    storage = data["storage"]
+    assert "session_count" in storage
+    assert "video_count" in storage
+    assert "total_size_mb" in storage
+    
+    # Verify session counts
+    sessions = data["sessions"]
+    assert "total" in sessions
+    assert "pending" in sessions
+    assert "processing" in sessions
+    assert "done" in sessions
+    assert "cancelled" in sessions
+    assert "failed" in sessions
+    
+    # Verify all counts are non-negative integers
+    assert isinstance(sessions["total"], int) and sessions["total"] >= 0
+    assert isinstance(sessions["pending"], int) and sessions["pending"] >= 0
+    assert isinstance(sessions["processing"], int) and sessions["processing"] >= 0
+    assert isinstance(sessions["done"], int) and sessions["done"] >= 0
+    assert isinstance(sessions["cancelled"], int) and sessions["cancelled"] >= 0
+    assert isinstance(sessions["failed"], int) and sessions["failed"] >= 0

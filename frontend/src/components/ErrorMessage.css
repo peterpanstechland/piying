@@ -1,0 +1,226 @@
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 40px 20px;
+}
+
+.error-message-content {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.error-message-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.error-message-title {
+  color: #ff4444;
+  font-size: 28px;
+  font-weight: bold;
+  margin: 0 0 16px 0;
+}
+
+.error-message-text {
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+  white-space: pre-line;
+}
+
+.error-message-details {
+  margin: 20px 0;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.error-message-details summary {
+  color: #ffffff;
+  cursor: pointer;
+  padding: 10px;
+  font-size: 14px;
+  user-select: none;
+  list-style: none;
+}
+
+.error-message-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.error-message-details summary::before {
+  content: '▶ ';
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.error-message-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.error-message-details summary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.error-message-details-content {
+  color: #ffcccc;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 10px 0 0 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.error-message-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.error-message-button {
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.error-message-button-primary {
+  background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+  color: white;
+}
+
+.error-message-button-primary:hover {
+  background: linear-gradient(135deg, #ff6666 0%, #ff0000 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+}
+
+.error-message-button-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.error-message-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.error-message-button-tertiary {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.error-message-button-tertiary:hover {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.error-message-button:active {
+  transform: translateY(0);
+}
+
+/* Inline error message styles */
+.inline-error-message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.inline-error-icon {
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.inline-error-text {
+  flex: 1;
+  color: #ff8888;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.inline-error-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.inline-error-button {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inline-error-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .error-message-content {
+    padding: 30px 20px;
+  }
+
+  .error-message-icon {
+    font-size: 48px;
+  }
+
+  .error-message-title {
+    font-size: 24px;
+  }
+
+  .error-message-text {
+    font-size: 14px;
+  }
+
+  .error-message-actions {
+    flex-direction: column;
+  }
+
+  .error-message-button {
+    width: 100%;
+    min-width: auto;
+  }
+}

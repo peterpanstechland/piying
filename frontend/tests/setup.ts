@@ -1,5 +1,32 @@
 import '@testing-library/jest-dom';
 
+// Mock import.meta for Jest
+// @ts-ignore
+global.import = {
+  meta: {
+    env: {
+      DEV: true,
+      PROD: false,
+      VITE_API_BASE_URL: 'http://localhost:8000',
+    },
+  },
+};
+
+// Also mock it on globalThis for better compatibility
+Object.defineProperty(globalThis, 'import', {
+  value: {
+    meta: {
+      env: {
+        DEV: true,
+        PROD: false,
+        VITE_API_BASE_URL: 'http://localhost:8000',
+      },
+    },
+  },
+  writable: true,
+  configurable: true,
+});
+
 // Mock MediaPipe for tests
 global.MediaPipe = {
   Pose: jest.fn(),

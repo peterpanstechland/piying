@@ -8,24 +8,34 @@
       "description_en": "Show your martial arts moves",
       "base_video_path": "assets/scenes/sceneA_base.mp4",
       "icon": "🥋",
+      "icon_image": "assets/images/sceneA_icon.png",
       "segments": [
         {
           "duration": 8,
           "path_type": "enter_left",
           "offset_start": [-200, 0],
-          "offset_end": [0, 0]
+          "offset_end": [0, 0],
+          "guidance_image": "assets/images/sceneA_segment1_guide.png",
+          "guidance_text": "摆出武术起势，双手抱拳",
+          "guidance_text_en": "Strike a martial arts opening stance with fists together"
         },
         {
           "duration": 10,
           "path_type": "static",
           "offset_start": [0, 0],
-          "offset_end": [0, 0]
+          "offset_end": [0, 0],
+          "guidance_image": "assets/images/sceneA_segment2_guide.png",
+          "guidance_text": "展示你的武术动作：踢腿、出拳、跳跃",
+          "guidance_text_en": "Show your martial arts moves: kicks, punches, jumps"
         },
         {
           "duration": 12,
           "path_type": "exit_right",
           "offset_start": [0, 0],
-          "offset_end": [200, -100]
+          "offset_end": [200, -100],
+          "guidance_image": "assets/images/sceneA_segment3_guide.png",
+          "guidance_text": "以收势动作结束，双手抱拳鞠躬",
+          "guidance_text_en": "End with a closing stance, fists together and bow"
         }
       ]
     },
@@ -37,24 +47,34 @@
       "description_en": "Show your dance moves",
       "base_video_path": "assets/scenes/sceneB_base.mp4",
       "icon": "💃",
+      "icon_image": "assets/images/sceneB_icon.png",
       "segments": [
         {
           "duration": 10,
           "path_type": "enter_center",
           "offset_start": [0, 200],
-          "offset_end": [0, 0]
+          "offset_end": [0, 0],
+          "guidance_image": "assets/images/sceneB_segment1_guide.png",
+          "guidance_text": "优雅地进入舞台，双臂展开",
+          "guidance_text_en": "Enter the stage gracefully with arms extended"
         },
         {
           "duration": 15,
           "path_type": "static",
           "offset_start": [0, 0],
-          "offset_end": [0, 0]
+          "offset_end": [0, 0],
+          "guidance_image": "assets/images/sceneB_segment2_guide.png",
+          "guidance_text": "展示你的舞蹈：旋转、跳跃、摆动",
+          "guidance_text_en": "Show your dance: spin, jump, sway"
         },
         {
           "duration": 5,
           "path_type": "exit_down",
           "offset_start": [0, 0],
-          "offset_end": [0, 200]
+          "offset_end": [0, 200],
+          "guidance_image": "assets/images/sceneB_segment3_guide.png",
+          "guidance_text": "以优美的姿势结束，向观众致意",
+          "guidance_text_en": "End with a graceful pose and acknowledge the audience"
         }
       ]
     },
@@ -66,30 +86,43 @@
       "description_en": "Tell your story",
       "base_video_path": "assets/scenes/sceneC_base.mp4",
       "icon": "📖",
+      "icon_image": "assets/images/sceneC_icon.png",
       "segments": [
         {
           "duration": 6,
           "path_type": "enter_right",
           "offset_start": [200, 0],
-          "offset_end": [100, 0]
+          "offset_end": [100, 0],
+          "guidance_image": "assets/images/sceneC_segment1_guide.png",
+          "guidance_text": "角色登场，用手势表达惊讶或好奇",
+          "guidance_text_en": "Character enters, use gestures to express surprise or curiosity"
         },
         {
           "duration": 12,
           "path_type": "walk_left",
           "offset_start": [100, 0],
-          "offset_end": [-100, 0]
+          "offset_end": [-100, 0],
+          "guidance_image": "assets/images/sceneC_segment2_guide.png",
+          "guidance_text": "边走边讲故事，用手势和身体语言表达",
+          "guidance_text_en": "Walk and tell your story with gestures and body language"
         },
         {
           "duration": 8,
           "path_type": "static",
           "offset_start": [-100, 0],
-          "offset_end": [-100, 0]
+          "offset_end": [-100, 0],
+          "guidance_image": "assets/images/sceneC_segment3_guide.png",
+          "guidance_text": "故事高潮，用夸张的动作表达情感",
+          "guidance_text_en": "Story climax, use exaggerated movements to express emotion"
         },
         {
           "duration": 4,
           "path_type": "exit_left",
           "offset_start": [-100, 0],
-          "offset_end": [-300, 0]
+          "offset_end": [-300, 0],
+          "guidance_image": "assets/images/sceneC_segment4_guide.png",
+          "guidance_text": "角色离场，挥手告别",
+          "guidance_text_en": "Character exits, wave goodbye"
         }
       ]
     }

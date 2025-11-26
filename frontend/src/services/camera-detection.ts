@@ -1,6 +1,5 @@
-import { Pose, Results as PoseResults, POSE_CONNECTIONS } from '@mediapipe/pose';
-import { Hands, Results as HandsResults } from '@mediapipe/hands';
-import { Camera } from '@mediapipe/camera_utils';
+import { VisionManager } from './VisionManager';
+import type { PoseLandmarkerResult, HandLandmarkerResult, NormalizedLandmark } from '@mediapipe/tasks-vision';
 
 export interface PoseLandmark {
   x: number;
@@ -30,21 +29,28 @@ export type DetectionCallback = (result: DetectionResult) => void;
 
 export class CameraDetectionService {
   private videoElement: HTMLVideoElement | null = null;
-  private pose: Pose | null = null;
-  private hands: Hands | null = null;
-  private camera: Camera | null = null;
+  private visionManager: VisionManager | null = null;
   private callback: DetectionCallback | null = null;
   private isInitialized = false;
   private isDetecting = false;
   
   // Detection state
-  private lastPoseResult: PoseResults | null = null;
-  private lastHandsResult: HandsResults | null = null;
+  private lastPoseResult: PoseLandmarkerResult | null = null;
+  private lastHandsResult: HandLandmarkerResult | null = null;
+  
+  // Animation frame loop
+  private animationFrameId: number | null = null;
   
   // Multi-person tracking state
   private trackedPersonIndex: number = -1;
   private isRecording: boolean = false;
   private recordingStartPersonIndex: number = -1;
+  
+  // Performance optimization
+  private lastCallbackTime: number = 0;
+  private callbackThrottleMs: number = 33; // ~30 FPS max callback rate
+  private rafId: number | null = null;
+  private pendingCallback: boolean = false;
 
   /**
    * Initialize camera and MediaPipe models
@@ -58,49 +64,13 @@ export class CameraDetectionService {
       // Create video element
       this.videoElement = document.createElement('video');
       this.videoElement.style.display = 'none';
+      this.videoElement.playsInline = true;
+      this.videoElement.muted = true;
       document.body.appendChild(this.videoElement);
 
-      // Initialize MediaPipe Pose
-      this.pose = new Pose({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-        },
-      });
-
-      this.pose.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        smoothSegmentation: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-
-      this.pose.onResults((results: PoseResults) => {
-        this.lastPoseResult = results;
-        // Process results immediately when pose is detected
-        this.processDetectionResults();
-      });
-
-      // Initialize MediaPipe Hands
-      this.hands = new Hands({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        },
-      });
-
-      this.hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-
-      this.hands.onResults((results: HandsResults) => {
-        this.lastHandsResult = results;
-        // Process results immediately when hands are detected
-        this.processDetectionResults();
-      });
+      // Initialize VisionManager (singleton)
+      this.visionManager = VisionManager.getInstance();
+      await this.visionManager.initialize();
 
       // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -112,9 +82,20 @@ export class CameraDetectionService {
       });
 
       this.videoElement.srcObject = stream;
+      
+      // Wait for video to be ready
+      await new Promise<void>((resolve) => {
+        if (this.videoElement) {
+          this.videoElement.onloadeddata = () => {
+            resolve();
+          };
+        }
+      });
+      
       await this.videoElement.play();
 
       this.isInitialized = true;
+      console.log('✅ Camera Detection Service Initialized');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to initialize camera detection: ${errorMessage}`);
@@ -132,21 +113,8 @@ export class CameraDetectionService {
     this.callback = callback;
     this.isDetecting = true;
 
-    // Start camera processing
-    if (this.videoElement && this.pose && this.hands) {
-      this.camera = new Camera(this.videoElement, {
-        onFrame: async () => {
-          if (this.videoElement && this.pose && this.hands && this.isDetecting) {
-            await this.pose.send({ image: this.videoElement });
-            await this.hands.send({ image: this.videoElement });
-          }
-        },
-        width: 1280,
-        height: 720,
-      });
-
-      this.camera.start();
-    }
+    // Start detection loop
+    this.startDetectionLoop();
   }
 
   /**
@@ -156,9 +124,10 @@ export class CameraDetectionService {
     this.isDetecting = false;
     this.callback = null;
 
-    if (this.camera) {
-      this.camera.stop();
-      this.camera = null;
+    // Stop animation frame loop
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
     }
   }
 
@@ -195,17 +164,19 @@ export class CameraDetectionService {
    */
   cleanup(): void {
     this.stopDetection();
-
-    if (this.pose) {
-      this.pose.close();
-      this.pose = null;
+    
+    // Cancel any pending RAF callbacks
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
     }
 
-    if (this.hands) {
-      this.hands.close();
-      this.hands = null;
-    }
-
+    // Stop camera stream
     if (this.videoElement) {
       const stream = this.videoElement.srcObject as MediaStream;
       if (stream) {
@@ -215,10 +186,85 @@ export class CameraDetectionService {
       this.videoElement = null;
     }
 
+    // Note: VisionManager is a singleton, don't cleanup here
+    // It will be reused across component remounts
+    this.visionManager = null;
+
     this.isInitialized = false;
     this.trackedPersonIndex = -1;
     this.isRecording = false;
     this.recordingStartPersonIndex = -1;
+    this.pendingCallback = false;
+  }
+
+  /**
+   * Schedule callback processing with throttling
+   * Uses requestAnimationFrame for smooth updates
+   */
+  private scheduleCallbackProcessing(): void {
+    if (this.pendingCallback) {
+      return; // Already scheduled
+    }
+    
+    this.pendingCallback = true;
+    
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+    }
+    
+    this.rafId = requestAnimationFrame(() => {
+      this.rafId = null;
+      this.pendingCallback = false;
+      
+      const now = performance.now();
+      const timeSinceLastCallback = now - this.lastCallbackTime;
+      
+      // Throttle callbacks to maintain target FPS
+      if (timeSinceLastCallback >= this.callbackThrottleMs) {
+        this.lastCallbackTime = now;
+        this.processDetectionResults();
+      } else {
+        // Schedule next attempt
+        this.scheduleCallbackProcessing();
+      }
+    });
+  }
+
+  /**
+   * Start the detection loop using requestAnimationFrame
+   */
+  private startDetectionLoop(): void {
+    if (!this.videoElement || !this.visionManager) {
+      return;
+    }
+
+    let frameCount = 0;
+    const skipFrames = 1; // Process every 2nd frame (30 FPS -> 15 FPS detection)
+
+    const loop = () => {
+      if (!this.isDetecting || !this.videoElement || !this.visionManager) {
+        return;
+      }
+
+      frameCount++;
+      
+      // Skip frames to reduce CPU load
+      if (frameCount % (skipFrames + 1) === 0) {
+        // Run detection
+        const { poseResult, handResult } = this.visionManager.detect(this.videoElement);
+        this.lastPoseResult = poseResult;
+        this.lastHandsResult = handResult;
+
+        // Schedule throttled callback processing
+        this.scheduleCallbackProcessing();
+      }
+
+      // Continue loop
+      this.animationFrameId = requestAnimationFrame(loop);
+    };
+
+    // Start the loop
+    this.animationFrameId = requestAnimationFrame(loop);
   }
 
   /**
@@ -266,13 +312,14 @@ export class CameraDetectionService {
     }
 
     // Extract right hand position for cursor control
-    if (this.lastHandsResult?.multiHandLandmarks && this.lastHandsResult.multiHandedness) {
-      for (let i = 0; i < this.lastHandsResult.multiHandLandmarks.length; i++) {
-        const handedness = this.lastHandsResult.multiHandedness[i];
-        const landmarks = this.lastHandsResult.multiHandLandmarks[i];
+    if (this.lastHandsResult?.landmarks && this.lastHandsResult.handedness) {
+      for (let i = 0; i < this.lastHandsResult.landmarks.length; i++) {
+        const handedness = this.lastHandsResult.handedness[i];
+        const landmarks = this.lastHandsResult.landmarks[i];
 
-        // Check if this is the right hand (note: MediaPipe returns mirrored labels)
-        if (handedness.label === 'Right' && landmarks.length > 0) {
+        // Camera is mirrored: user's right hand appears as "Left" in MediaPipe
+        // So we look for "Left" to get the actual right hand
+        if (handedness[0]?.categoryName === 'Left' && landmarks.length > 0) {
           // Use wrist (landmark 0) or index finger tip (landmark 8) for cursor
           const wrist = landmarks[0];
           const indexTip = landmarks[8];
@@ -301,9 +348,12 @@ export class CameraDetectionService {
   private detectAllPersons(): PersonDetection[] {
     const persons: PersonDetection[] = [];
 
-    if (this.lastPoseResult?.poseLandmarks && this.lastPoseResult.poseLandmarks.length > 0) {
+    if (this.lastPoseResult?.landmarks && this.lastPoseResult.landmarks.length > 0) {
+      // Get the first (and typically only) detected pose
+      const poseLandmarks = this.lastPoseResult.landmarks[0];
+      
       // Convert pose landmarks to our format
-      const pose = this.lastPoseResult.poseLandmarks.map((landmark) => ({
+      const pose = poseLandmarks.map((landmark: NormalizedLandmark) => ({
         x: landmark.x,
         y: landmark.y,
         z: landmark.z,
@@ -386,27 +436,27 @@ export class CameraDetectionService {
    * Detect exit gesture (both hands above head)
    */
   private detectExitGesture(): boolean {
-    if (!this.lastPoseResult?.poseLandmarks || !this.lastHandsResult?.multiHandLandmarks) {
+    if (!this.lastPoseResult?.landmarks || !this.lastHandsResult?.landmarks) {
       return false;
     }
 
-    const pose = this.lastPoseResult.poseLandmarks;
-    const hands = this.lastHandsResult.multiHandLandmarks;
+    const poseLandmarks = this.lastPoseResult.landmarks;
+    const handLandmarks = this.lastHandsResult.landmarks;
 
     // Get head position (nose landmark, index 0)
-    if (pose.length === 0) {
+    if (poseLandmarks.length === 0 || poseLandmarks[0].length === 0) {
       return false;
     }
-    const nose = pose[0];
+    const nose = poseLandmarks[0][0]; // First pose, nose landmark
 
     // Check if we have at least 2 hands detected
-    if (hands.length < 2) {
+    if (handLandmarks.length < 2) {
       return false;
     }
 
     // Check if both hands are above the nose
     let handsAboveHead = 0;
-    for (const hand of hands) {
+    for (const hand of handLandmarks) {
       if (hand.length > 0) {
         const wrist = hand[0];
         // Y coordinate increases downward, so above means smaller Y
@@ -417,5 +467,13 @@ export class CameraDetectionService {
     }
 
     return handsAboveHead >= 2;
+  }
+
+  /**
+   * Force immediate processing of detection results (for testing)
+   * Bypasses throttling and RAF scheduling
+   */
+  forceProcessResults(): void {
+    this.processDetectionResults();
   }
 }

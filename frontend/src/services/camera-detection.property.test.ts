@@ -16,8 +16,8 @@ describe('CameraDetectionService Property Tests', () => {
         fc.property(
           // Generate normalized hand positions (x, y in [0, 1])
           fc.record({
-            x: fc.double({ min: 0, max: 1 }),
-            y: fc.double({ min: 0, max: 1 }),
+            x: fc.double({ min: 0, max: 1, noNaN: true }),
+            y: fc.double({ min: 0, max: 1, noNaN: true }),
           }),
           // Generate various canvas dimensions
           fc.record({
@@ -25,6 +25,11 @@ describe('CameraDetectionService Property Tests', () => {
             height: fc.integer({ min: 240, max: 2160 }),
           }),
           (handPosition, canvasDimensions) => {
+            // Skip if inputs contain NaN (shouldn't happen with noNaN, but be defensive)
+            if (!Number.isFinite(handPosition.x) || !Number.isFinite(handPosition.y)) {
+              return true; // Skip this test case
+            }
+            
             // Map normalized coordinates to canvas coordinates
             const cursorX = handPosition.x * canvasDimensions.width;
             const cursorY = handPosition.y * canvasDimensions.height;

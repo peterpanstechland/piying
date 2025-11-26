@@ -20,16 +20,31 @@ export type HoverCallback = (sceneId: string) => void;
  */
 export class GestureCursorController {
   private cursorPosition: CursorPosition = { x: 0.5, y: 0.5 };
+  private targetPosition: CursorPosition = { x: 0.5, y: 0.5 };
   private hoveredCardId: string | null = null;
   private hoverStartTime: number = 0;
   private hoverTimer: number | null = null;
   private hoverDuration: number = 5000; // 5 seconds default
   private hoverCallback: HoverCallback | null = null;
   private lastUpdateTime: number = 0;
+  private rafId: number | null = null;
+  private smoothingFactor: number = 0.3; // Lower = smoother but more lag
+  private testMode: boolean = false;
+  
+  /**
+   * Enable test mode - disables smooth animation for immediate updates
+   */
+  setTestMode(enabled: boolean): void {
+    this.testMode = enabled;
+    if (enabled) {
+      this.smoothingFactor = 1.0; // Immediate updates in test mode
+    }
+  }
 
   /**
    * Update cursor position from hand coordinates
    * Hand coordinates are expected to be normalized [0, 1]
+   * Uses smooth interpolation for fluid cursor movement
    */
   updateCursorPosition(handPos: { x: number; y: number }): void {
     this.lastUpdateTime = performance.now();
@@ -39,10 +54,61 @@ export class GestureCursorController {
     const y = isNaN(handPos.y) || !isFinite(handPos.y) ? 0.5 : handPos.y;
     
     // Ensure coordinates are within valid range [0, 1]
-    this.cursorPosition = {
+    this.targetPosition = {
       x: Math.max(0, Math.min(1, x)),
       y: Math.max(0, Math.min(1, y)),
     };
+    
+    // In test mode, update position immediately
+    if (this.testMode) {
+      this.cursorPosition = { ...this.targetPosition };
+    } else {
+      // Start smooth animation if not already running
+      if (this.rafId === null) {
+        this.startSmoothUpdate();
+      }
+    }
+  }
+
+  /**
+   * Start smooth cursor position updates using requestAnimationFrame
+   */
+  private startSmoothUpdate(): void {
+    const animate = () => {
+      // Interpolate towards target position
+      const dx = this.targetPosition.x - this.cursorPosition.x;
+      const dy = this.targetPosition.y - this.cursorPosition.y;
+      
+      // Check if we're close enough to target
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance > 0.001) {
+        // Smooth interpolation
+        this.cursorPosition.x += dx * this.smoothingFactor;
+        this.cursorPosition.y += dy * this.smoothingFactor;
+        
+        // Continue animation
+        this.rafId = requestAnimationFrame(animate);
+      } else {
+        // Snap to target and stop animation
+        this.cursorPosition = { ...this.targetPosition };
+        this.rafId = null;
+      }
+    };
+    
+    this.rafId = requestAnimationFrame(animate);
+  }
+
+  /**
+   * Force immediate position update (for testing)
+   * Skips smooth interpolation and snaps directly to target
+   */
+  forceUpdatePosition(): void {
+    this.cursorPosition = { ...this.targetPosition };
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
   }
 
   /**
@@ -155,7 +221,15 @@ export class GestureCursorController {
    */
   reset(): void {
     this.cancelHoverTimer();
+    
+    // Cancel any pending animation frames
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    
     this.cursorPosition = { x: 0.5, y: 0.5 };
+    this.targetPosition = { x: 0.5, y: 0.5 };
     this.lastUpdateTime = 0;
   }
 

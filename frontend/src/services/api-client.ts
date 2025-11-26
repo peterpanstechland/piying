@@ -5,10 +5,10 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { getApiBaseUrl } from '../config/env';
 
-// API base URL - default value, can be overridden in constructor
-// In production, this will be set via environment variable
-const DEFAULT_API_BASE_URL = 'http://localhost:8000';
+// API base URL - uses environment configuration
+const DEFAULT_API_BASE_URL = getApiBaseUrl();
 
 /**
  * Session status enumeration matching backend
@@ -263,7 +263,11 @@ export class APIClient {
       const isLastAttempt = attempt >= this.retryConfig.maxRetries - 1;
       
       if (isLastAttempt || !this.shouldRetry(error)) {
-        throw error;
+        // Throw user-friendly error on last attempt
+        const friendlyMessage = this.getUserFriendlyError(error);
+        const enhancedError = new Error(friendlyMessage);
+        (enhancedError as any).originalError = error;
+        throw enhancedError;
       }
 
       // Calculate delay with exponential backoff
@@ -301,6 +305,43 @@ export class APIClient {
     }
 
     return false;
+  }
+
+  /**
+   * Get user-friendly error message from error
+   */
+  private getUserFriendlyError(error: unknown): string {
+    if (!axios.isAxiosError(error)) {
+      return error instanceof Error ? error.message : 'Unknown error occurred';
+    }
+
+    if (this.isNetworkError(error)) {
+      return '网络连接失败。请检查网络连接。/ Network connection failed. Please check your connection.';
+    }
+
+    if (error.response) {
+      const status = error.response.status;
+      
+      if (status === 404) {
+        return '请求的资源不存在。/ Requested resource not found.';
+      }
+      
+      if (status === 400) {
+        return '请求数据格式错误。/ Invalid request data.';
+      }
+      
+      if (status >= 500) {
+        return '服务器错误。请稍后重试。/ Server error. Please try again later.';
+      }
+      
+      return error.response.data?.message || `请求失败 (${status}) / Request failed (${status})`;
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      return '请求超时。请重试。/ Request timeout. Please retry.';
+    }
+
+    return error.message || '未知错误 / Unknown error';
   }
 
   /**

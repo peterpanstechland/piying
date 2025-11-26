@@ -39,7 +39,7 @@ export const RenderWaitPage = ({
 
   // Status polling with 2-second intervals
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout;
+    let pollInterval: ReturnType<typeof setInterval>;
     let isActive = true;
 
     const pollStatus = async () => {

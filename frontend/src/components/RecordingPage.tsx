@@ -35,7 +35,7 @@ export const RecordingPage = ({
       recordingStartedRef.current = true;
       
       try {
-        recorder.startRecording(segmentIndex, segmentDuration, (elapsed, total) => {
+        recorder.startRecording(segmentIndex, segmentDuration, (elapsed, _total) => {
           setElapsedTime(elapsed);
         });
         setIsRecording(true);

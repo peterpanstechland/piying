@@ -1,13 +1,24 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { StateMachine, AppState } from './state/state-machine';
 import { CameraDetectionService, DetectionResult } from './services/camera-detection';
 import { MotionCaptureRecorder, SegmentData } from './services/motion-capture';
 import { APIClient } from './services/api-client';
-import { IdlePage, SceneSelectionPage, Scene, MultiPersonWarning } from './components';
+import { 
+  IdlePage, 
+  SceneSelectionPage, 
+  Scene, 
+  MultiPersonWarning,
+  ErrorBoundary,
+  ToastContainer,
+  useToast,
+  CameraAccessError,
+} from './components';
 import { SegmentGuidancePage } from './components/SegmentGuidancePage';
 import { CountdownPage } from './components/CountdownPage';
 import { RecordingPage } from './components/RecordingPage';
 import { SegmentReviewPage } from './components/SegmentReviewPage';
+import { errorLogger, setupGlobalErrorHandling } from './utils/error-logger';
+import { performanceMonitor } from './utils/performance-monitor';
 import './App.css';
 
 // Load scenes configuration
@@ -60,7 +71,12 @@ function App() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [multiPersonWarning, setMultiPersonWarning] = useState<boolean>(false);
-  const [trackedPersonIndex, setTrackedPersonIndex] = useState<number>(-1);
+  const [cameraError, setCameraError] = useState<boolean>(false);
+  
+  const { toasts, showError, showWarning, closeToast } = useToast();
+  
+  // Performance monitoring
+  const animationFrameRef = useRef<number | null>(null);
   
   const stateMachineRef = useRef<StateMachine | null>(null);
   const cameraServiceRef = useRef<CameraDetectionService | null>(null);
@@ -69,13 +85,44 @@ function App() {
   const apiClientRef = useRef<APIClient>(new APIClient());
   const recordedSegmentsRef = useRef<SegmentData[]>([]);
 
+  // Setup global error handling
+  useEffect(() => {
+    setupGlobalErrorHandling();
+  }, []);
+
+  // Setup performance monitoring with RAF loop
+  useEffect(() => {
+    const performanceLoop = () => {
+      performanceMonitor.recordFrame();
+      animationFrameRef.current = requestAnimationFrame(performanceLoop);
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(performanceLoop);
+    
+    // Log performance report every 30 seconds
+    const reportInterval = setInterval(() => {
+      performanceMonitor.logReport();
+    }, 30000);
+    
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      clearInterval(reportInterval);
+    };
+  }, []);
+
   // Initialize state machine
   useEffect(() => {
     stateMachineRef.current = new StateMachine(AppState.IDLE);
     
-    // Listen to state changes
+    // Listen to state changes and track transition timing
     stateMachineRef.current.addListener((state) => {
       setCurrentState(state);
+      
+      // Record state transition duration for performance monitoring
+      const transitionDuration = stateMachineRef.current?.getLastTransitionDuration() || 0;
+      performanceMonitor.recordStateTransition(transitionDuration);
     });
 
     return () => {
@@ -87,41 +134,78 @@ function App() {
 
   // Load scenes
   useEffect(() => {
-    loadScenes().then(setScenes);
-  }, []);
+    loadScenes()
+      .then(setScenes)
+      .catch((error) => {
+        errorLogger.log(error, 'medium' as any, 'config');
+        showWarning(
+          '场景加载失败',
+          '使用默认场景配置。部分功能可能受限。'
+        );
+      });
+  }, [showWarning]);
 
-  // Initialize camera and detection
+  // Initialize camera and detection (only once on mount)
   useEffect(() => {
+    let mounted = true;
+    
     const initCamera = async () => {
       try {
         const service = new CameraDetectionService();
         await service.initialize();
+        
+        if (!mounted) {
+          service.cleanup();
+          return;
+        }
+        
         cameraServiceRef.current = service;
         setVideoElement(service.getVideoElement());
+        setCameraError(false);
 
         // Start detection
         service.startDetection(handleDetection);
       } catch (error) {
+        if (!mounted) return;
+        
         console.error('Failed to initialize camera:', error);
+        errorLogger.logCameraError(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: 'initialize' }
+        );
+        setCameraError(true);
+        showError(
+          '摄像头访问失败',
+          '无法访问摄像头。请检查权限设置。',
+          {
+            label: '重试',
+            onClick: () => {
+              setCameraError(false);
+              initCamera();
+            },
+          }
+        );
       }
     };
 
     initCamera();
 
     return () => {
+      mounted = false;
       if (cameraServiceRef.current) {
         cameraServiceRef.current.cleanup();
+        cameraServiceRef.current = null;
       }
     };
-  }, []);
+  }, []); // Empty deps - only run once on mount
 
   // Handle detection results
-  const handleDetection = (result: DetectionResult) => {
+  const handleDetection = useCallback((result: DetectionResult) => {
+    const detectionStart = performance.now();
     const currentState = stateMachineRef.current?.getCurrentState();
 
     // Update multi-person warning state
     setMultiPersonWarning(result.multiPerson);
-    setTrackedPersonIndex(result.trackedPersonIndex);
 
     // Handle person detection for IDLE -> SCENE_SELECT transition
     if (currentState === AppState.IDLE) {
@@ -142,10 +226,12 @@ function App() {
     }
 
     // Handle hand cursor in SCENE_SELECT state
-    if (currentState === AppState.SCENE_SELECT && result.rightHand) {
-      setHandPosition(result.rightHand);
-    } else if (currentState === AppState.SCENE_SELECT && !result.rightHand) {
-      setHandPosition(null);
+    if (currentState === AppState.SCENE_SELECT) {
+      if (result.rightHand) {
+        setHandPosition(result.rightHand);
+      } else {
+        setHandPosition(null);
+      }
     }
 
     // Handle pose recording during SEGMENT_RECORD state
@@ -164,7 +250,11 @@ function App() {
     if (currentState === AppState.SCENE_SELECT && !result.presence) {
       // TODO: Implement timeout logic (10 seconds)
     }
-  };
+    
+    // Record detection callback duration for performance monitoring
+    const detectionDuration = performance.now() - detectionStart;
+    performanceMonitor.recordDetectionCallback(detectionDuration);
+  }, []); // Empty deps - function is stable
 
   // Handle scene selection
   const handleSceneSelect = async (sceneId: string) => {
@@ -189,7 +279,18 @@ function App() {
         });
       } catch (error) {
         console.error('Failed to create session:', error);
-        // TODO: Show error message to user
+        errorLogger.logAPIError(
+          error instanceof Error ? error : new Error(String(error)),
+          { action: 'createSession', sceneId }
+        );
+        showError(
+          '创建会话失败',
+          '无法连接到服务器。请检查网络连接。',
+          {
+            label: '重试',
+            onClick: () => handleSceneSelect(sceneId),
+          }
+        );
       }
     }
   };
@@ -310,7 +411,26 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to upload segment:', error);
-      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      setUploadError(errorMessage);
+      
+      errorLogger.logAPIError(
+        error instanceof Error ? error : new Error(String(error)),
+        { 
+          action: 'uploadSegment', 
+          sessionId: context.sessionId,
+          segmentIndex: lastSegment.index 
+        }
+      );
+      
+      showError(
+        '上传失败',
+        '无法上传动作数据。请重试。',
+        {
+          label: '重试',
+          onClick: handleContinue,
+        }
+      );
       // Keep user on review page to retry
     } finally {
       setIsUploading(false);
@@ -318,7 +438,8 @@ function App() {
   };
 
   // Handle reset - cleanup frontend state and notify backend
-  const handleReset = async () => {
+  // @ts-ignore - Function defined for future use
+  const handleReset = async (): Promise<void> => {
     const context = stateMachineRef.current?.getContext();
     
     // If there's an active session, notify backend to cancel it
@@ -446,14 +567,34 @@ function App() {
     }
   };
 
+  // Render camera error screen if camera initialization failed
+  if (cameraError) {
+    return (
+      <ErrorBoundary>
+        <div className="App">
+          <CameraAccessError
+            onRetry={() => {
+              setCameraError(false);
+              window.location.reload();
+            }}
+          />
+          <ToastContainer toasts={toasts} onClose={closeToast} />
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
   return (
-    <div className="App">
-      {renderCurrentPage()}
-      <MultiPersonWarning 
-        show={multiPersonWarning} 
-        isRecording={currentState === AppState.SEGMENT_RECORD}
-      />
-    </div>
+    <ErrorBoundary>
+      <div className="App">
+        {renderCurrentPage()}
+        <MultiPersonWarning 
+          show={multiPersonWarning} 
+          isRecording={currentState === AppState.SEGMENT_RECORD}
+        />
+        <ToastContainer toasts={toasts} onClose={closeToast} />
+      </div>
+    </ErrorBoundary>
   );
 }
 

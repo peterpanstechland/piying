@@ -8,7 +8,13 @@ describe('StateMachine', () => {
   let stateMachine: StateMachine;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     stateMachine = new StateMachine();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   describe('Initialization', () => {
@@ -300,6 +306,9 @@ describe('StateMachine', () => {
       
       stateMachine.transition(AppState.SCENE_SELECT);
       
+      // Wait for requestAnimationFrame
+      jest.advanceTimersByTime(16);
+      
       expect(listener).toHaveBeenCalledWith(
         AppState.SCENE_SELECT,
         expect.any(Object)
@@ -328,6 +337,8 @@ describe('StateMachine', () => {
       // Should not throw
       expect(() => {
         stateMachine.transition(AppState.SCENE_SELECT);
+        // Wait for requestAnimationFrame
+        jest.advanceTimersByTime(16);
       }).not.toThrow();
       
       // Good listener should still be called
