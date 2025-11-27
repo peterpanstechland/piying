@@ -89,16 +89,25 @@ class VideoRenderer:
         (0, 12),   # Nose to right shoulder (approximate neck)
     ]
     
-    def __init__(self, scene_config: SceneConfig, output_dir: str = "data/outputs"):
+    def __init__(self, scene_config: SceneConfig, output_dir: str = None):
         """
         Initialize VideoRenderer
         
         Args:
             scene_config: Scene configuration with base video and segment settings
-            output_dir: Directory for output videos
+            output_dir: Directory for output videos (default: project_root/data/outputs)
         """
         self.scene_config = scene_config
-        self.output_dir = Path(output_dir)
+        
+        # Get project root directory
+        self.project_root = Path(__file__).parent.parent.parent.parent
+        
+        # Set output directory relative to project root
+        if output_dir:
+            self.output_dir = Path(output_dir)
+        else:
+            self.output_dir = self.project_root / "data" / "outputs"
+        
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Video properties (will be set when loading base video)
@@ -126,17 +135,17 @@ class VideoRenderer:
             extra={"context": {"session_id": session.id, "scene_id": session.scene_id}}
         )
         
-        # Load base video
-        base_video_path = self.scene_config.base_video_path
-        if not Path(base_video_path).exists():
+        # Load base video (resolve path relative to project root)
+        base_video_path = self.project_root / self.scene_config.base_video_path
+        if not base_video_path.exists():
             error_msg = f"Base video not found: {base_video_path}"
             logger.error(
                 error_msg,
-                extra={"context": {"session_id": session.id, "base_video_path": base_video_path}}
+                extra={"context": {"session_id": session.id, "base_video_path": str(base_video_path)}}
             )
             raise ValueError(error_msg)
         
-        cap = cv2.VideoCapture(base_video_path)
+        cap = cv2.VideoCapture(str(base_video_path))
         if not cap.isOpened():
             error_msg = f"Failed to open base video: {base_video_path}"
             logger.error(

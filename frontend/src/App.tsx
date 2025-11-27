@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { StateMachine, AppState } from './state/state-machine';
-import { CameraDetectionService, DetectionResult } from './services/camera-detection';
+import { CameraDetectionService, DetectionResult, PoseLandmark } from './services/camera-detection';
 import { MotionCaptureRecorder, SegmentData } from './services/motion-capture';
 import { APIClient } from './services/api-client';
 import { 
@@ -17,6 +17,8 @@ import { SegmentGuidancePage } from './components/SegmentGuidancePage';
 import { CountdownPage } from './components/CountdownPage';
 import { RecordingPage } from './components/RecordingPage';
 import { SegmentReviewPage } from './components/SegmentReviewPage';
+import { RenderWaitPage } from './components/RenderWaitPage';
+import { FinalResultPage } from './components/FinalResultPage';
 import { errorLogger, setupGlobalErrorHandling } from './utils/error-logger';
 import { performanceMonitor } from './utils/performance-monitor';
 import './App.css';
@@ -66,12 +68,14 @@ function App() {
   const [currentState, setCurrentState] = useState<AppState>(AppState.IDLE);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [handPosition, setHandPosition] = useState<{ x: number; y: number } | null>(null);
+  const [currentPose, setCurrentPose] = useState<PoseLandmark[] | null>(null);
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [multiPersonWarning, setMultiPersonWarning] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<boolean>(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   
   const { toasts, showError, showWarning, closeToast } = useToast();
   
@@ -225,12 +229,25 @@ function App() {
       }
     }
 
-    // Handle hand cursor in SCENE_SELECT state
-    if (currentState === AppState.SCENE_SELECT) {
+    // Handle hand cursor in SCENE_SELECT, SEGMENT_REVIEW, and FINAL_RESULT states
+    if (
+      currentState === AppState.SCENE_SELECT || 
+      currentState === AppState.SEGMENT_REVIEW ||
+      currentState === AppState.FINAL_RESULT
+    ) {
       if (result.rightHand) {
         setHandPosition(result.rightHand);
       } else {
         setHandPosition(null);
+      }
+    }
+
+    // Handle Pose for Segment Guidance (Checking if user is in box)
+    if (currentState === AppState.SEGMENT_GUIDE) {
+      if (result.pose) {
+        setCurrentPose(result.pose);
+      } else {
+        setCurrentPose(null);
       }
     }
 
@@ -403,17 +420,32 @@ function App() {
       const allSegmentsComplete = recordedSegmentsRef.current.length >= context.totalSegments;
 
       if (allSegmentsComplete) {
-        // All segments recorded - transition to render wait
-        console.log('All segments complete, transitioning to render wait');
+        // All segments recorded - trigger rendering and transition to render wait
+        console.log('All segments complete, triggering render');
+        
+        // Trigger video rendering on backend
+        try {
+          await apiClientRef.current.triggerRender(context.sessionId);
+          console.log('Render triggered successfully');
+        } catch (renderError) {
+          console.error('Failed to trigger render:', renderError);
+          // Continue to render wait page anyway - it will poll for status
+        }
+        
         if (stateMachineRef.current) {
-          stateMachineRef.current.transition(AppState.RENDER_WAIT);
+          // Update context with recorded segments before transitioning
+          stateMachineRef.current.transition(AppState.RENDER_WAIT, {
+            recordedSegments: [...recordedSegmentsRef.current],
+          });
         }
       } else {
         // More segments to record - go to next segment guidance
         console.log('Moving to next segment');
         if (stateMachineRef.current) {
+          // Update context with current recorded segments
           stateMachineRef.current.transition(AppState.SEGMENT_GUIDE, {
             currentSegment: context.currentSegment + 1,
+            recordedSegments: [...recordedSegmentsRef.current],
           });
         }
       }
@@ -446,12 +478,13 @@ function App() {
   };
 
   // Handle reset - cleanup frontend state and notify backend
-  // @ts-ignore - Function defined for future use
   const handleReset = async (): Promise<void> => {
     const context = stateMachineRef.current?.getContext();
+    const state = stateMachineRef.current?.getCurrentState();
     
-    // If there's an active session, notify backend to cancel it
-    if (context?.sessionId) {
+    // Only cancel session if it's not already completed (FINAL_RESULT means video is done)
+    // Don't try to cancel completed sessions as they may already be cleaned up
+    if (context?.sessionId && state !== AppState.FINAL_RESULT) {
       try {
         console.log(`Cancelling session ${context.sessionId} on reset`);
         await apiClientRef.current.cancelSession(context.sessionId);
@@ -473,8 +506,24 @@ function App() {
     setUploadProgress(0);
     setUploadError(null);
     setIsUploading(false);
+    setVideoUrl(null);
     
     console.log('Reset complete - returned to IDLE state');
+  };
+
+  // Handle render complete - video is ready
+  const handleRenderComplete = (url: string) => {
+    console.log('Render complete, video URL:', url);
+    setVideoUrl(url);
+    if (stateMachineRef.current) {
+      stateMachineRef.current.transition(AppState.FINAL_RESULT, { videoUrl: url });
+    }
+  };
+
+  // Handle render error
+  const handleRenderError = (error: string) => {
+    console.error('Render error:', error);
+    showError('渲染失败', error);
   };
 
   // Add pose frames to recorder during recording
@@ -509,6 +558,7 @@ function App() {
             segmentIndex={context?.currentSegment || 0}
             totalSegments={context?.totalSegments || 3}
             videoElement={videoElement}
+            currentPose={currentPose} // Pass pose data
             onGuidanceComplete={handleGuidanceComplete}
           />
         );
@@ -545,6 +595,29 @@ function App() {
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             uploadError={uploadError}
+            cursorPosition={handPosition}
+            hoverDurationMs={3000}
+          />
+        );
+      
+      case AppState.RENDER_WAIT:
+        return (
+          <RenderWaitPage
+            sessionId={context?.sessionId || ''}
+            onComplete={handleRenderComplete}
+            onError={handleRenderError}
+            apiClient={apiClientRef.current}
+          />
+        );
+      
+      case AppState.FINAL_RESULT:
+        return (
+          <FinalResultPage
+            videoUrl={videoUrl || context?.videoUrl || ''}
+            onReset={handleReset}
+            inactivityTimeoutSeconds={30}
+            cursorPosition={handPosition}
+            hoverDurationMs={3000}
           />
         );
       

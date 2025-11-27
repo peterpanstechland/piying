@@ -19,7 +19,7 @@ class StorageManager:
     
     def __init__(
         self, 
-        base_path: str = "data",
+        base_path: str = None,
         max_age_days: int = 7,
         min_disk_space_gb: int = 5,
         emergency_threshold_gb: int = 2,
@@ -29,13 +29,19 @@ class StorageManager:
         Initialize StorageManager
         
         Args:
-            base_path: Base directory for all data storage
+            base_path: Base directory for all data storage (default: project_root/data)
             max_age_days: Maximum age of files before cleanup (default: 7 days)
             min_disk_space_gb: Minimum disk space threshold for warnings
             emergency_threshold_gb: Disk space threshold for emergency cleanup
             emergency_target_gb: Target disk space after emergency cleanup
         """
-        self.base_path = Path(base_path)
+        if base_path:
+            self.base_path = Path(base_path)
+        else:
+            # Default to project root's data directory
+            project_root = Path(__file__).parent.parent.parent.parent
+            self.base_path = project_root / "data"
+        
         self.sessions_path = self.base_path / "sessions"
         self.outputs_path = self.base_path / "outputs"
         self.logs_path = self.base_path / "logs"

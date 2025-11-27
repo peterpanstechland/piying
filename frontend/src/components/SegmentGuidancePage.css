@@ -1,9 +1,12 @@
+/* SegmentGuidancePage - 皮影戏风格 */
+
 .segment-guidance-page {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #000;
+  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  isolation: isolate;
 }
 
 .video-feed-background {
@@ -13,120 +16,193 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.3;
+  z-index: -1;
+  opacity: 0.5;
 }
 
 .guidance-overlay {
-  position: relative;
-  z-index: 10;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  padding: 60px 40px;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.5) 50%,
-    rgba(0, 0, 0, 0.7) 100%
+  padding: 40px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(45, 24, 16, 0.5) 0%,
+    rgba(26, 10, 10, 0.8) 100%
   );
+  z-index: 10;
 }
 
+/* 幕布边框光晕 */
+.guidance-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 150px rgba(255, 150, 50, 0.1);
+  pointer-events: none;
+}
+
+/* 标题区域 */
 .guidance-header {
   text-align: center;
-  color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
 }
 
 .guidance-header h1 {
-  font-size: 48px;
-  font-weight: bold;
-  margin: 0 0 20px 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-family: 'Noto Serif SC', 'KaiTi', serif;
+  font-size: 44px;
+  color: #f5e6d3;
+  letter-spacing: 0.15em;
+  margin: 0;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(255, 180, 80, 0.3);
 }
 
 .segment-counter {
-  font-size: 24px;
-  color: #ffd700;
-  margin: 0;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 22px;
+  color: #d4af37;
+  margin-top: 12px;
+  letter-spacing: 0.1em;
 }
 
-.guidance-content {
-  flex: 1;
+/* 检测框 - 传统风格 */
+.detection-box {
+  position: absolute;
+  border: 3px dashed rgba(212, 175, 55, 0.5);
+  border-radius: 12px;
+  transition: all 0.3s ease;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  max-width: 800px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+}
+
+.detection-box.active {
+  border: 4px solid #c41e3a;
+  background: rgba(196, 30, 58, 0.1);
+  box-shadow: 
+    0 0 40px rgba(196, 30, 58, 0.5),
+    inset 0 0 30px rgba(196, 30, 58, 0.2);
+  animation: pulseBorder 2s infinite;
+}
+
+@keyframes pulseBorder {
+  0% { 
+    border-color: #c41e3a; 
+    box-shadow: 0 0 40px rgba(196, 30, 58, 0.5); 
+  }
+  50% { 
+    border-color: #d4af37; 
+    box-shadow: 0 0 60px rgba(212, 175, 55, 0.7); 
+  }
+  100% { 
+    border-color: #c41e3a; 
+    box-shadow: 0 0 40px rgba(196, 30, 58, 0.5); 
+  }
+}
+
+/* 角落装饰 */
+.box-corner {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+  border: 4px solid #d4af37;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.detection-box.active .box-corner {
+  border-color: #f4d03f;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; border-top-left-radius: 10px; }
+.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; border-top-right-radius: 10px; }
+.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; border-bottom-left-radius: 10px; }
+.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; border-bottom-right-radius: 10px; }
+
+/* 状态文字 */
+.box-status {
   text-align: center;
 }
 
-.guidance-icon {
-  font-size: 120px;
-  margin-bottom: 40px;
-  animation: pulse 2s ease-in-out infinite;
+.stand-here-prompt {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 28px;
+  color: #f5e6d3;
+  background: rgba(45, 24, 16, 0.8);
+  padding: 12px 35px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  animation: floatText 3s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+@keyframes floatText {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* 倒计时数字 */
+.countdown-number {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 110px;
+  font-weight: 600;
+  color: #d4af37;
+  text-shadow: 
+    0 0 30px rgba(212, 175, 55, 0.8),
+    4px 4px 0px #8b0000;
+  animation: countdownPop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
+}
+
+@keyframes countdownPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 底部内容 */
+.guidance-content {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  z-index: 2;
 }
 
 .guidance-action {
-  font-size: 42px;
-  font-weight: bold;
-  color: #fff;
-  margin: 0 0 30px 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-family: 'Noto Serif SC', serif;
+  font-size: 38px;
+  color: #d4af37;
+  margin-bottom: 12px;
+  letter-spacing: 0.15em;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(212, 175, 55, 0.3);
 }
 
 .guidance-description {
-  font-size: 28px;
-  color: #e0e0e0;
-  margin: 0 0 50px 0;
-  line-height: 1.6;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 22px;
+  color: #f5e6d3;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
-.guidance-tips {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-}
-
-.guidance-tips p {
-  font-size: 20px;
-  color: #fff;
-  margin: 0;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.guidance-footer {
-  text-align: center;
-}
-
-.guidance-hint {
-  font-size: 24px;
-  color: #ffd700;
-  margin: 0;
-  animation: blink 1.5s ease-in-out infinite;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-@keyframes blink {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.guidance-icon, .guidance-tips, .guidance-footer {
+  display: none;
 }

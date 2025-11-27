@@ -38,8 +38,6 @@ export const SceneSelectionPage = ({
   const { t, i18n } = useTranslation();
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
-  
-  const sceneCardsRef = useRef<Map<string, DOMRect>>(new Map());
   const cursorControllerRef = useRef<GestureCursorController>(new GestureCursorController());
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   
@@ -123,34 +121,38 @@ export const SceneSelectionPage = ({
     }
   }, [handPosition]);
 
-  // Update hover state
+  // Update hover state with requestAnimationFrame for smooth performance
   useEffect(() => {
     if (!handPosition) return;
 
     const controller = cursorControllerRef.current;
     const viewWidth = window.innerWidth;
     const viewHeight = window.innerHeight;
-
-    const sceneCards: SceneCard[] = [];
-    
-    scenes.forEach((scene) => {
-      const element = document.getElementById(`scene-card-${scene.id}`);
-      if (element) {
-        const rect = element.getBoundingClientRect();
-        sceneCards.push({
-          id: scene.id,
-          bounds: {
-            x: rect.left,
-            y: rect.top,
-            width: rect.width,
-            height: rect.height,
-          },
-        });
-      }
-    });
+    let animationFrameId: number;
 
     const updateHover = () => {
-      if (sceneCards.length === 0) return;
+      const sceneCards: SceneCard[] = [];
+      
+      scenes.forEach((scene) => {
+        const element = document.getElementById(`scene-card-${scene.id}`);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          sceneCards.push({
+            id: scene.id,
+            bounds: {
+              x: rect.left,
+              y: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+          });
+        }
+      });
+
+      if (sceneCards.length === 0) {
+        animationFrameId = requestAnimationFrame(updateHover);
+        return;
+      }
       
       const normalizedPos = controller.getCursorPosition();
       
@@ -165,7 +167,7 @@ export const SceneSelectionPage = ({
         sceneCards,
         screenPos.x,
         screenPos.y,
-        5000,
+        3000, // Reduced from 5000ms to 3000ms for faster selection
         (sceneId) => {
           console.log('Scene selected via hover:', sceneId);
           if (onSceneSelect) {
@@ -176,12 +178,14 @@ export const SceneSelectionPage = ({
 
       setHoveredSceneId(controller.getHoveredCardId());
       setHoverProgress(controller.getHoverProgress());
+
+      animationFrameId = requestAnimationFrame(updateHover);
     };
 
-    const intervalId = setInterval(updateHover, 50);
+    animationFrameId = requestAnimationFrame(updateHover);
 
     return () => {
-      clearInterval(intervalId);
+      cancelAnimationFrame(animationFrameId);
     };
   }, [scenes, onSceneSelect, handPosition, getScreenCoordinates]);
 

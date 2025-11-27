@@ -205,6 +205,20 @@ export class APIClient {
   }
 
   /**
+   * Trigger video rendering for a session
+   * @param sessionId - Session identifier
+   * @returns Render status response
+   */
+  async triggerRender(sessionId: string): Promise<{ success: boolean; status: string; message: string }> {
+    return this.retryRequest(async () => {
+      const response = await this.client.post<{ success: boolean; status: string; message: string }>(
+        `/api/sessions/${sessionId}/render`
+      );
+      return response.data;
+    });
+  }
+
+  /**
    * Process cached uploads (retry failed uploads)
    * @returns Number of successfully processed uploads
    */

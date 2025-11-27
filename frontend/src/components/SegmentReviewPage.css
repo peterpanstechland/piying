@@ -1,9 +1,28 @@
+/* SegmentReviewPage - 皮影戏风格 */
+
 .segment-review-page {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #000;
+  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+}
+
+/* 手势光标 - 皮影风格 */
+.gesture-cursor {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.9) 0%, rgba(255, 180, 80, 0.5) 70%, transparent 100%);
+  border: 2px solid #d4af37;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 
+    0 0 20px rgba(255, 180, 80, 0.6),
+    inset 0 0 10px rgba(255, 200, 100, 0.5);
+  transition: transform 0.05s ease-out;
 }
 
 .video-feed-background {
@@ -13,7 +32,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.3;
+  opacity: 0.25;
 }
 
 .review-overlay {
@@ -25,30 +44,49 @@
   justify-content: space-between;
   height: 100%;
   padding: 60px 40px;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.5) 50%,
-    rgba(0, 0, 0, 0.7) 100%
+  background: radial-gradient(
+    ellipse at center,
+    rgba(45, 24, 16, 0.7) 0%,
+    rgba(26, 10, 10, 0.9) 100%
   );
+}
+
+/* 幕布边框光晕 */
+.review-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 150px rgba(255, 150, 50, 0.12);
+  pointer-events: none;
 }
 
 .review-header {
   text-align: center;
-  color: #fff;
+  color: #f5e6d3;
+  position: relative;
+  z-index: 10;
 }
 
 .review-header h1 {
-  font-size: 48px;
-  font-weight: bold;
+  font-size: 52px;
+  font-weight: 400;
   margin: 0 0 20px 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-family: 'Noto Serif SC', 'SimSun', serif;
+  letter-spacing: 0.15em;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(255, 180, 80, 0.3);
 }
 
 .segment-info {
-  font-size: 24px;
-  color: #00ff00;
+  font-size: 22px;
+  color: #d4af37;
   margin: 0;
+  font-family: 'Noto Sans SC', sans-serif;
+  letter-spacing: 0.1em;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
@@ -58,169 +96,244 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 60px;
+  gap: 50px;
   max-width: 900px;
+  position: relative;
+  z-index: 10;
 }
 
+/* 统计卡片 - 传统风格 */
 .review-stats {
   display: flex;
-  gap: 80px;
-  padding: 40px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  gap: 60px;
+  padding: 35px 50px;
+  background: rgba(45, 24, 16, 0.9);
+  border: 2px solid rgba(212, 175, 55, 0.5);
+  border-radius: 12px;
   backdrop-filter: blur(10px);
+  box-shadow: 
+    0 0 30px rgba(255, 180, 80, 0.15),
+    0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
 .stat-icon {
-  font-size: 80px;
-  color: #00ff00;
+  font-size: 70px;
+  color: #d4af37;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
 }
 
 .stat-value {
-  font-size: 72px;
-  font-weight: bold;
-  color: #ffd700;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-size: 64px;
+  font-weight: 600;
+  color: #d4af37;
+  font-family: 'Noto Serif SC', serif;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(212, 175, 55, 0.3);
 }
 
 .stat-label {
-  font-size: 24px;
-  color: #e0e0e0;
+  font-size: 20px;
+  color: #f5e6d3;
+  font-family: 'Noto Sans SC', sans-serif;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+/* 按钮区域 */
 .review-actions {
   display: flex;
   gap: 40px;
 }
 
+/* 按钮 - 传统风格 */
 .review-button {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 25px 50px;
-  font-size: 28px;
-  font-weight: bold;
-  border: none;
-  border-radius: 15px;
+  padding: 22px 45px;
+  font-size: 26px;
+  font-weight: 500;
+  border: 2px solid;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  font-family: 'Noto Serif SC', serif;
+  letter-spacing: 0.1em;
 }
 
-.review-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+.review-button:hover,
+.review-button.hovering {
+  transform: translateY(-3px) scale(1.05);
 }
 
-.review-button:active {
-  transform: translateY(-1px);
+.button-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: left;
+  transition: transform 0.1s linear;
+  z-index: 0;
 }
 
+.review-button .button-icon,
+.review-button .button-text,
+.review-button .button-hint {
+  position: relative;
+  z-index: 1;
+}
+
+.button-hint {
+  font-size: 16px;
+  color: rgba(245, 230, 211, 0.9);
+  margin-left: 10px;
+}
+
+/* 重录按钮 - 红色调 */
 .rerecord-button {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ff4444 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #3d2418 0%, #2d1810 100%);
+  border-color: #c41e3a;
+  color: #e57373;
+  box-shadow: 
+    0 0 20px rgba(196, 30, 58, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-.rerecord-button:hover {
-  background: linear-gradient(135deg, #ff8888 0%, #ff6666 100%);
+.rerecord-button:hover,
+.rerecord-button.hovering {
+  background: linear-gradient(135deg, #8b0000 0%, #c41e3a 100%);
+  border-color: #e57373;
+  color: #f5e6d3;
+  box-shadow: 
+    0 0 30px rgba(196, 30, 58, 0.4),
+    0 6px 20px rgba(0, 0, 0, 0.6);
 }
 
+.rerecord-button .button-progress {
+  background: linear-gradient(90deg, rgba(196, 30, 58, 0.5) 0%, rgba(229, 115, 115, 0.7) 100%);
+}
+
+/* 继续按钮 - 金绿色调 */
 .continue-button {
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #3d2418 0%, #2d1810 100%);
+  border-color: #d4af37;
+  color: #d4af37;
+  box-shadow: 
+    0 0 20px rgba(212, 175, 55, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-.continue-button:hover {
-  background: linear-gradient(135deg, #66bb6a 0%, #5cb85c 100%);
+.continue-button:hover,
+.continue-button.hovering {
+  background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
+  border-color: #81c784;
+  color: #f5e6d3;
+  box-shadow: 
+    0 0 30px rgba(76, 175, 80, 0.4),
+    0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.continue-button .button-progress {
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.5) 0%, rgba(129, 199, 132, 0.7) 100%);
 }
 
 .button-icon {
-  font-size: 32px;
-}
-
-.button-text {
   font-size: 28px;
 }
 
+.button-text {
+  font-size: 26px;
+}
+
+/* 底部提示 */
 .review-footer {
   text-align: center;
+  position: relative;
+  z-index: 10;
 }
 
 .review-hint {
-  font-size: 24px;
-  color: #ffd700;
+  font-size: 22px;
+  color: #d4af37;
   margin: 0;
+  font-family: 'Noto Sans SC', sans-serif;
+  letter-spacing: 0.1em;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-/* Upload progress and error styles */
+/* 上传进度 */
 .upload-progress {
   width: 100%;
-  max-width: 600px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
+  max-width: 550px;
+  padding: 25px;
+  background: rgba(45, 24, 16, 0.9);
+  border: 2px solid rgba(212, 175, 55, 0.5);
+  border-radius: 12px;
   backdrop-filter: blur(10px);
   text-align: center;
 }
 
 .progress-bar {
   width: 100%;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 8px;
   overflow: hidden;
   margin-bottom: 15px;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4caf50 0%, #45a049 100%);
+  background: linear-gradient(90deg, #8b0000 0%, #c41e3a 50%, #d4af37 100%);
   transition: width 0.3s ease;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .progress-text {
-  font-size: 20px;
-  color: #fff;
+  font-size: 18px;
+  color: #f5e6d3;
   margin: 0;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: 'Noto Sans SC', sans-serif;
 }
 
+/* 上传错误 */
 .upload-error {
   width: 100%;
-  max-width: 600px;
-  padding: 20px;
-  background: rgba(255, 68, 68, 0.2);
-  border: 2px solid #ff4444;
-  border-radius: 15px;
+  max-width: 550px;
+  padding: 25px;
+  background: rgba(139, 0, 0, 0.3);
+  border: 2px solid #c41e3a;
+  border-radius: 12px;
   backdrop-filter: blur(10px);
   text-align: center;
 }
 
 .error-message {
-  font-size: 24px;
-  color: #ff6b6b;
+  font-size: 22px;
+  color: #e57373;
   margin: 0 0 10px 0;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-weight: 500;
+  font-family: 'Noto Sans SC', sans-serif;
 }
 
 .error-hint {
-  font-size: 18px;
-  color: #ffcccc;
+  font-size: 16px;
+  color: rgba(245, 230, 211, 0.7);
   margin: 0;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+/* 禁用状态 */
 .review-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -229,5 +342,4 @@
 
 .review-button:disabled:hover {
   transform: none;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }

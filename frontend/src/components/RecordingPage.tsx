@@ -78,17 +78,29 @@ export const RecordingPage = ({
   const progress = Math.min(elapsedTime / segmentDuration, 1);
   const remainingTime = Math.max(segmentDuration - elapsedTime, 0);
 
+  // Video ref to prevent repeated play() calls
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoInitializedRef = useRef(false);
+
+  // Setup video only once
+  useEffect(() => {
+    if (videoRef.current && videoElement && !videoInitializedRef.current) {
+      videoRef.current.srcObject = videoElement.srcObject;
+      videoRef.current.play().catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Video play error:', err);
+        }
+      });
+      videoInitializedRef.current = true;
+    }
+  }, [videoElement]);
+
   return (
     <div className="recording-page">
       {videoElement && (
         <video
           className="video-feed-background"
-          ref={(el) => {
-            if (el && videoElement) {
-              el.srcObject = videoElement.srcObject;
-              el.play();
-            }
-          }}
+          ref={videoRef}
           autoPlay
           muted
           playsInline

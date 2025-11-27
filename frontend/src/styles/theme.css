@@ -1,0 +1,236 @@
+/* 
+ * 皮影戏主题 - Shadow Puppet Theme
+ * 中国传统风格配色与视觉效果
+ */
+
+:root {
+  /* 主色调 - 传统中国红与金色 */
+  --color-primary: #c41e3a;           /* 中国红 */
+  --color-primary-light: #e74c3c;     /* 浅红 */
+  --color-primary-dark: #8b0000;      /* 深红 */
+  
+  --color-gold: #d4af37;              /* 金色 */
+  --color-gold-light: #f4d03f;        /* 浅金 */
+  --color-gold-dark: #b8860b;         /* 深金 */
+  
+  /* 背景色 - 皮影幕布效果 */
+  --color-bg-dark: #1a0a0a;           /* 深褐黑 */
+  --color-bg-medium: #2d1810;         /* 中褐 */
+  --color-bg-light: #3d2418;          /* 浅褐 */
+  
+  /* 皮影色 - 半透明暖色调 */
+  --color-shadow-puppet: rgba(255, 200, 100, 0.85);
+  --color-shadow-glow: rgba(255, 180, 80, 0.6);
+  
+  /* 文字色 */
+  --color-text-primary: #f5e6d3;      /* 米白/宣纸色 */
+  --color-text-secondary: rgba(245, 230, 211, 0.7);
+  --color-text-accent: var(--color-gold);
+  
+  /* 边框与装饰 */
+  --color-border: rgba(212, 175, 55, 0.5);
+  --color-border-accent: var(--color-gold);
+  
+  /* 阴影效果 */
+  --shadow-glow: 0 0 20px rgba(255, 180, 80, 0.4);
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.5);
+  
+  /* 字体 */
+  --font-display: 'Noto Serif SC', 'SimSun', serif;
+  --font-body: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 全局背景 - 皮影幕布效果 */
+.shadow-puppet-bg {
+  background: 
+    radial-gradient(ellipse at center, var(--color-bg-medium) 0%, var(--color-bg-dark) 100%);
+  position: relative;
+}
+
+/* 幕布纹理叠加 */
+.shadow-puppet-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 边框光晕效果 */
+.shadow-puppet-bg::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 150px rgba(255, 150, 50, 0.15);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 传统边框装饰 */
+.traditional-border {
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  position: relative;
+}
+
+.traditional-border::before,
+.traditional-border::after {
+  content: '◆';
+  position: absolute;
+  color: var(--color-gold);
+  font-size: 12px;
+}
+
+.traditional-border::before {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.traditional-border::after {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 标题样式 - 传统书法风格 */
+.title-traditional {
+  font-family: var(--font-display);
+  color: var(--color-text-primary);
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(255, 180, 80, 0.3);
+  letter-spacing: 0.1em;
+}
+
+/* 按钮样式 - 传统风格 */
+.btn-traditional {
+  background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-medium) 100%);
+  border: 2px solid var(--color-gold);
+  border-radius: 8px;
+  color: var(--color-gold);
+  font-family: var(--font-display);
+  padding: 16px 40px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-traditional:hover {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  border-color: var(--color-gold-light);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-glow);
+  transform: scale(1.05);
+}
+
+.btn-traditional::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-traditional:hover::before {
+  left: 100%;
+}
+
+/* 卡片样式 */
+.card-traditional {
+  background: rgba(45, 24, 16, 0.9);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+/* 手势光标 - 皮影风格 */
+.gesture-cursor-puppet {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-shadow-puppet) 0%, var(--color-shadow-glow) 70%, transparent 100%);
+  border: 2px solid var(--color-gold);
+  box-shadow: 
+    0 0 20px var(--color-shadow-glow),
+    inset 0 0 10px rgba(255, 200, 100, 0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* 进度条样式 */
+.progress-traditional {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-traditional-fill {
+  background: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 50%, var(--color-gold) 100%);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* 动画效果 */
+@keyframes puppet-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 180, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 180, 80, 0.6);
+  }
+}
+
+@keyframes lantern-sway {
+  0%, 100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 装饰元素 - 云纹 */
+.cloud-pattern {
+  position: absolute;
+  width: 100px;
+  height: 50px;
+  opacity: 0.1;
+  background: 
+    radial-gradient(circle at 25% 50%, var(--color-gold) 20%, transparent 20%),
+    radial-gradient(circle at 50% 50%, var(--color-gold) 25%, transparent 25%),
+    radial-gradient(circle at 75% 50%, var(--color-gold) 20%, transparent 20%);
+}

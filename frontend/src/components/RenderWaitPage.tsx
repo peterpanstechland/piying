@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import './RenderWaitPage.css';
 
@@ -27,6 +27,19 @@ export const RenderWaitPage = ({
 }: RenderWaitPageProps) => {
   const { t } = useTranslation();
   const [dots, setDots] = useState('');
+  
+  // Use refs to avoid re-creating the polling effect
+  const onCompleteRef = useRef(onComplete);
+  const onErrorRef = useRef(onError);
+  const apiClientRef = useRef(apiClient);
+  const completedRef = useRef(false);
+  
+  // Update refs when props change
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onErrorRef.current = onError;
+    apiClientRef.current = apiClient;
+  }, [onComplete, onError, apiClient]);
 
   // Animated dots for loading indicator
   useEffect(() => {
@@ -39,43 +52,75 @@ export const RenderWaitPage = ({
 
   // Status polling with 2-second intervals
   useEffect(() => {
-    let pollInterval: ReturnType<typeof setInterval>;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
     let isActive = true;
+    
+    // Reset completed flag when sessionId changes
+    completedRef.current = false;
 
     const pollStatus = async () => {
-      if (!isActive) return;
+      // Don't poll if already completed or component unmounted
+      if (!isActive || completedRef.current) return;
 
       try {
-        const status = await apiClient.getSessionStatus(sessionId);
+        const response = await apiClientRef.current.getSessionStatus(sessionId);
+        console.log('Poll status response:', response);
 
-        if (!isActive) return;
+        // Check again after async call
+        if (!isActive || completedRef.current) return;
 
-        if (status.status === 'done') {
-          const videoUrl = apiClient.getVideoUrl(sessionId);
-          onComplete(videoUrl);
-        } else if (status.status === 'failed') {
-          onError(t('errors.renderFailed'));
+        if (response.status === 'done') {
+          // Mark as completed to prevent further polling
+          completedRef.current = true;
+          
+          // Clear interval immediately
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          
+          console.log('Status is done, calling onComplete');
+          const videoUrl = apiClientRef.current.getVideoUrl(sessionId);
+          console.log('Video URL:', videoUrl);
+          onCompleteRef.current(videoUrl);
+        } else if (response.status === 'failed') {
+          // Mark as completed to prevent further polling
+          completedRef.current = true;
+          
+          // Clear interval immediately
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          
+          console.log('Status is failed, calling onError');
+          onErrorRef.current(t('errors.renderFailed'));
+        } else {
+          console.log('Status is:', response.status, '- continuing to poll');
         }
-        // Continue polling if status is 'processing' or 'pending'
       } catch (error) {
-        if (isActive) {
+        if (isActive && !completedRef.current) {
           console.error('Error polling status:', error);
           // Continue polling on error - don't fail immediately
         }
       }
     };
 
-    // Initial poll
-    pollStatus();
+    // Initial poll after a short delay
+    const initialTimeout = setTimeout(pollStatus, 500);
 
     // Set up polling interval (2 seconds)
     pollInterval = setInterval(pollStatus, 2000);
 
     return () => {
+      console.log('RenderWaitPage cleanup - stopping polling');
       isActive = false;
-      clearInterval(pollInterval);
+      clearTimeout(initialTimeout);
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
     };
-  }, [sessionId, apiClient, onComplete, onError, t]);
+  }, [sessionId, t]); // Only depend on sessionId and t
 
   return (
     <div className="render-wait-page">

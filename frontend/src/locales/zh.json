@@ -1,4 +1,7 @@
 {
+  "common": {
+    "back": "返回"
+  },
   "idle": {
     "waiting": "等待用户..."
   },

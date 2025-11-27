@@ -28,7 +28,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'mediapipe': ['@mediapipe/pose', '@mediapipe/hands', '@mediapipe/camera_utils'],
+          'mediapipe': ['@mediapipe/tasks-vision'],
           'vendor': ['react', 'react-dom', 'axios'],
         },
       },

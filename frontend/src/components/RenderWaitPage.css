@@ -1,25 +1,42 @@
+/* RenderWaitPage - 皮影戏风格 */
+
 .render-wait-page {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.render-wait-content {
-  text-align: center;
-  color: white;
-  animation: fadeIn 0.5s ease-in;
+/* 幕布边框光晕 */
+.render-wait-page::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 200px rgba(255, 150, 50, 0.12);
+  pointer-events: none;
 }
 
+.render-wait-content {
+  text-align: center;
+  color: #f5e6d3;
+  animation: fadeIn 0.5s ease-in;
+  position: relative;
+  z-index: 10;
+}
+
+/* 加载动画 - 皮影风格 */
 .loading-spinner {
   position: relative;
-  width: 150px;
-  height: 150px;
-  margin: 0 auto 40px;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 50px;
 }
 
 .spinner-ring {
@@ -27,49 +44,61 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  border: 4px solid transparent;
-  border-top-color: #4a90e2;
+  border: 3px solid transparent;
+  border-top-color: #d4af37;
   border-radius: 50%;
   animation: spin 1.5s linear infinite;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }
 
 .spinner-ring:nth-child(1) {
-  width: 120px;
-  height: 120px;
+  width: 130px;
+  height: 130px;
   animation-duration: 1.5s;
+  border-top-color: #d4af37;
 }
 
 .spinner-ring:nth-child(2) {
-  width: 90px;
-  height: 90px;
-  border-top-color: #7fb3d5;
+  width: 100px;
+  height: 100px;
+  border-top-color: #c41e3a;
   animation-duration: 2s;
+  animation-direction: reverse;
 }
 
 .spinner-ring:nth-child(3) {
-  width: 60px;
-  height: 60px;
-  border-top-color: #b4d7ed;
+  width: 70px;
+  height: 70px;
+  border-top-color: #f5e6d3;
   animation-duration: 2.5s;
 }
 
+/* 处理消息 */
 .processing-message {
-  font-size: 42px;
-  font-weight: 300;
-  margin: 0 0 20px 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-size: 40px;
+  font-weight: 400;
+  margin: 0 0 25px 0;
+  font-family: 'Noto Serif SC', serif;
+  letter-spacing: 0.15em;
+  color: #f5e6d3;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(255, 180, 80, 0.3);
 }
 
 .loading-dots {
   display: inline-block;
-  width: 40px;
+  width: 50px;
   text-align: left;
+  color: #d4af37;
 }
 
 .processing-hint {
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
+  color: rgba(212, 175, 55, 0.8);
   margin: 0;
+  font-family: 'Noto Sans SC', sans-serif;
+  letter-spacing: 0.1em;
 }
 
 @keyframes fadeIn {

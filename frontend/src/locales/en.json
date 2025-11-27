@@ -1,4 +1,7 @@
 {
+  "common": {
+    "back": "Back"
+  },
   "idle": {
     "waiting": "Waiting for user..."
   },

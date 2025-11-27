@@ -32,7 +32,6 @@ export class GestureCursorController {
   private testMode: boolean = false;
 
   // Debounce Logic Variables
-  private hoverLossTimestamp: number = 0; // Time when hover was lost
   private gracePeriodTimer: number | null = null;
   private readonly GRACE_PERIOD: number = 300; // 300ms to tolerate flickering
   
@@ -165,14 +164,14 @@ export class GestureCursorController {
    */
   checkHoverScreenPos(cards: SceneCard[], screenX: number, screenY: number): string | null {
     // Collision buffer/tolerance in pixels to make selection easier
-    const tolerance = 20;
+    const tolerance = 40; // Increased from 20 to 40 for easier selection
 
     // Check collision with each card
     for (const card of cards) {
       // Determine if we are currently hovering this card (sticky selection)
       // If so, we might want an even larger tolerance to prevent flickering
       const isCurrentTarget = this.hoveredCardId === card.id;
-      const effectiveTolerance = isCurrentTarget ? tolerance + 10 : tolerance;
+      const effectiveTolerance = isCurrentTarget ? tolerance + 20 : tolerance; // Increased sticky bonus
 
       if (
         screenX >= card.bounds.x - effectiveTolerance &&

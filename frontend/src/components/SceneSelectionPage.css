@@ -1,14 +1,15 @@
+/* SceneSelectionPage - 皮影戏风格 */
+
 .scene-selection-page {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #000;
-  /* Establish a root stacking context for the page */
+  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
   isolation: isolate;
 }
 
-/* Layer -1: Video Background - Pushed way back */
+/* 视频背景层 */
 .video-feed-layer {
   position: absolute;
   top: 0;
@@ -16,11 +17,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: -1; /* Move behind everything in the current stacking context */
+  z-index: -1;
   pointer-events: none;
+  opacity: 0.6;
 }
 
-/* Layer 10: UI Overlay - Sits on top */
+/* UI覆盖层 */
 .scene-selection-overlay {
   position: absolute;
   top: 0;
@@ -31,12 +33,24 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: radial-gradient(ellipse at center, rgba(45, 24, 16, 0.7) 0%, rgba(26, 10, 10, 0.9) 100%);
   padding: 40px;
   z-index: 10;
 }
 
-/* Layer 100: Cursor Top Layer */
+/* 幕布边框光晕 */
+.scene-selection-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 200px rgba(255, 150, 50, 0.12);
+  pointer-events: none;
+}
+
+/* 光标层 */
 .cursor-layer {
   position: absolute;
   top: 0;
@@ -47,36 +61,52 @@
   pointer-events: none;
 }
 
+/* 手势光标 - 皮影风格 */
+.gesture-cursor {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.9) 0%, rgba(255, 180, 80, 0.5) 70%, transparent 100%);
+  border: 2px solid #d4af37;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 
+    0 0 20px rgba(255, 180, 80, 0.6),
+    inset 0 0 10px rgba(255, 200, 100, 0.5);
+}
+
+/* 场景卡片容器 */
 .scene-cards-container {
   display: flex;
-  gap: 60px;
+  gap: 50px;
   justify-content: center;
   align-items: stretch;
   max-width: 1400px;
   width: 100%;
   position: relative;
-  z-index: 2; /* Ensure container is well above video */
+  z-index: 2;
 }
 
-/* Shadow Puppet Style Card */
+/* 场景卡片 - 皮影风格 */
 .scene-card {
   flex: 1;
   min-width: 280px;
-  max-width: 400px;
-  border-radius: 12px; 
-  padding: 50px 30px;
+  max-width: 380px;
+  border-radius: 8px;
+  padding: 45px 25px;
   text-align: center;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
   cursor: pointer;
   position: relative;
   overflow: visible;
-  z-index: 1; 
-  isolation: isolate; 
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-  background: transparent; /* Ensure no default background interferes */
+  z-index: 1;
+  isolation: isolate;
+  will-change: transform;
 }
 
-/* SVG Border Container - Layer 1 (Bottom) */
+/* SVG边框容器 */
 .scene-card-border {
   position: absolute;
   top: -12px;
@@ -84,60 +114,57 @@
   width: calc(100% + 24px);
   height: calc(100% + 24px);
   pointer-events: none;
-  z-index: 1; /* Lowest positive layer */
+  z-index: 1;
   overflow: visible;
 }
 
-/* Background Layer - Layer 2 (Middle) */
+/* 卡片背景 - 宣纸/皮革质感 */
 .scene-card-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #fff3e0 0%, #f8e6c0 100%);
-  border: 4px solid #8d6e63;
-  border-radius: 12px;
+  background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 50%, #d4c4b0 100%);
+  border: 3px solid #8b4513;
+  border-radius: 8px;
   box-shadow: 
-    0 10px 20px rgba(0, 0, 0, 0.4),
-    inset 0 0 30px rgba(139, 69, 19, 0.2);
-  z-index: 2; /* Middle layer */
-  transition: all 0.3s ease;
+    0 0 30px rgba(255, 180, 80, 0.2),
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 40px rgba(139, 69, 19, 0.15);
+  z-index: 2;
+  transition: all 0.2s ease;
+  will-change: box-shadow, border-color, background;
 }
 
-/* Corner Decorations */
+/* 角落装饰 - 传统纹样 */
 .scene-card-bg::before,
 .scene-card-bg::after {
-  content: '';
+  content: '◆';
   position: absolute;
-  width: 40px;
-  height: 40px;
-  border: 4px solid #8d6e63;
+  font-size: 16px;
+  color: #8b4513;
   transition: all 0.3s ease;
-  opacity: 0.6;
-  z-index: 3; /* Decorations on top of background */
+  opacity: 0.7;
+  z-index: 3;
 }
 
 .scene-card-bg::before {
-  top: 8px;
-  left: 8px;
-  border-right: none;
-  border-bottom: none;
-  border-top-left-radius: 8px;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .scene-card-bg::after {
-  bottom: 8px;
-  right: 8px;
-  border-left: none;
-  border-top: none;
-  border-bottom-right-radius: 8px;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-/* Content Layer - Layer 4 (Top) */
+/* 卡片内容层 */
 .scene-card-content {
   position: relative;
-  z-index: 4; /* Topmost layer */
+  z-index: 4;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -145,97 +172,120 @@
   align-items: center;
 }
 
-/* Hover State */
+/* 悬停状态 */
 .scene-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-8px);
 }
 
 .scene-card:hover .scene-card-bg {
   box-shadow: 
-    0 15px 30px rgba(0, 0, 0, 0.5),
-    inset 0 0 40px rgba(139, 69, 19, 0.3);
-  border-color: #5d4037;
+    0 0 40px rgba(255, 180, 80, 0.4),
+    0 15px 40px rgba(0, 0, 0, 0.6),
+    inset 0 0 30px rgba(139, 69, 19, 0.2);
+  border-color: #d4af37;
 }
 
 .scene-card.hovered {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .scene-card.hovered .scene-card-bg {
-  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 50%, #ffcc80 100%);
   box-shadow: 
-    0 0 20px rgba(255, 215, 0, 0.6), 
-    0 20px 40px rgba(0, 0, 0, 0.6),
-    inset 0 0 20px rgba(255, 160, 0, 0.3);
-  border-color: #ff6f00;
+    0 0 50px rgba(212, 175, 55, 0.6),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    inset 0 0 30px rgba(255, 160, 0, 0.3);
+  border-color: #c41e3a;
 }
 
-/* Progress Bar Stroke */
+.scene-card.hovered .scene-card-bg::before,
+.scene-card.hovered .scene-card-bg::after {
+  color: #c41e3a;
+}
+
+/* 进度条边框 - 优化性能 */
 .scene-card-border rect {
-  transition: stroke-dashoffset 0.1s linear;
   stroke-linecap: square;
-  filter: drop-shadow(0 0 10px #ff3d00);
-  stroke: #ff6f00;
+  filter: drop-shadow(0 0 15px #c41e3a);
+  stroke: #c41e3a;
+  will-change: stroke-dashoffset;
 }
 
-/* Content Styles */
+/* 场景图标 */
 .scene-icon {
-  font-size: 100px;
+  font-size: 90px;
   margin-bottom: 20px;
-  filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.2));
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
   opacity: 0.9;
 }
 
+/* 场景名称 - 书法风格 */
 .scene-name {
-  font-size: 42px;
-  font-family: "KaiTi", "STKaiti", "Baskerville", serif;
-  font-weight: bold;
+  font-size: 38px;
+  font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
+  font-weight: 600;
   color: #3e2723;
-  margin: 0 0 15px 0;
-  letter-spacing: 4px;
+  margin: 0 0 12px 0;
+  letter-spacing: 0.15em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+/* 场景描述 */
 .scene-description {
-  font-size: 18px;
-  font-family: "KaiTi", "STKaiti", serif;
+  font-size: 16px;
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   color: #5d4037;
   margin: 0;
-  line-height: 1.5;
-  font-weight: 600;
+  line-height: 1.6;
+  font-weight: 500;
 }
 
-/* Header Styles */
+/* 标题区域 */
+.scene-selection-header {
+  margin-bottom: 50px;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
 .scene-selection-header h1 {
-  font-family: "KaiTi", "STKaiti", serif;
-  font-size: 64px;
-  color: #fff8e1;
-  text-shadow: 0 0 10px rgba(255, 160, 0, 0.8);
-  letter-spacing: 8px;
+  font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
+  font-size: 56px;
+  color: #f5e6d3;
+  letter-spacing: 0.2em;
+  margin: 0 0 15px 0;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(255, 180, 80, 0.4);
 }
 
 .scene-selection-hint {
-  font-family: "KaiTi", "STKaiti", serif;
-  font-size: 28px;
-  color: #ffecb3;
-  letter-spacing: 4px;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 22px;
+  color: rgba(212, 175, 55, 0.9);
+  letter-spacing: 0.1em;
 }
 
+/* 响应式 */
 @media (max-width: 1200px) {
   .scene-cards-container {
     gap: 30px;
   }
   .scene-card {
     min-width: 240px;
-    padding: 30px 20px;
+    padding: 35px 20px;
+  }
+  .scene-selection-header h1 {
+    font-size: 44px;
   }
 }
 
 @media (max-width: 900px) {
   .scene-cards-container {
     flex-direction: column;
-    gap: 30px;
+    gap: 25px;
   }
   .scene-card {
-    max-width: 500px;
+    max-width: 450px;
   }
 }

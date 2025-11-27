@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import './CountdownPage.css';
 
@@ -19,37 +19,85 @@ export const CountdownPage = ({
 }: CountdownPageProps) => {
   const { t } = useTranslation();
   const [countdown, setCountdown] = useState(countdownDuration);
+  const completedRef = useRef(false);
+  const intervalRef = useRef<number | null>(null);
 
+  // Store callback in ref to avoid dependency issues
+  const onCountdownCompleteRef = useRef(onCountdownComplete);
+  onCountdownCompleteRef.current = onCountdownComplete;
+
+  // Single useEffect to handle countdown logic
   useEffect(() => {
-    // Update countdown every second
-    const intervalId = setInterval(() => {
+    console.log('CountdownPage mounted, starting countdown from', countdownDuration);
+    
+    // Reset state
+    setCountdown(countdownDuration);
+    completedRef.current = false;
+    
+    // Clear any existing interval
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Start countdown interval
+    intervalRef.current = window.setInterval(() => {
       setCountdown((prev) => {
+        console.log('Countdown tick:', prev);
+        
         if (prev <= 1) {
-          clearInterval(intervalId);
-          // Trigger recording start when countdown reaches 0
-          if (onCountdownComplete) {
-            setTimeout(onCountdownComplete, 100); // Small delay for smooth transition
+          // Clear interval
+          if (intervalRef.current !== null) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          
+          // Trigger callback using ref
+          if (onCountdownCompleteRef.current && !completedRef.current) {
+            completedRef.current = true;
+            console.log('Countdown complete, triggering callback');
+            setTimeout(() => onCountdownCompleteRef.current?.(), 100);
           }
           return 0;
         }
+        
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(intervalId);
-  }, [onCountdownComplete]);
+    // Cleanup on unmount
+    return () => {
+      console.log('Cleaning up countdown interval');
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [countdownDuration]); // Only depend on countdownDuration, not the callback
+
+  // Video ref to prevent repeated play() calls
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoInitializedRef = useRef(false);
+
+  // Setup video only once
+  useEffect(() => {
+    if (videoRef.current && videoElement && !videoInitializedRef.current) {
+      videoRef.current.srcObject = videoElement.srcObject;
+      videoRef.current.play().catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Video play error:', err);
+        }
+      });
+      videoInitializedRef.current = true;
+    }
+  }, [videoElement]);
 
   return (
     <div className="countdown-page">
       {videoElement && (
         <video
           className="video-feed-background"
-          ref={(el) => {
-            if (el && videoElement) {
-              el.srcObject = videoElement.srcObject;
-              el.play();
-            }
-          }}
+          ref={videoRef}
           autoPlay
           muted
           playsInline

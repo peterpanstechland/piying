@@ -110,14 +110,20 @@ class Settings(BaseModel):
 class ConfigLoader:
     """Loads and validates scene and system configurations"""
     
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str = None):
         """
         Initialize ConfigLoader
         
         Args:
-            config_dir: Directory containing configuration files
+            config_dir: Directory containing configuration files (default: project_root/config)
         """
-        self.config_dir = Path(config_dir)
+        if config_dir:
+            self.config_dir = Path(config_dir)
+        else:
+            # Default to project root's config directory
+            project_root = Path(__file__).parent.parent.parent.parent
+            self.config_dir = project_root / "config"
+        
         self.scenes_file = self.config_dir / "scenes.json"
         self.settings_file = self.config_dir / "settings.json"
         

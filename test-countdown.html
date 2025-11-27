@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒计时测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: #fff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #ffd700;
+        }
+        .test-section {
+            background: #222;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .countdown-display {
+            font-size: 72px;
+            font-weight: bold;
+            color: #ffd700;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.idle {
+            background: #444;
+        }
+        .status.counting {
+            background: #ff6600;
+        }
+        .status.complete {
+            background: #00ff00;
+            color: #000;
+        }
+        button {
+            background: #ffd700;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #ffed4e;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #111;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .log-entry.info {
+            color: #00ff00;
+        }
+        .log-entry.warn {
+            color: #ffaa00;
+        }
+        .log-entry.error {
+            color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 倒计时功能测试</h1>
+        
+        <div class="test-section">
+            <h2>测试说明</h2>
+            <p>此页面用于测试倒计时逻辑是否正常工作。</p>
+            <p>点击"开始倒计时"按钮，观察倒计时是否从指定数字递减到0。</p>
+        </div>
+
+        <div class="test-section">
+            <h2>倒计时显示</h2>
+            <div class="countdown-display" id="countdownDisplay">--</div>
+            <div class="status idle" id="status">状态：等待开始</div>
+        </div>
+
+        <div class="test-section">
+            <h2>控制</h2>
+            <button onclick="startCountdown(5)">5秒倒计时</button>
+            <button onclick="startCountdown(3)">3秒倒计时</button>
+            <button onclick="startCountdown(10)">10秒倒计时</button>
+            <button onclick="resetTest()">重置</button>
+        </div>
+
+        <div class="test-section">
+            <h2>日志</h2>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let intervalId = null;
+        let countdown = 0;
+        let completed = false;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateDisplay(value) {
+            const display = document.getElementById('countdownDisplay');
+            if (value === 0) {
+                display.textContent = '开始！';
+                display.style.color = '#00ff00';
+            } else {
+                display.textContent = value;
+                display.style.color = '#ffd700';
+            }
+        }
+
+        function updateStatus(text, className) {
+            const status = document.getElementById('status');
+            status.textContent = `状态：${text}`;
+            status.className = `status ${className}`;
+        }
+
+        function startCountdown(duration) {
+            log(`开始 ${duration} 秒倒计时`, 'info');
+            
+            // 清理现有定时器
+            if (intervalId !== null) {
+                log('清理现有定时器', 'warn');
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+
+            // 重置状态
+            countdown = duration;
+            completed = false;
+            updateDisplay(countdown);
+            updateStatus('倒计时中...', 'counting');
+
+            // 启动定时器
+            intervalId = setInterval(() => {
+                log(`倒计时 tick: ${countdown}`, 'info');
+                
+                if (countdown <= 1) {
+                    // 清理定时器
+                    clearInterval(intervalId);
+                    intervalId = null;
+                    
+                    // 触发完成
+                    if (!completed) {
+                        completed = true;
+                        log('倒计时完成！', 'info');
+                        updateDisplay(0);
+                        updateStatus('完成！', 'complete');
+                        
+                        // 模拟回调延迟
+                        setTimeout(() => {
+                            log('触发回调（模拟进入下一状态）', 'info');
+                        }, 100);
+                    }
+                    countdown = 0;
+                } else {
+                    countdown--;
+                    updateDisplay(countdown);
+                }
+            }, 1000);
+        }
+
+        function resetTest() {
+            log('重置测试', 'warn');
+            
+            if (intervalId !== null) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            
+            countdown = 0;
+            completed = false;
+            updateDisplay('--');
+            updateStatus('等待开始', 'idle');
+        }
+
+        // 初始化
+        log('测试页面已加载', 'info');
+        log('点击按钮开始测试倒计时功能', 'info');
+    </script>
+</body>
+</html>
