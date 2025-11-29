@@ -327,8 +327,10 @@ export class CameraDetectionService {
           // Use index finger tip if available, otherwise wrist
           const cursorPoint = indexTip || wrist;
           
+          // Mirror the x coordinate for natural interaction
+          // When user moves hand right, cursor should move right (like a mirror)
           result.rightHand = {
-            x: cursorPoint.x,
+            x: 1 - cursorPoint.x,  // Mirror horizontally
             y: cursorPoint.y,
           };
           break;

@@ -31,8 +31,11 @@ export const IdlePage = ({ videoElement }: IdlePageProps) => {
         canvas.width = videoElement.videoWidth;
         canvas.height = videoElement.videoHeight;
         
-        // Draw video frame
-        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        // Mirror the video horizontally for natural interaction
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoElement, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
       }
 
       animationFrameId = requestAnimationFrame(renderFrame);

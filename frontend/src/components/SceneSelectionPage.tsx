@@ -220,7 +220,11 @@ export const SceneSelectionPage = ({
           startY = (canvas.height - drawHeight) / 2;
         }
 
-        ctx.drawImage(videoElement, startX, startY, drawWidth, drawHeight);
+        // Mirror the video horizontally for natural interaction
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoElement, -startX - drawWidth, startY, drawWidth, drawHeight);
+        ctx.restore();
       }
 
       animationFrameId = requestAnimationFrame(renderVideo);

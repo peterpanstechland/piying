@@ -16,6 +16,7 @@
   height: 100%;
   object-fit: cover;
   opacity: 0.25;
+  transform: scaleX(-1); /* Mirror horizontally for natural interaction */
 }
 
 .countdown-overlay {
