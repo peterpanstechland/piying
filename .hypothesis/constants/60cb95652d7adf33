@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\passlib\handlers\bcrypt.py
+# hypothesis_version: 6.148.2
+
+[b'\x00', b'0123456789', b'\xd1\x91', 255, '$', '$2$', '$2a$', '$2b$', '$2x$', '$2y$', '$bcrypt-sha256$', '%02d', '%s%02d$%s', '%s%02d$%s%s', '.Oeu', '2', '2a', '2b', '2y', '<unknown>', '`bcrypt` package', 'ascii', 'bcrypt', 'bcrypt_sha256', 'bcryptor', 'bcryptor library', 'builtin', 'digest', 'hash', 'ident', 'invalid salt string', 'log2', 'malformed cost field', 'os_crypt', 'pybcrypt', 'pybcrypt library', 'rounds', 'salt', 'sha256', 'test', 'truncate_error', 'type', 'utf-8', 'version']

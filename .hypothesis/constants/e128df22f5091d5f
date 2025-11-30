@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\models\admin\character.py
+# hypothesis_version: 6.148.2
+
+[0.0, 0.5, 0.9, 1.0, 100, 255, 500, '2024-01-01T00:00:00', 'CASCADE', 'Character name', 'Character part name', 'Character parts', 'CharacterDB', 'CharacterPartDB', 'Connected part names', 'Creation timestamp', 'Display name', 'Part name', 'Path to PNG file', 'Shadow Warrior', 'Skeleton bindings', 'SkeletonBindingDB', '[]', 'all, delete-orphan', 'bindings', 'body', 'character', 'character_parts', 'characters', 'characters.id', 'connections', 'created_at', 'description', 'example', 'file_path', 'head', 'id', 'landmarks', 'left-arm', 'left-foot', 'left-hand', 'name', 'part_name', 'parts', 'pivot_x', 'pivot_y', 'right-arm', 'right-foot', 'right-hand', 'rotation_landmark', 'scale_landmarks', 'selectin', 'skeleton_bindings', 'thumbnail_path', 'updated_at', 'upper-leg', 'z_index']

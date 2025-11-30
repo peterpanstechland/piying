@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\orm\instrumentation.py
+# hypothesis_version: 6.148.2
+
+['1.4', '<%s of %r at %x>', 'DEL_ATTR', 'InstanceEvents', '_T', '__defaults__', '__del__', '__init__', '__kwdefaults__', '__name__', 'mapper']

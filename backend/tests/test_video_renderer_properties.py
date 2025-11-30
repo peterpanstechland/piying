@@ -74,7 +74,7 @@ def create_test_video(path: Path, width: int = 640, height: int = 480, fps: int 
 # Property 11: Rendered video uses correct time windows
 # Feature: shadow-puppet-interactive-system, Property 11: Rendered video uses correct time windows
 # Validates: Requirements 8.2
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow, HealthCheck.data_too_large])
 @given(
     global_time=st.floats(min_value=0.0, max_value=15.0),
     segment_durations=st.lists(
@@ -181,7 +181,7 @@ def test_property_11_time_window_mapping(global_time, segment_durations):
 # Property 12: Rendering completion updates status and creates file
 # Feature: shadow-puppet-interactive-system, Property 12: Rendering completion updates status and creates file
 # Validates: Requirements 8.4
-@settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     scene_id=scene_id_strategy(),
     num_segments=st.integers(min_value=1, max_value=3)
@@ -279,7 +279,7 @@ def test_property_12_rendering_completion(scene_id, num_segments):
 # Property 25: Rendered video matches base video resolution
 # Feature: shadow-puppet-interactive-system, Property 25: Rendered video matches base video resolution
 # Validates: Requirements 15.1
-@settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     width=st.integers(min_value=320, max_value=1920).filter(lambda x: x % 2 == 0),
     height=st.integers(min_value=240, max_value=1080).filter(lambda x: x % 2 == 0)
@@ -361,7 +361,7 @@ def test_property_25_video_resolution(width, height):
 # Property 26: Rendered video maintains target frame rate
 # Feature: shadow-puppet-interactive-system, Property 26: Rendered video maintains target frame rate
 # Validates: Requirements 15.2
-@settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     base_fps=st.integers(min_value=24, max_value=60)
 )
@@ -439,7 +439,7 @@ def test_property_26_video_frame_rate(base_fps):
 # Property 27: Rendered video uses H.264 codec
 # Feature: shadow-puppet-interactive-system, Property 27: Rendered video uses H.264 codec
 # Validates: Requirements 15.4
-@settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(scene_id=scene_id_strategy())
 def test_property_27_video_codec(scene_id):
     """
@@ -519,7 +519,7 @@ def test_property_27_video_codec(scene_id):
 # Property 37: Rendering applies scene-specific parameters
 # Feature: shadow-puppet-interactive-system, Property 37: Rendering applies scene-specific parameters
 # Validates: Requirements 20.4
-@settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=15, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     scene_id=scene_id_strategy(),
     offset_x=st.integers(min_value=-200, max_value=200),

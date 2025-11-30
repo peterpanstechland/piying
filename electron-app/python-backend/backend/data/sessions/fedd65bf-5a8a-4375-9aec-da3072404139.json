@@ -1,0 +1,33 @@
+{
+  "id": "fedd65bf-5a8a-4375-9aec-da3072404139",
+  "scene_id": "sceneC",
+  "status": "pending",
+  "segments": [
+    {
+      "index": 0,
+      "duration": 8.0,
+      "frames": [
+        {
+          "timestamp": 0.033,
+          "landmarks": [
+            [
+              0.5,
+              0.3,
+              -0.1,
+              0.99
+            ],
+            [
+              0.52,
+              0.28,
+              -0.12,
+              0.98
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "output_path": null,
+  "created_at": 1764128644.2338192,
+  "updated_at": 1764128644.2534966
+}

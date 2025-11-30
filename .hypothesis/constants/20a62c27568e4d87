@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\services\admin\__init__.py
+# hypothesis_version: 6.148.2
+
+['AuthService', 'CharacterService', 'DashboardService', 'ExportImportService', 'SettingsService', 'StorylineService', 'auth_service', 'character_service', 'dashboard_service', 'settings_service', 'storyline_service']

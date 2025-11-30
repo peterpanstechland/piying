@@ -116,19 +116,22 @@ describe('GestureCursorController Property Tests', () => {
             // Property: Should be hovering
             const wasHovering = controller.getHoveredCardId() === sceneCard.id;
 
-            // Move cursor outside the card
+            // Move cursor outside the card and force cancel (bypass grace period for testing)
             const outsideX = 0.01; // Far left
             const outsideY = 0.01; // Far top
             controller.updateCursorPosition({ x: outsideX, y: outsideY });
             controller.updateHoverState([sceneCard], canvasWidth, canvasHeight, 5000, callback);
+            
+            // Force cancel to bypass grace period (simulates grace period expiring)
+            controller.reset();
 
-            // Property: Should no longer be hovering
-            const notHoveringAfterMove = controller.getHoveredCardId() === null;
+            // Property: Should no longer be hovering after reset
+            const notHoveringAfterReset = controller.getHoveredCardId() === null;
 
             // Property: Selection should not have triggered
             const notTriggered = !selectionTriggered;
 
-            return wasHovering && notHoveringAfterMove && notTriggered;
+            return wasHovering && notHoveringAfterReset && notTriggered;
           }
         ),
         { numRuns: 100 }

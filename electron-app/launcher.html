@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>皮影互动系统 - 启动器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+        }
+        
+        .logo {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(255, 200, 100, 0.5));
+        }
+        
+        h1 {
+            font-size: 42px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 50px;
+            letter-spacing: 3px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            width: 280px;
+            height: 200px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .btn:hover::before {
+            opacity: 1;
+        }
+        
+        .btn:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(-5px) scale(0.98);
+        }
+        
+        .btn-frontend {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-admin {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
+        }
+        
+        .btn-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 8px;
+        }
+        
+        .btn-desc {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 30px;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .footer-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .footer-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.offline {
+            background: #f87171;
+            animation: none;
+        }
+        
+        .status-dot.loading {
+            background: #fbbf24;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .version {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        
+        .loading-overlay.show {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="status">
+        <div class="status-dot loading" id="statusDot"></div>
+        <span id="statusText">检查服务状态...</span>
+    </div>
+    
+    <div class="container">
+        <div class="logo">🎭</div>
+        <h1>皮影互动系统</h1>
+        <p class="subtitle">Shadow Puppet Interactive System</p>
+        
+        <div class="buttons">
+            <button class="btn btn-frontend" onclick="openFrontend()">
+                <span class="btn-icon">🎬</span>
+                <span class="btn-title">开始体验</span>
+                <span class="btn-desc">进入互动体验界面</span>
+            </button>
+            
+            <button class="btn btn-admin" onclick="openAdmin()">
+                <span class="btn-icon">⚙️</span>
+                <span class="btn-title">管理后台</span>
+                <span class="btn-desc">系统配置与管理</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <button class="footer-btn" onclick="restartBackend()">🔄 重启服务</button>
+        <button class="footer-btn" onclick="openHelp()">❓ 帮助文档</button>
+        <button class="footer-btn" onclick="exitApp()">🚪 退出程序</button>
+    </div>
+    
+    <div class="version">v1.0.0</div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">正在加载...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        // 检查后端状态
+        async function checkBackendStatus() {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(`${API_BASE}/api/health`, { 
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusDot.className = 'status-dot';
+                    if (data.status === 'healthy') {
+                        statusText.textContent = '服务运行中';
+                    } else if (data.status === 'degraded') {
+                        statusDot.style.background = '#fbbf24';
+                        statusText.textContent = '服务运行中（警告）';
+                    } else {
+                        statusDot.style.background = '#f87171';
+                        statusText.textContent = '服务异常';
+                    }
+                    return true;
+                }
+            } catch (error) {
+                console.log('Backend check failed:', error);
+            }
+            
+            statusDot.className = 'status-dot offline';
+            statusText.textContent = '服务未响应';
+            return false;
+        }
+        
+        // 显示加载
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').classList.add('show');
+        }
+        
+        // 隐藏加载
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        }
+        
+        // 打开前端体验
+        function openFrontend() {
+            showLoading('正在打开体验界面...');
+            if (window.electronAPI) {
+                window.electronAPI.openFrontend();
+            } else {
+                window.location.href = API_BASE;
+            }
+        }
+        
+        // 打开管理后台
+        function openAdmin() {
+            showLoading('正在打开管理后台...');
+            if (window.electronAPI) {
+                window.electronAPI.openAdmin();
+            } else {
+                window.location.href = `${API_BASE}/admin`;
+            }
+        }
+        
+        // 重启后端
+        async function restartBackend() {
+            showLoading('正在重启服务...');
+            if (window.electronAPI) {
+                await window.electronAPI.restartBackend();
+            }
+            
+            // 等待后端重启
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            hideLoading();
+            checkBackendStatus();
+        }
+        
+        // 打开帮助
+        function openHelp() {
+            if (window.electronAPI) {
+                window.electronAPI.openHelp();
+            } else {
+                alert('帮助文档请查看安装目录下的 README.txt');
+            }
+        }
+        
+        // 退出应用
+        function exitApp() {
+            if (confirm('确定要退出程序吗？')) {
+                if (window.electronAPI) {
+                    window.electronAPI.exitApp();
+                } else {
+                    window.close();
+                }
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            checkBackendStatus();
+            // 每 10 秒检查一次状态
+            setInterval(checkBackendStatus, 10000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\api\admin\__init__.py
+# hypothesis_version: 6.148.2
+
+['auth_router', 'characters_router', 'dashboard_router', 'export_import_router', 'get_current_user', 'require_admin', 'settings_router', 'storylines_router', 'users_router']

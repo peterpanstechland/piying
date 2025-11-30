@@ -1,0 +1,15 @@
+{
+  "id": "3a0b1d1c-074a-4e9e-8c69-f70cb7f314c7",
+  "scene_id": "sceneA",
+  "status": "pending",
+  "segments": [
+    {
+      "index": 0,
+      "duration": 8.0,
+      "frames": []
+    }
+  ],
+  "output_path": null,
+  "created_at": 1764135051.4112391,
+  "updated_at": 1764135051.420656
+}

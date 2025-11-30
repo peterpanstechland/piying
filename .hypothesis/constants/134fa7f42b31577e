@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\services\__init__.py
+# hypothesis_version: 6.148.2
+
+['CharacterPath', 'SessionManager', 'StorageManager', 'VideoRenderer']

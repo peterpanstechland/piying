@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\api\admin\users.py
+# hypothesis_version: 6.148.2
+
+['/api/admin/users', '/{user_id}', 'admin', 'message', 'operator', 'user_id']

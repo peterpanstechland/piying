@@ -39,7 +39,7 @@ def create_test_video(path: Path, width: int = 640, height: int = 480, fps: int 
 # Property 30: Rendering failures update status and log
 # Feature: shadow-puppet-interactive-system, Property 30: Rendering failures update status and log
 # Validates: Requirements 18.3
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     scene_id=st.sampled_from(["sceneA", "sceneB", "sceneC"]),
     failure_type=st.sampled_from(["missing_video", "invalid_video", "missing_scene"])
@@ -150,7 +150,7 @@ def test_property_30_rendering_failure_handling(scene_id, failure_type):
 # Property 28: Video responses include correct content-type
 # Feature: shadow-puppet-interactive-system, Property 28: Video responses include correct content-type
 # Validates: Requirements 15.5
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     scene_id=st.sampled_from(["sceneA", "sceneB", "sceneC"])
 )

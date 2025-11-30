@@ -102,8 +102,8 @@ describe('CameraDetectionService Property Tests', () => {
     it('should maintain proportional mapping across different canvas sizes', () => {
       fc.assert(
         fc.property(
-          fc.double({ min: 0, max: 1 }),
-          fc.double({ min: 0, max: 1 }),
+          fc.double({ min: 0, max: 1, noNaN: true }),
+          fc.double({ min: 0, max: 1, noNaN: true }),
           fc.integer({ min: 320, max: 3840 }),
           fc.integer({ min: 240, max: 2160 }),
           (normalizedX, normalizedY, width, height) => {

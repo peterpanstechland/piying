@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\apscheduler\events.py
+# hypothesis_version: 6.148.2
+
+['<%s (code=%d)>', 'EVENT_EXECUTOR_ADDED', 'EVENT_JOBSTORE_ADDED', 'EVENT_JOB_ADDED', 'EVENT_JOB_ERROR', 'EVENT_JOB_EXECUTED', 'EVENT_JOB_MISSED', 'EVENT_JOB_MODIFIED', 'EVENT_JOB_REMOVED', 'EVENT_JOB_SUBMITTED', 'JobEvent', 'JobExecutionEvent', 'JobSubmissionEvent', 'SchedulerEvent']

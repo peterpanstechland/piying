@@ -1,0 +1,204 @@
+.segment-configurator {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Segment Count Control */
+.segment-count-control {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.segment-count-control label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.count-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.count-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.count-btn:hover {
+  background: #f3f4f6;
+}
+
+.count-btn.active {
+  background: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+}
+
+/* Duration Summary */
+.duration-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #166534;
+}
+
+.duration-summary.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.duration-summary .separator {
+  color: #9ca3af;
+}
+
+.duration-summary .warning-icon {
+  margin-left: auto;
+}
+
+/* Validation Error */
+.validation-error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+/* Segment List */
+.segment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.segment-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segment-header {
+  background: #f9fafb;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.segment-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.segment-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field.full-width {
+  flex: 1 1 100%;
+}
+
+.form-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.form-field input,
+.form-field select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: #4f46e5;
+}
+
+.form-field input[type="number"] {
+  width: 100%;
+}
+
+/* Offset Fields */
+.offset-field .offset-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.offset-field .offset-inputs input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Configurator Actions */
+.configurator-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .segment-count-control {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

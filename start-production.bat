@@ -21,8 +21,8 @@ if not exist "data\sessions\" mkdir data\sessions
 if not exist "data\outputs\" mkdir data\outputs
 if not exist "data\logs\" mkdir data\logs
 
-REM Build frontend
-echo [1/2] Building frontend...
+REM Build main frontend
+echo [1/3] Building main frontend...
 cd frontend
 call npm run build
 if errorlevel 1 (
@@ -32,7 +32,20 @@ if errorlevel 1 (
     exit /b 1
 )
 cd ..
-echo Frontend built successfully.
+echo Main frontend built successfully.
+echo.
+
+REM Build admin frontend
+echo [2/3] Building admin panel...
+cd admin-frontend
+call npm run build
+if errorlevel 1 (
+    echo WARNING: Admin panel build failed. Admin panel will not be available.
+    cd ..
+) else (
+    cd ..
+    echo Admin panel built successfully.
+)
 echo.
 
 REM Get local IP address for QR code
@@ -46,7 +59,7 @@ echo   QR Code URLs: http://%LOCAL_IP%:8000
 echo.
 
 REM Start backend
-echo [2/2] Starting production server...
+echo [3/3] Starting production server...
 echo Press Ctrl+C to stop the server.
 echo.
 call venv\Scripts\activate.bat

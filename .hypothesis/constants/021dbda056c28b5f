@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\apscheduler\triggers\cron\fields.py
+# hypothesis_version: 6.148.2
+
+[1970, 9999, ' *, *', "%s('%s', '%s')", '*', ',', 'BaseField', 'DEFAULT_VALUES', 'DayOfMonthField', 'DayOfWeekField', 'MAX_VALUES', 'MIN_VALUES', 'WeekField', 'day', 'day_of_week', 'hour', 'minute', 'month', 'second', 'week', 'year']

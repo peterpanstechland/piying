@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\orm\path_registry.py
+# hypothesis_version: 6.148.2
+
+['*', 'AliasedInsp[Any]', '_cache', '_loader_key', '_sa_default', 'entity', 'has_entity', 'is_aliased_class', 'is_entity', 'is_property', 'is_root', 'is_unnatural', 'key', 'loader', 'mapper', 'natural_path', 'parent', 'path', 'prop', 'token']

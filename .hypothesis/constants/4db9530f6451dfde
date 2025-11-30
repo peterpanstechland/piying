@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\models\admin\__init__.py
+# hypothesis_version: 6.148.2
+
+['CameraDevice', 'CameraListResponse', 'CameraSettings', 'CameraSettingsUpdate', 'Character', 'CharacterCreate', 'CharacterDB', 'CharacterPart', 'CharacterPartDB', 'CharacterPartUpload', 'CharacterResponse', 'CharacterUpdate', 'LANIPResponse', 'LoginRequest', 'LoginResponse', 'PivotConfigUpdate', 'QRCodeSettings', 'QRCodeSettingsUpdate', 'REQUIRED_PARTS', 'RenderingSettings', 'Segment', 'SegmentConfigUpdate', 'SegmentDB', 'SkeletonBinding', 'SkeletonBindingDB', 'StorageSettings', 'Storyline', 'StorylineCreate', 'StorylineDB', 'StorylineResponse', 'StorylineUpdate', 'SystemSettings', 'SystemSettingsUpdate', 'TimeoutSettings', 'TokenPayload', 'User', 'UserCreate', 'UserResponse', 'VALID_PATH_TYPES', 'VideoUploadResponse']

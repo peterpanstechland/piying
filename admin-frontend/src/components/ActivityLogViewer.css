@@ -1,0 +1,252 @@
+.activity-log-viewer {
+  background: #2a2a3e;
+  border: 1px solid #3a3a4e;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+/* Filters */
+.log-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.level-filter {
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border: 1px solid #3a3a4e;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.level-filter:focus {
+  outline: none;
+  border-color: #4f46e5;
+}
+
+.refresh-btn {
+  padding: 8px 16px;
+  background: #374151;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.refresh-btn:hover {
+  background: #4b5563;
+}
+
+/* Log List */
+.log-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.log-entry {
+  border-bottom: 1px solid #3a3a4e;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.log-summary:hover {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.log-level {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  min-width: 60px;
+  text-align: center;
+}
+
+.level-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.level-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.level-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.level-debug {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.level-default {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.log-timestamp {
+  font-size: 0.75rem;
+  color: #6b7280;
+  min-width: 150px;
+}
+
+.log-message {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #d1d5db;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-expand-icon {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+/* Log Details */
+.log-details {
+  padding: 12px 12px 12px 92px;
+  background: #1a1a2e;
+  border-top: 1px solid #3a3a4e;
+}
+
+.log-detail-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: #6b7280;
+  min-width: 80px;
+}
+
+.detail-value {
+  color: #d1d5db;
+}
+
+.log-detail-section {
+  margin-top: 12px;
+}
+
+.detail-code {
+  margin-top: 8px;
+  padding: 12px;
+  background: #0d0d1a;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.75rem;
+  color: #a5b4fc;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Exception Section */
+.exception-section {
+  background: rgba(239, 68, 68, 0.1);
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.exception-type {
+  font-weight: 600;
+  color: #ef4444;
+  margin-top: 8px;
+}
+
+.exception-message {
+  color: #fca5a5;
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+
+.exception-traceback {
+  margin-top: 12px;
+  padding: 12px;
+  background: #0d0d1a;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.75rem;
+  color: #fca5a5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Pagination */
+.log-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #3a3a4e;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  background: #374151;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* Loading and Empty States */
+.log-loading,
+.log-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+}
+
+.log-error {
+  text-align: center;
+  padding: 2rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}

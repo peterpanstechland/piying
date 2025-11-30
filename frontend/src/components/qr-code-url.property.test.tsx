@@ -4,6 +4,7 @@
  * Validates: Requirements 10.2
  */
 
+import React from 'react';
 import * as fc from 'fast-check';
 import { render } from '@testing-library/react';
 import { FinalResultPage } from './FinalResultPage';

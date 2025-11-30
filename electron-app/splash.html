@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 400px;
+            height: 300px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .logo {
+            font-size: 64px;
+            margin-bottom: 15px;
+            animation: float 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 15px rgba(255, 200, 100, 0.5));
+        }
+        
+        h1 {
+            font-size: 22px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 30px;
+        }
+        
+        .loader {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .loader-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            border-radius: 2px;
+            animation: loading 2.5s ease-in-out infinite;
+        }
+        
+        .status {
+            margin-top: 15px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @keyframes loading {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">🎭</div>
+    <h1>皮影互动系统</h1>
+    <p class="subtitle">Shadow Puppet Interactive System</p>
+    <div class="loader">
+        <div class="loader-bar"></div>
+    </div>
+    <div class="status">正在启动服务...</div>
+</body>
+</html>

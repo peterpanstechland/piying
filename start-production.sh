@@ -4,10 +4,29 @@
 echo "Starting Shadow Puppet Interactive System (Production Mode)"
 echo "============================================================"
 
-# Check if frontend is built
+# Build main frontend if not already built
 if [ ! -d "frontend/dist" ]; then
-    echo "Error: Frontend not built. Run ./build-frontend.sh first."
-    exit 1
+    echo "Building main frontend..."
+    cd frontend
+    npm install
+    npm run build
+    if [ $? -ne 0 ]; then
+        echo "Error: Frontend build failed."
+        exit 1
+    fi
+    cd ..
+fi
+
+# Build admin frontend if not already built
+if [ ! -d "admin-frontend/dist" ]; then
+    echo "Building admin panel..."
+    cd admin-frontend
+    npm install
+    npm run build
+    if [ $? -ne 0 ]; then
+        echo "Warning: Admin panel build failed. Admin panel will not be available."
+    fi
+    cd ..
 fi
 
 # Check if Python is installed

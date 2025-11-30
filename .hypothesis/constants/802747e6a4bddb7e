@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\passlib\context.py
+# hypothesis_version: 6.148.2
+
+[0.01, ' \t./;:', '%', '%%', '%.2f', '%s__%s', '%s__%s__%s', ', ', '.', '0', '1.6', '1.7', '2.0', 'CryptContext', 'CryptContext.hash()', 'CryptPolicy', 'LazyCryptContext', '_', '__', '_internal_context', '_stub_policy', 'all', 'ascii', 'auto', 'category', 'context', 'create_policy', 'default', 'deprecated', 'deprecated element', 'empty category: %r', 'empty option: %r', 'empty scheme: %r', 'harden_verify', 'hash', 'items', 'min_verify_time', 'name', 'no sources specified', 'onload', 'passlib', 'rb', 'rounds', 'rt', 'salt', 'scheme', 'schemes', 'source', 'str', 'str or None', 'str or seq', 'string or dict', 'too many secrets', 'truncate_error', 'unicode or bytes', 'utf-8', 'vary_rounds']

@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\services\session_manager.py
+# hypothesis_version: 6.148.2
+
+['*.json', 'cancelled', 'completed', 'created', 'failed', 'status_changed']

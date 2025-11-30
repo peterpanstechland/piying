@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\config\config_loader.py
+# hypothesis_version: 6.148.2
+
+[0.0, 0.5, 1.0, 10.0, 100, 1000, 2000, 'Default Scene A', 'Default language', 'Ending offset [x, y]', 'Fallback language', 'H264', 'Minimum FPS', 'Movement path type', 'Scene identifier', 'Scene name (Chinese)', 'Scene name (English)', 'config', 'en', 'offset_end', 'offset_start', 'r', 'sceneA', 'scenes', 'scenes.json', 'segments', 'settings.json', 'static', 'utf-8', 'zh', '默认场景A', '默认场景描述', '🎭']

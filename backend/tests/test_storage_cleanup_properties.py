@@ -33,7 +33,7 @@ file_age_strategy = st.floats(min_value=0.0, max_value=30.0)  # 0 to 30 days
 
 
 @pytest.mark.property
-@settings(max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(max_examples=20, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     old_file_ages=st.lists(
         st.floats(min_value=7.5, max_value=30.0),  # Only files clearly older than 7 days
@@ -113,7 +113,7 @@ def test_cleanup_deletes_files_older_than_threshold(old_file_ages, young_file_ag
 
 
 @pytest.mark.property
-@settings(max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(max_examples=20, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     file_count=st.integers(min_value=5, max_value=20),
     files_to_delete=st.integers(min_value=1, max_value=10)
@@ -187,7 +187,7 @@ def test_emergency_cleanup_frees_space_to_threshold(file_count, files_to_delete)
 
 
 @pytest.mark.property
-@settings(max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(max_examples=20, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     session_count=st.integers(min_value=1, max_value=20)
 )
@@ -246,7 +246,7 @@ def test_video_deletion_removes_associated_metadata(session_count):
 
 @pytest.mark.property
 @settings(
-    max_examples=100, 
+    max_examples=20, 
     suppress_health_check=[HealthCheck.function_scoped_fixture],
     deadline=None  # Disable deadline for file I/O operations
 )

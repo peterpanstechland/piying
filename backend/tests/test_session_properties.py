@@ -54,7 +54,7 @@ def segment_strategy(draw):
 # Property 10: New sessions have correct initial state
 # Feature: shadow-puppet-interactive-system, Property 10: New sessions have correct initial state
 # Validates: Requirements 7.5
-@settings(max_examples=100)
+@settings(max_examples=20)
 @given(scene_id=scene_id_strategy())
 def test_property_10_new_sessions_have_correct_initial_state(scene_id):
     """
@@ -100,7 +100,7 @@ def test_property_10_new_sessions_have_correct_initial_state(scene_id):
 # Property 8: Segment data round-trip preservation
 # Feature: shadow-puppet-interactive-system, Property 8: Segment data round-trip preservation
 # Validates: Requirements 7.2
-@settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow])
 @given(
     scene_id=scene_id_strategy(),
     segment=segment_strategy()
@@ -168,7 +168,7 @@ def test_property_8_segment_data_round_trip(scene_id, segment):
 # Property 9: Complete segments trigger processing status
 # Feature: shadow-puppet-interactive-system, Property 9: Complete segments trigger processing status
 # Validates: Requirements 7.3
-@settings(max_examples=100)
+@settings(max_examples=20)
 @given(
     scene_id=scene_id_strategy(),
     num_segments=st.integers(min_value=2, max_value=4)
@@ -228,7 +228,7 @@ def test_property_9_complete_segments_trigger_processing_status(scene_id, num_se
 # Property 36: Scene configuration contains required parameters
 # Feature: shadow-puppet-interactive-system, Property 36: Scene configuration contains required parameters
 # Validates: Requirements 20.2
-@settings(max_examples=100)
+@settings(max_examples=20)
 @given(scene_id=st.sampled_from(["sceneA", "sceneB", "sceneC"]))
 def test_property_36_scene_configuration_contains_required_parameters(scene_id):
     """

@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\cryptography\x509\oid.py
+# hypothesis_version: 6.148.2
+
+['AttributeOID', 'CRLEntryExtensionOID', 'ExtendedKeyUsageOID', 'ExtensionOID', 'NameOID', 'OCSPExtensionOID', 'ObjectIdentifier', 'OtherNameFormOID']

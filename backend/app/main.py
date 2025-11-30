@@ -4,13 +4,17 @@ FastAPI application entry point for Shadow Puppet Interactive System
 import logging
 import time
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from .api import sessions_router, videos_router
+from .api.admin import auth_router, users_router, characters_router, storylines_router, settings_router, dashboard_router, export_import_router
 from .config import ConfigLoader
+from .database import init_db
+from .services.admin.auth_service import auth_service
 from .services import StorageManager, SessionManager
 from .models import SessionStatus
 from .utils.logger import setup_logging, log_error_with_context
@@ -101,20 +105,62 @@ print(f"Assets dir: {assets_dir.absolute()}, exists: {assets_dir.exists()}")
 
 if config_dir.exists():
     app.mount("/config", StaticFiles(directory=str(config_dir.absolute())), name="config")
-    print(f"✓ Mounted /config -> {config_dir.absolute()}")
+    print(f"[OK] Mounted /config -> {config_dir.absolute()}")
 
 if assets_dir.exists():
-    app.mount("/assets", StaticFiles(directory=str(assets_dir.absolute())), name="assets")
-    print(f"✓ Mounted /assets -> {assets_dir.absolute()}")
+    app.mount("/scene-assets", StaticFiles(directory=str(assets_dir.absolute())), name="scene_assets")
+    print(f"[OK] Mounted /scene-assets -> {assets_dir.absolute()}")
+
+# Mount user frontend static files
+frontend_dist = project_root / "frontend" / "dist"
+print(f"Frontend dist: {frontend_dist.absolute()}, exists: {frontend_dist.exists()}")
+
+if frontend_dist.exists():
+    # Mount user frontend assets (JS, CSS, etc.)
+    frontend_assets_dir = frontend_dist / "assets"
+    if frontend_assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(frontend_assets_dir.absolute())), name="frontend_assets")
+        print(f"[OK] Mounted /assets -> {frontend_assets_dir.absolute()}")
+
+# Mount admin frontend static files
+admin_frontend_dist = project_root / "admin-frontend" / "dist"
+print(f"Admin frontend dist: {admin_frontend_dist.absolute()}, exists: {admin_frontend_dist.exists()}")
+
+if admin_frontend_dist.exists():
+    # Mount admin frontend assets (JS, CSS, etc.)
+    admin_assets_dir = admin_frontend_dist / "assets"
+    if admin_assets_dir.exists():
+        app.mount("/admin/assets", StaticFiles(directory=str(admin_assets_dir.absolute())), name="admin_assets")
+        print(f"[OK] Mounted /admin/assets -> {admin_assets_dir.absolute()}")
 
 # Include routers AFTER static files
 app.include_router(sessions_router)
 app.include_router(videos_router)
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(characters_router)
+app.include_router(storylines_router)
+app.include_router(settings_router)
+app.include_router(dashboard_router)
+app.include_router(export_import_router)
 
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler"""
     logger.info("Starting Shadow Puppet Interactive System API")
+    
+    # Initialize admin database
+    try:
+        await init_db()
+        logger.info("Admin database initialized")
+        
+        # Ensure default admin user exists
+        from .database import async_session_maker
+        async with async_session_maker() as db:
+            await auth_service.ensure_default_admin(db)
+            logger.info("Default admin user ensured")
+    except Exception as e:
+        logger.error(f"Failed to initialize admin database: {e}")
     
     # Check disk space on startup
     available_space = storage_manager.check_disk_space()
@@ -152,8 +198,50 @@ async def shutdown_event():
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
-    return {"message": "Shadow Puppet Interactive System API", "status": "running"}
+    """Serve user frontend"""
+    frontend_index = project_root / "frontend" / "dist" / "index.html"
+    if frontend_index.exists():
+        return FileResponse(str(frontend_index.absolute()))
+    return HTMLResponse(
+        content="<h1>Frontend Not Built</h1><p>Please run 'npm run build' in frontend directory.</p>",
+        status_code=404
+    )
+
+# Admin panel routes - serve the React SPA
+@app.get("/admin")
+@app.get("/admin/")
+async def admin_root():
+    """Redirect to admin panel"""
+    admin_index = project_root / "admin-frontend" / "dist" / "index.html"
+    if admin_index.exists():
+        return FileResponse(str(admin_index.absolute()))
+    return HTMLResponse(
+        content="<h1>Admin Panel Not Built</h1><p>Please run 'npm run build' in admin-frontend directory.</p>",
+        status_code=404
+    )
+
+@app.get("/admin/{full_path:path}")
+async def admin_spa(full_path: str):
+    """
+    Serve admin panel SPA for all routes.
+    This enables client-side routing in the React app.
+    """
+    admin_dist = project_root / "admin-frontend" / "dist"
+    
+    # First, try to serve the exact file if it exists (for static assets)
+    requested_file = admin_dist / full_path
+    if requested_file.exists() and requested_file.is_file():
+        return FileResponse(str(requested_file.absolute()))
+    
+    # Otherwise, serve index.html for client-side routing
+    admin_index = admin_dist / "index.html"
+    if admin_index.exists():
+        return FileResponse(str(admin_index.absolute()))
+    
+    return HTMLResponse(
+        content="<h1>Admin Panel Not Built</h1><p>Please run 'npm run build' in admin-frontend directory.</p>",
+        status_code=404
+    )
 
 @app.get("/api/health")
 async def health_check():
@@ -225,6 +313,35 @@ async def health_check():
             "timestamp": time.time(),
             "error": str(e)
         }
+
+# Catch-all route for user frontend SPA (must be last)
+# This handles client-side routing for the React app
+@app.get("/{full_path:path}")
+async def frontend_spa(full_path: str, request: Request):
+    """
+    Serve user frontend SPA for all non-API routes.
+    This enables client-side routing in the React app.
+    """
+    # Skip if this is an API request
+    if full_path.startswith("api/") or full_path.startswith("admin"):
+        return HTMLResponse(content="Not Found", status_code=404)
+    
+    frontend_dist = project_root / "frontend" / "dist"
+    
+    # First, try to serve the exact file if it exists (for static assets)
+    requested_file = frontend_dist / full_path
+    if requested_file.exists() and requested_file.is_file():
+        return FileResponse(str(requested_file.absolute()))
+    
+    # Otherwise, serve index.html for client-side routing
+    frontend_index = frontend_dist / "index.html"
+    if frontend_index.exists():
+        return FileResponse(str(frontend_index.absolute()))
+    
+    return HTMLResponse(
+        content="<h1>Frontend Not Built</h1><p>Please run 'npm run build' in frontend directory.</p>",
+        status_code=404
+    )
 
 if __name__ == "__main__":
     import uvicorn

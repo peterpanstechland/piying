@@ -1,0 +1,52 @@
+{
+  "system": {
+    "language": "zh",
+    "fallback_language": "en"
+  },
+  "camera": {
+    "default_camera_id": "c3b7c8c763d90f3d83ff78e9d870b8232162308c2087495ef8767f5f35d0c50c",
+    "min_fps": 20,
+    "detection_confidence": 0.5
+  },
+  "timeouts": {
+    "idle_to_scene_select_seconds": 1,
+    "scene_select_inactivity_seconds": 10,
+    "motion_capture_inactivity_seconds": 15,
+    "final_result_auto_reset_seconds": 30,
+    "exit_gesture_duration_seconds": 3,
+    "exit_confirmation_duration_seconds": 2
+  },
+  "storage": {
+    "mode": "local",
+    "local_path": "data/outputs",
+    "s3_bucket": null,
+    "s3_region": null,
+    "s3_access_key": null,
+    "s3_secret_key": null,
+    "max_age_days": 7,
+    "min_disk_space_gb": 5,
+    "emergency_cleanup_threshold_gb": 2,
+    "emergency_cleanup_target_gb": 3
+  },
+  "rendering": {
+    "target_fps": 30,
+    "video_codec": "H264",
+    "max_render_time_seconds": 20
+  },
+  "qr_code": {
+    "auto_detect_ip": true,
+    "manual_ip": null,
+    "port": 8000
+  },
+  "interaction": {
+    "hover_selection_duration_seconds": 5,
+    "countdown_duration_seconds": 5,
+    "cursor_latency_ms": 100,
+    "state_transition_max_ms": 1000
+  },
+  "api": {
+    "retry_attempts": 3,
+    "retry_backoff_base_ms": 1000,
+    "polling_interval_ms": 2000
+  }
+}

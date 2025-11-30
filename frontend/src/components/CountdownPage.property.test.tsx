@@ -7,7 +7,6 @@ import { renderWithI18n } from './test-utils';
 describe('CountdownPage Property Tests', () => {
   describe('Property 5: Countdown triggers automatic recording', () => {
     it('should trigger onCountdownComplete callback when countdown reaches zero', async () => {
-      jest.setTimeout(30000);
       await fc.assert(
         fc.asyncProperty(
           fc.integer({ min: 1, max: 3 }),
@@ -23,6 +22,6 @@ describe('CountdownPage Property Tests', () => {
         ),
         { numRuns: 10 }
       );
-    });
+    }, 60000); // 60 second timeout for this test
   });
 });

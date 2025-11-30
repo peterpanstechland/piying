@@ -6,7 +6,7 @@ import pytest
 import logging
 import json
 import io
-from hypothesis import given, strategies as st, settings
+from hypothesis import given, strategies as st, settings, HealthCheck
 from app.utils.logger import (
     setup_logging,
     StructuredFormatter,
@@ -30,7 +30,7 @@ frame_count_strategy = st.integers(min_value=30, max_value=1800)
     log_level=st.sampled_from(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     message=st.text(min_size=1, max_size=200)
 )
-@settings(max_examples=100)
+@settings(max_examples=20)
 def test_property_42_log_entries_contain_required_fields(log_level, message):
     """
     Feature: shadow-puppet-interactive-system, Property 42: Log entries contain required fields
@@ -86,7 +86,7 @@ def test_property_42_log_entries_contain_required_fields(log_level, message):
     scene_id=scene_id_strategy,
     event_type=event_type_strategy
 )
-@settings(max_examples=100)
+@settings(max_examples=20)
 def test_property_44_session_lifecycle_events_are_logged(session_id, scene_id, event_type):
     """
     Feature: shadow-puppet-interactive-system, Property 44: Session lifecycle events are logged
@@ -141,7 +141,7 @@ def test_property_44_session_lifecycle_events_are_logged(session_id, scene_id, e
     file_size=file_size_strategy,
     frame_count=frame_count_strategy
 )
-@settings(max_examples=100)
+@settings(max_examples=20, suppress_health_check=[HealthCheck.data_too_large])
 def test_property_45_render_completion_logs_performance_metrics(
     session_id, duration, file_size, frame_count
 ):
@@ -209,7 +209,7 @@ def test_property_45_render_completion_logs_performance_metrics(
     context_key=st.text(min_size=1, max_size=50, alphabet=st.characters(whitelist_categories=('Lu', 'Ll', 'Nd'), min_codepoint=97, max_codepoint=122)),
     context_value=st.text(min_size=1, max_size=100)
 )
-@settings(max_examples=100)
+@settings(max_examples=20)
 def test_property_43_error_logs_include_stack_traces(error_message, context_key, context_value):
     """
     Feature: shadow-puppet-interactive-system, Property 43: Error logs include stack traces

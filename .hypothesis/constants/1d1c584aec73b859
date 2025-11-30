@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\models\__init__.py
+# hypothesis_version: 6.148.2
+
+['CreateSessionRequest', 'PoseFrame', 'Segment', 'Session', 'SessionStatus']

@@ -111,7 +111,7 @@ describe('GestureCursorController', () => {
       const callback = jest.fn();
       
       controller.startHoverTimer('scene1', 1000, callback);
-      controller.cancelHoverTimer();
+      controller.cancelHoverTimer(true); // Force immediate cancellation (bypass grace period)
       
       expect(controller.getHoveredCardId()).toBeNull();
       expect(controller.getHoverProgress()).toBe(0);
@@ -164,6 +164,10 @@ describe('GestureCursorController', () => {
       controller.updateCursorPosition({ x: 0.05, y: 0.05 });
       controller.forceUpdatePosition(); // Force immediate update for testing
       controller.updateHoverState(sceneCards, 800, 600, 5000, callback);
+      
+      // Advance past grace period (300ms)
+      jest.advanceTimersByTime(350);
+      
       expect(controller.getHoveredCardId()).toBeNull();
     });
   });

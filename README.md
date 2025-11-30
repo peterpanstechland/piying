@@ -39,6 +39,22 @@ uvicorn app.main:app --reload
 
 See [QUICKSTART_DEPLOYMENT.md](QUICKSTART_DEPLOYMENT.md) for a step-by-step guide.
 
+### Offline Deployment (No Internet Required)
+
+For deploying on devices without internet access:
+
+1. **Create offline package** (on a machine with internet):
+   ```bash
+   create-offline-package.bat  # Windows
+   ./create-offline-package.sh  # Linux/macOS
+   ```
+
+2. **Transfer to target device** via USB or local network
+
+3. **Follow the guide**: [OFFLINE_DEPLOYMENT_GUIDE.md](OFFLINE_DEPLOYMENT_GUIDE.md)
+
+4. **Use the checklist**: [OFFLINE_DEPLOYMENT_CHECKLIST.md](OFFLINE_DEPLOYMENT_CHECKLIST.md)
+
 ### Full Deployment Guide
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment instructions including:
@@ -161,13 +177,43 @@ npm run test:property    # Run property tests only
 test-deployment.bat      # Windows
 ```
 
+## Admin Panel
+
+The system includes a web-based admin panel for managing the system without internet access:
+
+- **Access**: `http://localhost:8000/admin` (or your server IP)
+- **Default Login**: `admin` / `admin123` (⚠️ change immediately after first login!)
+
+### Admin Features
+
+- 👥 **User Management**: Create/delete users, change passwords, manage roles
+- 🎭 **Character Management**: Upload and configure shadow puppet characters
+- 🎬 **Storyline Management**: Configure scenes and recording segments
+- ⚙️ **System Settings**: Language, timeouts, rendering settings
+- 💾 **Storage Configuration**: Local or AWS S3 storage
+- 📱 **QR Code Configuration**: Set download URL IP address
+- 📊 **Dashboard**: View statistics and activity logs
+- 📦 **Export/Import**: Backup and restore system configuration
+
+See [USER_MANAGEMENT_GUIDE.md](USER_MANAGEMENT_GUIDE.md) for detailed user management instructions.
+
 ## Documentation
 
+### Deployment Guides
+- **Quick Start**: `QUICKSTART_DEPLOYMENT.md` - 25-minute deployment guide
+- **Full Deployment**: `DEPLOYMENT.md` - Comprehensive deployment instructions
+- **Offline Deployment**: `OFFLINE_DEPLOYMENT_GUIDE.md` - Deploy without internet
+- **Deployment Checklist**: `OFFLINE_DEPLOYMENT_CHECKLIST.md` - Step-by-step checklist
+
+### Admin & Management
+- **User Management**: `USER_MANAGEMENT_GUIDE.md` - Manage users and permissions
+- **Password Recovery**: `PASSWORD_RECOVERY_QUICK_GUIDE.md` - Reset forgotten passwords
+- **Troubleshooting**: `TROUBLESHOOTING.md` - Common issues and solutions
+
+### Development
 - **Requirements**: `.kiro/specs/shadow-puppet-interactive-system/requirements.md`
 - **Design**: `.kiro/specs/shadow-puppet-interactive-system/design.md`
 - **Tasks**: `.kiro/specs/shadow-puppet-interactive-system/tasks.md`
-- **Deployment**: `DEPLOYMENT.md`
-- **Quick Start**: `QUICKSTART_DEPLOYMENT.md`
 - **Project Structure**: `PROJECT_STRUCTURE.md`
 - **Assets Guide**: `assets/README.md`
 

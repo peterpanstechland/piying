@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\services\admin\settings_service.py
+# hypothesis_version: 6.148.2
+
+[0.5, 100, 300, 1000, 2000, 8000, '127.0.0.1', '8.8.8.8', 'Code', 'Error', 'H264', 'Message', 'Unknown', 'api', 'auto_detect_ip', 'camera', 'config/settings.json', 'cursor_latency_ms', 'data/outputs', 'default_camera_id', 'detection_confidence', 'en', 'fallback_language', 'interaction', 'language', 'local', 'local_path', 'manual_ip', 'max_age_days', 'min_disk_space_gb', 'min_fps', 'mode', 'polling_interval_ms', 'port', 'qr_code', 'r', 'rendering', 'retry_attempts', 's3', 's3_access_key', 's3_bucket', 's3_region', 's3_secret_key', 'storage', 'system', 'target_fps', 'timeouts', 'utf-8', 'video_codec', 'w', 'zh']

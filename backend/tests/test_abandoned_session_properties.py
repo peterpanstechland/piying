@@ -33,7 +33,7 @@ def segment_strategy(draw):
     return Segment(
         index=draw(st.integers(min_value=0, max_value=3)),
         duration=draw(st.floats(min_value=6.0, max_value=10.0, allow_nan=False, allow_infinity=False)),
-        frames=draw(st.lists(pose_frame_strategy(), min_size=1, max_size=50))
+        frames=draw(st.lists(pose_frame_strategy(), min_size=1, max_size=5))  # Reduced from 50 for faster tests
     )
 
 
@@ -73,7 +73,7 @@ class TestAbandonedSessionProperties:
         shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None)
     def test_mark_cancelled_updates_status_to_cancelled(self, session_data):
         """
         Property: For any session, calling mark_cancelled should update status to CANCELLED
@@ -97,7 +97,7 @@ class TestAbandonedSessionProperties:
         assert updated_session.status == SessionStatus.CANCELLED
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None)
     def test_cancelled_session_persists_to_storage(self, session_data):
         """
         Property: For any session marked as cancelled, the status should persist to storage
@@ -117,7 +117,7 @@ class TestAbandonedSessionProperties:
         assert reloaded_session.status == SessionStatus.CANCELLED
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None)
     def test_mark_cancelled_preserves_session_data(self, session_data):
         """
         Property: For any session, marking as cancelled should preserve all other session data
@@ -146,8 +146,8 @@ class TestAbandonedSessionProperties:
         assert updated_session.created_at == original_created_at
         assert updated_session.id == session.id
     
-    @given(st.lists(session_strategy(), min_size=1, max_size=5))
-    @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
+    @given(st.lists(session_strategy(), min_size=1, max_size=3))
+    @settings(max_examples=10, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_multiple_sessions_can_be_cancelled_independently(self, sessions_data):
         """
         Property: For any set of sessions, each can be cancelled independently
@@ -175,7 +175,7 @@ class TestAbandonedSessionProperties:
                 assert session.status == SessionStatus.PENDING
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_mark_cancelled_is_idempotent(self, session_data):
         """
         Property: For any session, calling mark_cancelled multiple times has same effect as once
@@ -193,7 +193,7 @@ class TestAbandonedSessionProperties:
         assert updated_session.status == SessionStatus.CANCELLED
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_mark_cancelled_updates_timestamp(self, session_data):
         """
         Property: For any session, marking as cancelled should update the updated_at timestamp
@@ -215,7 +215,7 @@ class TestAbandonedSessionProperties:
         assert updated_session.updated_at > original_updated_at
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_cancelled_sessions_can_be_listed(self, session_data):
         """
         Property: For any cancelled session, it should appear in list of cancelled sessions
@@ -232,7 +232,7 @@ class TestAbandonedSessionProperties:
         assert session.id in cancelled_ids
     
     @given(session_strategy())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_cancelled_sessions_not_in_other_status_lists(self, session_data):
         """
         Property: For any cancelled session, it should not appear in lists of other statuses

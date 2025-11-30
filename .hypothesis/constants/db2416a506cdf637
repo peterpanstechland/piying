@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\passlib\utils\binary.py
+# hypothesis_version: 6.148.2
+
+[b'\x00', b'+', b'.', b'=', b'=\n', b'==', 255, 256, 4095, 16777215, 1073741823, 18446744073709551615, '0', '0123456789ABCDEF', '0123456789abcdef', '8', '=', 'AB64_CHARS', 'ALL_BYTE_VALUES', 'B', 'BASE64_CHARS', 'BCRYPT_CHARS', 'Base64Engine', 'HASH64_CHARS', 'HEX_CHARS', 'LOWER_HEX_CHARS', 'LazyBase64Engine', 'O', 'PADDED_BASE64_CHARS', 'UPPER_HEX_CHARS', '_', 'ab64_decode', 'ab64_encode', 'ascii', 'b32decode', 'b32encode', 'b64s_decode', 'b64s_encode', 'bcrypt64', 'charmap', 'h64', 'h64big', 'invalid base64 input', 'invalid character', 'latin-1', 'value out of range']

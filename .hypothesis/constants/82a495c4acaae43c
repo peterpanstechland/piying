@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\models\admin\settings.py
+# hypothesis_version: 6.148.2
+
+[0.1, 0.5, 1.0, 120, 255, 300, 8000, 65535, '.', 'Auto-detect LAN IP', 'Available cameras', 'Camera configuration', 'Camera device ID', 'Camera device name', 'Default language', 'Fallback language', 'H264', 'H265', 'Local storage path', 'Manual IP override', 'Maximum render time', 'Rendering settings', 'S3 access key', 'S3 bucket name', 'S3 region', 'S3 secret key', 'Server port', 'VP9', 'Video codec', 'auto_detect_ip', 'camera', 'data/outputs', 'default_camera_id', 'detection_confidence', 'en', 'example', 'fallback_language', 'language', 'local', 'local_path', 'manual_ip', 'min_fps', 'mode', 'port', 'qr_code', 'rendering', 's3', 's3_access_key', 's3_bucket', 's3_region', 's3_secret_key', 'storage', 'target_fps', 'timeouts', 'video_codec', 'zh']
