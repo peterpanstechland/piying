@@ -37,6 +37,14 @@ function App() {
           }
         />
         <Route
+          path="/characters/new"
+          element={
+            <ProtectedRoute>
+              <CharacterEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/characters/:id/edit"
           element={
             <ProtectedRoute>

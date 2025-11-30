@@ -432,13 +432,13 @@ async def validate_skeleton_binding(
 @router.get("/{character_id}/preview")
 async def get_character_preview(
     character_id: str,
-    current_user: Annotated[TokenPayload, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Get the preview thumbnail image for a character.
     
     Returns the thumbnail PNG file or generates one if it doesn't exist.
+    Note: This endpoint does not require authentication to allow img tags to load images.
     """
     import os
     
@@ -486,13 +486,13 @@ async def get_character_preview(
 async def get_character_part_image(
     character_id: str,
     part_name: str,
-    current_user: Annotated[TokenPayload, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Get the PNG image for a specific character part.
     
     Returns the part's PNG file for use in camera overlay testing.
+    Note: This endpoint does not require authentication to allow img tags to load images.
     """
     import os
     

@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\models\session.py
-# hypothesis_version: 6.148.2
-
-[-0.12, -0.1, 0.033, 0.28, 0.3, 0.5, 0.52, 0.98, 0.99, 8.0, 33.5, 1700000000.0, 'Captured pose frames', 'Created session ID', 'Current status', 'Duration in seconds', 'Optional message', 'Recorded segments', 'Scene ID', 'Session ID', 'cancelled', 'created_at', 'done', 'duration', 'example', 'failed', 'frames', 'id', 'index', 'landmarks', 'message', 'output_path', 'pending', 'processing', 'sceneA', 'scene_id', 'segment_count', 'segments', 'session_id', 'status', 'success', 'timestamp', 'updated_at']

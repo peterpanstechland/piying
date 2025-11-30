@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\aiosqlite\__init__.py
-# hypothesis_version: 6.148.2
-
-['Amethyst Reese', 'Connection', 'Cursor', 'DatabaseError', 'Error', 'IntegrityError', 'NotSupportedError', 'OperationalError', 'ProgrammingError', 'Row', 'Warning', '__version__', 'connect', 'paramstyle', 'register_adapter', 'register_converter', 'sqlite_version', 'sqlite_version_info']

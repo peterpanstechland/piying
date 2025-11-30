@@ -38,7 +38,7 @@ type TabType = 'info' | 'parts' | 'pivot' | 'binding'
 export default function CharacterEditPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const isNew = id === 'new'
+  const isNew = !id || id === 'new'
 
   const [character, setCharacter] = useState<Character | null>(null)
   const [name, setName] = useState('')
@@ -245,8 +245,9 @@ export default function CharacterEditPage() {
           />
         )}
 
-        {activeTab === 'pivot' && character && (
+        {activeTab === 'pivot' && character && id && (
           <PivotEditor
+            characterId={id}
             parts={character.parts}
             onSave={handlePivotSaved}
             saving={saving}

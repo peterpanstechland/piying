@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\jose\jwt.py
-# hypothesis_version: 6.148.2
-
-['Invalid audience', 'Invalid issuer', 'Invalid subject', 'alg', 'at_hash', 'aud', 'exp', 'iat', 'iss', 'jti', 'leeway', 'nbf', 'require_', 'require_at_hash', 'require_aud', 'require_exp', 'require_iat', 'require_iss', 'require_jti', 'require_nbf', 'require_sub', 'sub', 'utf-8', 'verify_', 'verify_at_hash', 'verify_aud', 'verify_exp', 'verify_iat', 'verify_iss', 'verify_jti', 'verify_nbf', 'verify_signature', 'verify_sub']

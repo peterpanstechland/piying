@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\utils\logger.py
-# hypothesis_version: 6.148.2
-
-['INFO', 'cancelled', 'completed', 'context', 'created', 'duration_seconds', 'event_type', 'exception', 'failed', 'frame_count', 'frames_per_second', 'function', 'level', 'line', 'logger', 'message', 'module', 'output_file_size_mb', 'render_completed', 'scene_id', 'session_id', 'timestamp', 'traceback', 'type']

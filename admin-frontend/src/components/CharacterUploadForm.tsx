@@ -151,7 +151,7 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
       try {
         const formData = new FormData()
         formData.append('file', uploadFile.file)
-        formData.append('name', uploadFile.partName)
+        formData.append('part_name', uploadFile.partName)
         
         await adminApi.uploadCharacterParts(characterId, formData)
         

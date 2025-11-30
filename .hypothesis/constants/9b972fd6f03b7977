@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\apscheduler\schedulers\base.py
-# hypothesis_version: 6.148.2
-
-['    %s', '    No pending jobs', '.', 'Jobstore %s:', 'No such executor: %s', 'Pending jobs:', 'Removed job %s', 'Scheduler started', 'apscheduler.', 'apscheduler.triggers', 'args', 'class', 'coalesce', 'date', 'default', 'executor', 'executors', 'func', 'has_threads', 'id', 'job_defaults', 'jobstore', 'jobstores', 'kwargs', 'logger', 'max_instances', 'misfire_grace_time', 'name', 'next_run_time', 'timezone', 'trigger', 'type', 'uwsgi']

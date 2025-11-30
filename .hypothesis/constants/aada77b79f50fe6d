@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\api\admin\characters.py
-# hypothesis_version: 6.148.2
-
-['.png', '/{character_id}', 'bound to storylines', 'bound_parts', 'character_id', 'data', 'error', 'errors', 'file_path', 'filename', 'head', 'image/png', 'is_complete', 'is_valid', 'left-arm', 'left-foot', 'left-hand', 'message', 'missing_parts', 'name', 'not found', 'part', 'pivot_x', 'pivot_y', 'required_parts', 'right-arm', 'right-foot', 'right-hand', 'total_bindings', 'total_parts', 'uploaded', 'uploaded_parts', 'upper-leg', 'warnings', 'z_index']

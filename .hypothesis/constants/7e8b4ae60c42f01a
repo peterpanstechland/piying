@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\apscheduler\triggers\cron\expressions.py
-# hypothesis_version: 6.148.2
-
-['%d-%d', '%s %s', '%s(%s)', "%s('%s', '%s')", '%s()', '%s-%s', '%s/%d', "'%s'", '*', '*/%d', ', ', '1st', '2nd', '3rd', '4th', '5th', 'AllExpression', 'RangeExpression', 'apr', 'aug', 'dec', 'feb', 'fri', 'jan', 'jul', 'jun', 'last', 'mar', 'may', 'mon', 'nov', 'oct', 'sat', 'sep', 'sun', 'thu', 'tue', 'wed', '|']

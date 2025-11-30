@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\aiosqlite\core.py
-# hypothesis_version: 6.148.2
-
-[0.01, 0.1, 0.25, 'Connection', 'Connection closed', 'Cursor', 'DEFERRED', 'EXCLUSIVE', 'IMMEDIATE', 'aiosqlite', 'connect', 'executing %s', 'main', 'no active connection', 'utf-8']

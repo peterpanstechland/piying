@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\passlib\registry.py
-# hypothesis_version: 6.148.2
-
-['-', '.', ':', '_', '__', 'all', 'any', 'auto', 'builtin', 'context', 'default', 'get_backend', 'get_crypt_handler', 'handler', 'has_backend', 'list_crypt_handlers', 'none', 'onload', 'os_crypt', 'passlib.hash', 'policy', 'value']

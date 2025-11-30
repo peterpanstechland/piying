@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\api\admin\dashboard.py
-# hypothesis_version: 6.148.2
-
-[100, 1000, '/api/admin/dashboard', '/logs', '/logs/{index}', '/sessions', '/stats', '/storage', '/videos', 'Admin Dashboard']

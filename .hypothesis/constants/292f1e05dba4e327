@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\passlib\utils\decor.py
-# hypothesis_version: 6.148.2
-
-['\n.. deprecated:: %s\n', ', ', ', use %s instead', '.', '.. deprecated::', 'classproperty', 'deprecated_function', 'deprecated_method', 'hybrid_method', 'memoize_single_value', 'memoized_property', 'use %s instead']

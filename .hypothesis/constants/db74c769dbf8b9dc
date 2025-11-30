@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\main.py
-# hypothesis_version: 6.148.2
-
-[8000, '*', '/', '/api/health', '/assets', '/config', '0.0.0.0', '0.1.0', 'Health check failed', 'INFO', '__main__', 'assets', 'available_space_gb', 'cancelled', 'cleanup_completed', 'cleanup_failed', 'config', 'context', 'critical', 'daily_cleanup', 'data/logs/app.log', 'degraded', 'disk_space_gb', 'done', 'error', 'event_type', 'failed', 'files_deleted', 'health_check_failed', 'healthy', 'message', 'pending', 'processing', 'running', 'scheduled_cleanup', 'session_count', 'sessions', 'shutdown', 'space_freed_mb', 'startup', 'status', 'storage', 'threshold_gb', 'timestamp', 'total', 'total_size_mb', 'video_count', 'warnings']

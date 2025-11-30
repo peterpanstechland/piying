@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\apscheduler\triggers\cron\__init__.py
-# hypothesis_version: 6.148.2
-
-["%s='%s'", '*', ', ', 'cron[%s]', 'day', 'day_of_week', 'end_date', 'end_date=%r', 'fields', 'hour', 'jitter', 'jitter=%s', 'minute', 'month', 'second', 'start_date', 'start_date=%r', 'timezone', 'version', 'week', 'year']

@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\apscheduler\job.py
-# hypothesis_version: 6.148.2
-
-['%s (trigger: %s, %s)', ', ', '__weakref__', '_jobstore_alias', '_scheduler', 'args', 'coalesce', 'executor', 'func', 'func_ref', 'id', 'kwargs', 'max_instances', 'misfire_grace_time', 'name', 'next run at: ', 'next_run_time', 'paused', 'pending', 'trigger', 'version']

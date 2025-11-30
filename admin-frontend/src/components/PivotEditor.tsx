@@ -11,6 +11,7 @@ interface CharacterPart {
 }
 
 interface Props {
+  characterId: string
   parts: CharacterPart[]
   onSave: (parts: CharacterPart[]) => void
   saving: boolean
@@ -44,7 +45,7 @@ const PART_LABELS: Record<string, string> = {
   'upper-leg': '大腿'
 }
 
-export default function PivotEditor({ parts, onSave, saving }: Props) {
+export default function PivotEditor({ characterId, parts, onSave, saving }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [editedParts, setEditedParts] = useState<CharacterPart[]>([])
@@ -93,7 +94,7 @@ export default function PivotEditor({ parts, onSave, saving }: Props) {
             resolve()
           }
           img.onerror = () => resolve()
-          img.src = `/api/admin/characters/parts/${encodeURIComponent(part.file_path)}`
+          img.src = `/api/admin/characters/${characterId}/parts/${part.name}`
         })
       }
       

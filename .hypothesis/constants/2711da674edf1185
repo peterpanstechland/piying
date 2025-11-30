@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\api\admin\settings.py
-# hypothesis_version: 6.148.2
-
-['/api/admin/settings', '/cameras', '/default-camera', '/lan-ip', '/storage', '/storage/test', 'Admin Settings', 'camera_id', 'message', 's3']

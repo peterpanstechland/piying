@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\ext\asyncio\session.py
-# hypothesis_version: 6.148.2
-
-['%s(class_=%r, %s)', '%s=%r', ', ', '2.0', 'AsyncConnection', 'AsyncEngine', 'AsyncSession', 'Callable[..., _O]', '_AS', '_P', '_T', '__contains__', '__iter__', '_instance', 'add', 'add_all', 'async_session', 'autoflush', 'bind', 'deleted', 'dirty', 'expire', 'expire_all', 'expire_on_commit', 'expunge', 'expunge_all', 'identity_key', 'identity_map', 'in_transaction', 'info', 'is_active', 'is_modified', 'nested', 'new', 'no_autoflush', 'object_session', 'prebuffer_rows', 'session', 'stream_results', 'sync_transaction', 'trans']

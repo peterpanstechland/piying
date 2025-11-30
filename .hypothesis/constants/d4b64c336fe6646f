@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\ext\asyncio\scoping.py
-# hypothesis_version: 6.148.2
-
-['1.4.23', '_T', '__contains__', '__iter__', 'aclose', 'add', 'add_all', 'autoflush', 'begin', 'begin_nested', 'bind', 'close', 'close_all', 'commit', 'connection', 'delete', 'deleted', 'dirty', 'execute', 'expire', 'expire_all', 'expunge', 'expunge_all', 'flush', 'get', 'get_bind', 'get_one', 'identity_key', 'identity_map', 'info', 'invalidate', 'is_active', 'is_modified', 'merge', 'new', 'no_autoflush', 'object_session', 'refresh', 'reset', 'rollback', 'scalar', 'scalars', 'stream', 'stream_scalars']

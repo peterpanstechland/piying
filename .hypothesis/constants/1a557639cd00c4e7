@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\OneDrive\Documents\Robomon\piying\backend\app\api\admin\storylines.py
-# hypothesis_version: 6.148.2
-
-['.mp4', '/{storyline_id}', '/{storyline_id}/icon', 'icon_path', 'image_path', 'message', 'not found']
