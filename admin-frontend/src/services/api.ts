@@ -233,6 +233,11 @@ class AdminApiClient {
     return response.data
   }
 
+  async deleteCharacterPart(characterId: string, partName: string) {
+    const response = await this.client.delete(`/characters/${characterId}/parts/${partName}`)
+    return response.data
+  }
+
   async updateCharacterPivot(id: string, pivotConfig: Record<string, unknown>) {
     const response = await this.client.put(`/characters/${id}/pivot`, pivotConfig)
     return response.data

@@ -303,3 +303,32 @@
   font-size: 12px;
   color: #6b7280;
 }
+
+
+.part-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.btn-delete-part {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-delete-part:hover:not(:disabled) {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.btn-delete-part:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

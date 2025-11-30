@@ -197,6 +197,38 @@ async def upload_character_part(
     }
 
 
+@router.delete("/{character_id}/parts/{part_name}", status_code=status.HTTP_200_OK)
+async def delete_character_part(
+    character_id: str,
+    part_name: str,
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """
+    Delete a character part by name.
+    
+    - **character_id**: ID of the character
+    - **part_name**: Name of the part to delete
+    
+    Removes the part from the character and deletes the associated file.
+    """
+    success, error = await character_service.delete_character_part(db, character_id, part_name)
+    
+    if not success:
+        if "not found" in error.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=error,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error,
+            )
+    
+    return {"message": f"Part '{part_name}' deleted successfully"}
+
+
 @router.post("/{character_id}/parts/batch", status_code=status.HTTP_201_CREATED)
 async def upload_character_parts_batch(
     character_id: str,

@@ -46,10 +46,26 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const existingPartNames = existingParts.map(p => p.name)
   const missingParts = REQUIRED_PARTS.filter(p => !existingPartNames.includes(p))
+
+  const handleDeletePart = async (partName: string) => {
+    if (!confirm(`确定要删除 "${PART_LABELS[partName] || partName}" 吗？`)) return
+    
+    try {
+      setDeleting(partName)
+      await adminApi.deleteCharacterPart(characterId, partName)
+      onUploadComplete() // Refresh the parts list
+    } catch (err) {
+      console.error('Failed to delete part:', err)
+      alert('删除失败，请重试')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   const validateFile = (file: File): string | null => {
     if (!file.type.includes('png')) {
@@ -299,7 +315,17 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
                     }}
                   />
                 </div>
-                <div className="part-name">{PART_LABELS[part.name] || part.name}</div>
+                <div className="part-info">
+                  <div className="part-name">{PART_LABELS[part.name] || part.name}</div>
+                  <button
+                    className="btn-delete-part"
+                    onClick={() => handleDeletePart(part.name)}
+                    disabled={deleting === part.name}
+                    title="删除部件"
+                  >
+                    {deleting === part.name ? '...' : '×'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

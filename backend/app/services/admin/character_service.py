@@ -273,6 +273,50 @@ class CharacterService:
         
         return part, ""
 
+    async def delete_character_part(
+        self,
+        db: AsyncSession,
+        character_id: str,
+        part_name: str,
+    ) -> Tuple[bool, str]:
+        """
+        Delete a character part.
+        
+        Returns:
+            Tuple of (success, error_message)
+        """
+        character = await self.get_character_by_id(db, character_id)
+        if character is None:
+            return False, "Character not found"
+        
+        # Find the part
+        part_to_delete = None
+        for part in character.parts:
+            if part.name == part_name:
+                part_to_delete = part
+                break
+        
+        if part_to_delete is None:
+            return False, f"Part '{part_name}' not found"
+        
+        # Delete the file
+        file_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            "data", part_to_delete.file_path
+        )
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Delete from database
+        await db.delete(part_to_delete)
+        character.updated_at = datetime.utcnow()
+        await db.commit()
+        
+        # Regenerate thumbnail
+        await self.generate_thumbnail(db, character_id)
+        
+        return True, ""
+
     async def generate_thumbnail(
         self,
         db: AsyncSession,
@@ -359,6 +403,10 @@ class CharacterService:
             part.pivot_y = part_data.pivot_y
             part.z_index = part_data.z_index
             part.connections = json.dumps(part_data.connections)
+            # Save joints data
+            if hasattr(part_data, 'joints'):
+                joints_list = [j.model_dump() if hasattr(j, 'model_dump') else j for j in part_data.joints]
+                part.joints = json.dumps(joints_list)
         
         character.updated_at = datetime.utcnow()
         await db.commit()
@@ -406,6 +454,7 @@ class CharacterService:
         """Convert a CharacterDB to CharacterResponse."""
         parts = []
         for p in character.parts:
+            joints_data = json.loads(p.joints) if hasattr(p, 'joints') and p.joints else []
             parts.append(CharacterPart(
                 name=p.name,
                 file_path=p.file_path,
@@ -413,6 +462,7 @@ class CharacterService:
                 pivot_y=p.pivot_y,
                 z_index=p.z_index,
                 connections=json.loads(p.connections) if p.connections else [],
+                joints=joints_data,
             ))
         
         bindings = []

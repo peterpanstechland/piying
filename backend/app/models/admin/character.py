@@ -32,6 +32,7 @@ class CharacterPartDB(Base):
     pivot_y: Mapped[float] = mapped_column(Float, default=0.5)
     z_index: Mapped[int] = mapped_column(Integer, default=0)
     connections: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of connected part names
+    joints: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of joint points
     
     # Relationship back to character
     character: Mapped["CharacterDB"] = relationship("CharacterDB", back_populates="parts")
@@ -80,6 +81,15 @@ class CharacterDB(Base):
 
 # Pydantic Models for API Validation
 
+class Joint(BaseModel):
+    """Pydantic model for joint point data."""
+    id: str = Field(..., description="Unique joint identifier")
+    name: str = Field(..., description="Joint display name")
+    x: float = Field(..., ge=0.0, le=1.0, description="X position (0-1 normalized)")
+    y: float = Field(..., ge=0.0, le=1.0, description="Y position (0-1 normalized)")
+    connectedTo: Optional[str] = Field(default=None, description="Connected joint key (partName:jointId)")
+
+
 class CharacterPart(BaseModel):
     """Pydantic model for character part data."""
     name: str = Field(..., description="Part name (e.g., 'head', 'left-arm')")
@@ -88,6 +98,7 @@ class CharacterPart(BaseModel):
     pivot_y: float = Field(default=0.5, ge=0.0, le=1.0, description="Pivot point Y (0-1 normalized)")
     z_index: int = Field(default=0, description="Rendering order (higher = on top)")
     connections: List[str] = Field(default_factory=list, description="Connected part names")
+    joints: List[Joint] = Field(default_factory=list, description="Joint points for this part")
 
     class Config:
         from_attributes = True
@@ -98,7 +109,8 @@ class CharacterPart(BaseModel):
                 "pivot_x": 0.5,
                 "pivot_y": 0.9,
                 "z_index": 10,
-                "connections": ["body"]
+                "connections": ["body"],
+                "joints": []
             }
         }
 

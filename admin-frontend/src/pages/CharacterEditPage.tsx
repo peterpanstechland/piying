@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { adminApi } from '../services/api'
 import CharacterUploadForm from '../components/CharacterUploadForm'
-import PivotEditor from '../components/PivotEditor'
+import JointEditor from '../components/JointEditor'
 import SkeletonBindingEditor from '../components/SkeletonBindingEditor'
 import './CharacterEditPage.css'
 
@@ -246,7 +246,7 @@ export default function CharacterEditPage() {
         )}
 
         {activeTab === 'pivot' && character && id && (
-          <PivotEditor
+          <JointEditor
             characterId={id}
             parts={character.parts}
             onSave={handlePivotSaved}
