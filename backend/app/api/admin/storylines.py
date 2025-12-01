@@ -713,6 +713,37 @@ async def update_storyline_order(
     return {"message": f"Storyline '{storyline_id}' order updated to {order}"}
 
 
+@router.put("/batch/reorder", status_code=status.HTTP_200_OK)
+async def batch_reorder_storylines(
+    orders: List[dict],
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """
+    Batch update storyline display orders (Requirements 10.3).
+    
+    - **orders**: List of {id, order} objects
+    
+    Updates multiple storyline display orders in a single request.
+    Useful for drag-to-reorder functionality.
+    """
+    storyline_orders = [(item["id"], item["order"]) for item in orders]
+    success, error = await storyline_service.reorder_storylines(db, storyline_orders)
+    
+    if not success:
+        if "not found" in error.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=error,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error,
+            )
+    
+    return {"message": f"Successfully reordered {len(orders)} storylines"}
+
 
 @router.post("/{storyline_id}/cover", status_code=status.HTTP_200_OK)
 async def upload_cover_image(
