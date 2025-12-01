@@ -33,6 +33,16 @@ class CharacterPartDB(Base):
     z_index: Mapped[int] = mapped_column(Integer, default=0)
     connections: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of connected part names
     joints: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of joint points
+    # Editor layout position (for preserving layout in editor)
+    editor_x: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    editor_y: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    editor_width: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    editor_height: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    # Joint pivot point (rotation center for animation, different from assembly pivot)
+    joint_pivot_x: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    joint_pivot_y: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    # Rotation offset (based on sprite drawing direction, in radians)
+    rotation_offset: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # Relationship back to character
     character: Mapped["CharacterDB"] = relationship("CharacterDB", back_populates="parts")
@@ -99,6 +109,16 @@ class CharacterPart(BaseModel):
     z_index: int = Field(default=0, description="Rendering order (higher = on top)")
     connections: List[str] = Field(default_factory=list, description="Connected part names")
     joints: List[Joint] = Field(default_factory=list, description="Joint points for this part")
+    # Editor layout position (for preserving layout in editor)
+    editor_x: Optional[float] = Field(default=None, description="Editor X position")
+    editor_y: Optional[float] = Field(default=None, description="Editor Y position")
+    editor_width: Optional[float] = Field(default=None, description="Editor display width")
+    editor_height: Optional[float] = Field(default=None, description="Editor display height")
+    # Joint pivot point (rotation center for animation, different from assembly pivot)
+    joint_pivot_x: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Joint pivot X for rotation (0-1)")
+    joint_pivot_y: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Joint pivot Y for rotation (0-1)")
+    # Rotation offset (based on sprite drawing direction, in radians)
+    rotation_offset: Optional[float] = Field(default=None, description="Rotation offset in radians")
 
     class Config:
         from_attributes = True
@@ -110,7 +130,10 @@ class CharacterPart(BaseModel):
                 "pivot_y": 0.9,
                 "z_index": 10,
                 "connections": ["body"],
-                "joints": []
+                "joints": [],
+                "joint_pivot_x": 0.5,
+                "joint_pivot_y": 0.1,
+                "rotation_offset": 1.5708
             }
         }
 

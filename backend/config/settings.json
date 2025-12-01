@@ -4,7 +4,7 @@
     "fallback_language": "en"
   },
   "camera": {
-    "default_camera_id": "c3b7c8c763d90f3d83ff78e9d870b8232162308c2087495ef8767f5f35d0c50c",
+    "default_camera_id": "5c9705bf8d6d33c470594cfe2b464404269e040c73de00ce449c965473ce7c76",
     "min_fps": 20,
     "detection_confidence": 0.5
   },

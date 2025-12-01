@@ -1,10 +1,21 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { adminApi } from '../services/api'
 import CharacterUploadForm from '../components/CharacterUploadForm'
 import JointEditor from '../components/JointEditor'
 import SkeletonBindingEditor from '../components/SkeletonBindingEditor'
 import './CharacterEditPage.css'
+
+// Lazy load CharacterPreview to avoid loading PixiJS until needed
+const CharacterPreview = lazy(() => import('../components/CharacterPreview'))
+
+interface Joint {
+  id: string
+  name: string
+  x: number
+  y: number
+  connectedTo?: string
+}
 
 interface CharacterPart {
   name: string
@@ -13,6 +24,16 @@ interface CharacterPart {
   pivot_y: number
   z_index: number
   connections: string[]
+  joints?: Joint[]
+  editor_x?: number | null
+  editor_y?: number | null
+  editor_width?: number | null
+  editor_height?: number | null
+  // 关节锚点（用于旋转动画）
+  joint_pivot_x?: number | null
+  joint_pivot_y?: number | null
+  // 旋转偏移量（根据素材朝向，弧度）
+  rotation_offset?: number | null
 }
 
 interface SkeletonBinding {
@@ -33,7 +54,7 @@ interface Character {
   updated_at: string
 }
 
-type TabType = 'info' | 'parts' | 'pivot' | 'binding'
+type TabType = 'info' | 'parts' | 'pivot' | 'binding' | 'preview'
 
 export default function CharacterEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -46,6 +67,7 @@ export default function CharacterEditPage() {
   const [activeTab, setActiveTab] = useState<TabType>('info')
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -102,7 +124,9 @@ export default function CharacterEditPage() {
     try {
       setSaving(true)
       await adminApi.updateCharacterPivot(id, { parts })
-      setSuccessMessage('枢轴配置保存成功')
+      // Auto-generate spritesheet after saving pivot config
+      await adminApi.generateSpritesheet(id)
+      setSuccessMessage('枢轴配置保存成功，Spritesheet 已更新')
       loadCharacter()
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save pivot config'
@@ -124,6 +148,29 @@ export default function CharacterEditPage() {
       setError(errorMessage)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDownloadSpritesheet = async () => {
+    if (!id) return
+    try {
+      setExporting(true)
+      setError(null)
+      
+      // Spritesheet is auto-generated on save, just download
+      const pngUrl = adminApi.getSpritesheetPngUrl(id)
+      const jsonUrl = adminApi.getSpritesheetJsonUrl(id)
+      
+      // Open download links in new tabs
+      window.open(pngUrl, '_blank')
+      window.open(jsonUrl, '_blank')
+      
+      setSuccessMessage('Sprite Sheet 下载已开始')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download sprite sheet'
+      setError(errorMessage)
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -152,6 +199,15 @@ export default function CharacterEditPage() {
           ← 返回列表
         </button>
         <h1>{isNew ? '新建人物' : `编辑: ${character?.name || ''}`}</h1>
+        {!isNew && character && character.parts.length > 0 && (
+          <button
+            className="btn-export"
+            onClick={handleDownloadSpritesheet}
+            disabled={exporting}
+          >
+            {exporting ? '下载中...' : '📥 下载 Sprite Sheet'}
+          </button>
+        )}
       </div>
 
       {error && (
@@ -195,6 +251,13 @@ export default function CharacterEditPage() {
               disabled={!character?.parts.length}
             >
               骨骼绑定
+            </button>
+            <button
+              className={`tab tab-preview ${activeTab === 'preview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('preview')}
+              disabled={!character?.parts.length}
+            >
+              🎬 实时预览
             </button>
           </>
         )}
@@ -261,6 +324,21 @@ export default function CharacterEditPage() {
             onSave={handleBindingSaved}
             saving={saving}
           />
+        )}
+
+        {activeTab === 'preview' && character && id && (
+          <div className="preview-tab">
+            <Suspense
+              fallback={
+                <div className="preview-loading">
+                  <div className="loading-spinner"></div>
+                  <p>加载预览组件...</p>
+                </div>
+              }
+            >
+              <CharacterPreview characterId={id} width={600} height={500} />
+            </Suspense>
+          </div>
         )}
       </div>
     </div>

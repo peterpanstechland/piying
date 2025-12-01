@@ -9,12 +9,31 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   color: #1a1a2e;
+  flex: 1;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  color: #4f46e5;
+  background: #f3f4f6;
 }
 
 .btn-primary {

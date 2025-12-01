@@ -299,3 +299,56 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+
+/* Joint count badge in part list */
+.joint-count {
+  font-size: 11px;
+  color: #22c55e;
+  margin-left: 4px;
+}
+
+/* Part joints info section */
+.part-joints-info {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.part-joints-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #166534;
+}
+
+.joints-list-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.joint-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #166534;
+}
+
+.joint-dot-small {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+}
+
+.connected-to {
+  color: #4f46e5;
+  font-weight: bold;
+}

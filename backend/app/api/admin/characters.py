@@ -363,6 +363,32 @@ async def update_pivot_configuration(
     # Regenerate thumbnail with new z-index ordering
     await character_service.generate_thumbnail(db, character_id)
     
+    # Auto-generate sprite sheet for seamless preview
+    from ...services.admin.spritesheet_service import spritesheet_service
+    character = await character_service.get_character_by_id(db, character_id)
+    if character and character.parts:
+        parts_data = []
+        for p in character.parts:
+            joints = []
+            if p.joints:
+                try:
+                    joints = json.loads(p.joints)
+                except Exception:
+                    pass
+            parts_data.append({
+                'name': p.name,
+                'file_path': p.file_path,
+                'pivot_x': p.pivot_x,
+                'pivot_y': p.pivot_y,
+                'z_index': p.z_index,
+                'joints': joints,
+                'editor_x': p.editor_x,
+                'editor_y': p.editor_y,
+                'editor_width': p.editor_width,
+                'editor_height': p.editor_height,
+            })
+        await spritesheet_service.generate_spritesheet(character_id, parts_data)
+    
     return {"message": "Pivot configuration updated successfully"}
 
 
@@ -565,3 +591,223 @@ async def get_character_part_image(
         media_type="image/png",
         filename=f"{part_name}.png"
     )
+
+
+# ============== Sprite Sheet Export APIs ==============
+
+@router.post("/{character_id}/export/spritesheet", status_code=status.HTTP_200_OK)
+async def generate_spritesheet(
+    character_id: str,
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """
+    Generate a PixiJS-compatible sprite sheet for a character.
+    
+    Packs all character parts into a single PNG atlas with JSON metadata.
+    The generated files can be used directly with PixiJS Assets.load().
+    """
+    from ...services.admin.spritesheet_service import spritesheet_service
+    
+    character = await character_service.get_character_by_id(db, character_id)
+    if character is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Character with ID '{character_id}' not found",
+        )
+    
+    if not character.parts:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Character has no parts to export",
+        )
+    
+    # Prepare parts data with all fields needed for spritesheet generation
+    parts_data = []
+    for p in character.parts:
+        joints = []
+        if hasattr(p, 'joints') and p.joints:
+            try:
+                joints = json.loads(p.joints)
+            except Exception:
+                pass
+        
+        parts_data.append({
+            'name': p.name,
+            'file_path': p.file_path,
+            'pivot_x': p.pivot_x,
+            'pivot_y': p.pivot_y,
+            'z_index': p.z_index,
+            'joints': joints,
+            # Editor position (assembly coordinates)
+            'editor_x': getattr(p, 'editor_x', None),
+            'editor_y': getattr(p, 'editor_y', None),
+            'editor_width': getattr(p, 'editor_width', None),
+            'editor_height': getattr(p, 'editor_height', None),
+            # Joint pivot for rotation animation
+            'joint_pivot_x': getattr(p, 'joint_pivot_x', None),
+            'joint_pivot_y': getattr(p, 'joint_pivot_y', None),
+            # Rotation offset based on sprite orientation
+            'rotation_offset': getattr(p, 'rotation_offset', None),
+        })
+    
+    # Generate sprite sheet
+    png_path, json_path, error = await spritesheet_service.generate_spritesheet(
+        character_id, parts_data
+    )
+    
+    if error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate sprite sheet: {error}",
+        )
+    
+    return {
+        "message": "Sprite sheet generated successfully",
+        "spritesheet_png": f"/api/admin/characters/{character_id}/spritesheet.png",
+        "spritesheet_json": f"/api/admin/characters/{character_id}/spritesheet.json",
+    }
+
+
+@router.get("/{character_id}/spritesheet.png")
+async def get_spritesheet_png(
+    character_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Get the sprite sheet PNG image for a character.
+    
+    Note: This endpoint does not require authentication to allow PixiJS to load assets.
+    """
+    import os
+    
+    character = await character_service.get_character_by_id(db, character_id)
+    if character is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Character with ID '{character_id}' not found",
+        )
+    
+    spritesheet_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+        "data", "characters", character_id, "spritesheet.png"
+    )
+    
+    if not os.path.exists(spritesheet_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sprite sheet not generated. Call POST /export/spritesheet first.",
+        )
+    
+    return FileResponse(
+        spritesheet_path,
+        media_type="image/png",
+        filename=f"{character.name}_spritesheet.png"
+    )
+
+
+@router.get("/{character_id}/spritesheet.json")
+async def get_spritesheet_json(
+    character_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Get the sprite sheet JSON metadata for a character.
+    
+    Returns PixiJS-compatible sprite sheet JSON that can be loaded with Assets.load().
+    Note: This endpoint does not require authentication to allow PixiJS to load assets.
+    """
+    import os
+    
+    character = await character_service.get_character_by_id(db, character_id)
+    if character is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Character with ID '{character_id}' not found",
+        )
+    
+    json_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+        "data", "characters", character_id, "spritesheet.json"
+    )
+    
+    if not os.path.exists(json_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sprite sheet not generated. Call POST /export/spritesheet first.",
+        )
+    
+    return FileResponse(
+        json_path,
+        media_type="application/json",
+        filename=f"{character.name}_spritesheet.json"
+    )
+
+
+@router.get("/{character_id}/config.json")
+async def get_character_config(
+    character_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Get the complete character configuration for PixiJS renderer.
+    
+    Returns character config including skeleton, bindings, and render order.
+    Note: This endpoint does not require authentication to allow PixiJS to load assets.
+    """
+    from ...services.admin.spritesheet_service import spritesheet_service
+    
+    character = await character_service.get_character_by_id(db, character_id)
+    if character is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Character with ID '{character_id}' not found",
+        )
+    
+    # Prepare parts data with all fields
+    parts_data = []
+    for p in character.parts:
+        joints = []
+        if hasattr(p, 'joints') and p.joints:
+            try:
+                joints = json.loads(p.joints)
+            except Exception:
+                pass
+        
+        parts_data.append({
+            'name': p.name,
+            'file_path': p.file_path,
+            'pivot_x': p.pivot_x,
+            'pivot_y': p.pivot_y,
+            'z_index': p.z_index,
+            'joints': joints,
+            # Editor position (assembly coordinates)
+            'editor_x': getattr(p, 'editor_x', None),
+            'editor_y': getattr(p, 'editor_y', None),
+            'editor_width': getattr(p, 'editor_width', None),
+            'editor_height': getattr(p, 'editor_height', None),
+            # Joint pivot for rotation animation
+            'joint_pivot_x': getattr(p, 'joint_pivot_x', None),
+            'joint_pivot_y': getattr(p, 'joint_pivot_y', None),
+            # Rotation offset based on sprite orientation
+            'rotation_offset': getattr(p, 'rotation_offset', None),
+        })
+    
+    # Prepare bindings data
+    bindings_data = []
+    for b in character.bindings:
+        bindings_data.append({
+            'part_name': b.part_name,
+            'landmarks': json.loads(b.landmarks) if b.landmarks else [],
+            'rotation_landmark': b.rotation_landmark,
+            'scale_landmarks': json.loads(b.scale_landmarks) if b.scale_landmarks else [],
+        })
+    
+    config = spritesheet_service.generate_character_config(
+        character_id,
+        character.name,
+        parts_data,
+        bindings_data,
+    )
+    
+    return config

@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import './SkeletonBindingEditor.css'
 
+interface Joint {
+  id: string
+  name: string
+  x: number
+  y: number
+  connectedTo?: string
+}
+
 interface CharacterPart {
   name: string
   file_path: string
@@ -8,6 +16,7 @@ interface CharacterPart {
   pivot_y: number
   z_index: number
   connections: string[]
+  joints?: Joint[]
 }
 
 interface SkeletonBinding {
@@ -231,6 +240,8 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
               const isMovable = MOVABLE_PARTS.includes(part.name)
               const hasBinding = binding && binding.landmarks.length > 0
               
+              const jointCount = part.joints?.length || 0
+              
               return (
                 <div
                   key={part.name}
@@ -241,6 +252,11 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
                   <span className="binding-count">
                     {binding?.landmarks.length || 0} 个关键点
                   </span>
+                  {jointCount > 0 && (
+                    <span className="joint-count" title="枢轴配置中设置的关节点">
+                      🔗 {jointCount}
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -273,6 +289,32 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
               请从左侧选择一个部件来配置关键点绑定
             </div>
           ) : (
+            <>
+              {/* Show joints configured in pivot editor */}
+              {(() => {
+                const selectedPartData = parts.find(p => p.name === selectedPart)
+                const joints = selectedPartData?.joints || []
+                if (joints.length > 0) {
+                  return (
+                    <div className="part-joints-info">
+                      <h4>已配置的关节点 ({joints.length})</h4>
+                      <div className="joints-list-compact">
+                        {joints.map(joint => (
+                          <div key={joint.id} className="joint-tag">
+                            <span className="joint-dot-small"></span>
+                            <span>{joint.name}</span>
+                            {joint.connectedTo && (
+                              <span className="connected-to" title={`连接到: ${joint.connectedTo}`}>→</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              })()}
+            
             <>
               <div className="pose-diagram">
                 <svg viewBox="0 0 200 300" className="pose-svg">
@@ -349,6 +391,7 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
                   )
                 })}
               </div>
+            </>
             </>
           )}
         </div>

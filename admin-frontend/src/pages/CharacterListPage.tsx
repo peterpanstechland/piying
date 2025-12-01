@@ -98,6 +98,9 @@ export default function CharacterListPage() {
   return (
     <div className="character-list-page">
       <div className="page-header">
+        <button className="btn-back" onClick={() => navigate('/')}>
+          ← 返回首页
+        </button>
         <h1>人物管理</h1>
         <button className="btn-primary" onClick={handleCreate}>
           + 新建人物

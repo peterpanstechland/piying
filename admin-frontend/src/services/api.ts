@@ -257,6 +257,33 @@ class AdminApiClient {
     return `${API_BASE_URL}/characters/${characterId}/parts/${partName}`
   }
 
+  // Sprite Sheet Export
+  async generateSpritesheet(characterId: string): Promise<{
+    message: string
+    spritesheet_png: string
+    spritesheet_json: string
+  }> {
+    const response = await this.client.post(`/characters/${characterId}/export/spritesheet`)
+    return response.data
+  }
+
+  getSpritesheetPngUrl(characterId: string): string {
+    return `${API_BASE_URL}/characters/${characterId}/spritesheet.png`
+  }
+
+  getSpritesheetJsonUrl(characterId: string): string {
+    return `${API_BASE_URL}/characters/${characterId}/spritesheet.json`
+  }
+
+  getCharacterConfigUrl(characterId: string): string {
+    return `${API_BASE_URL}/characters/${characterId}/config.json`
+  }
+
+  async getCharacterConfig(characterId: string) {
+    const response = await this.client.get(`/characters/${characterId}/config.json`)
+    return response.data
+  }
+
   // Storylines
   async getStorylines() {
     const response = await this.client.get('/storylines')

@@ -407,6 +407,22 @@ class CharacterService:
             if hasattr(part_data, 'joints'):
                 joints_list = [j.model_dump() if hasattr(j, 'model_dump') else j for j in part_data.joints]
                 part.joints = json.dumps(joints_list)
+            # Save editor position data
+            if hasattr(part_data, 'editor_x') and part_data.editor_x is not None:
+                part.editor_x = part_data.editor_x
+            if hasattr(part_data, 'editor_y') and part_data.editor_y is not None:
+                part.editor_y = part_data.editor_y
+            if hasattr(part_data, 'editor_width') and part_data.editor_width is not None:
+                part.editor_width = part_data.editor_width
+            if hasattr(part_data, 'editor_height') and part_data.editor_height is not None:
+                part.editor_height = part_data.editor_height
+            # Save joint pivot and rotation offset
+            if hasattr(part_data, 'joint_pivot_x'):
+                part.joint_pivot_x = part_data.joint_pivot_x
+            if hasattr(part_data, 'joint_pivot_y'):
+                part.joint_pivot_y = part_data.joint_pivot_y
+            if hasattr(part_data, 'rotation_offset'):
+                part.rotation_offset = part_data.rotation_offset
         
         character.updated_at = datetime.utcnow()
         await db.commit()
@@ -452,9 +468,14 @@ class CharacterService:
 
     def to_character_response(self, character: CharacterDB) -> CharacterResponse:
         """Convert a CharacterDB to CharacterResponse."""
+        from ...models.admin.character import Joint
         parts = []
         for p in character.parts:
-            joints_data = json.loads(p.joints) if hasattr(p, 'joints') and p.joints else []
+            try:
+                joints_raw = json.loads(p.joints) if hasattr(p, 'joints') and p.joints else []
+                joints_data = [Joint(**j) if isinstance(j, dict) else j for j in joints_raw]
+            except Exception:
+                joints_data = []
             parts.append(CharacterPart(
                 name=p.name,
                 file_path=p.file_path,
@@ -463,6 +484,13 @@ class CharacterService:
                 z_index=p.z_index,
                 connections=json.loads(p.connections) if p.connections else [],
                 joints=joints_data,
+                editor_x=p.editor_x if hasattr(p, 'editor_x') else None,
+                editor_y=p.editor_y if hasattr(p, 'editor_y') else None,
+                editor_width=p.editor_width if hasattr(p, 'editor_width') else None,
+                editor_height=p.editor_height if hasattr(p, 'editor_height') else None,
+                joint_pivot_x=p.joint_pivot_x if hasattr(p, 'joint_pivot_x') else None,
+                joint_pivot_y=p.joint_pivot_y if hasattr(p, 'joint_pivot_y') else None,
+                rotation_offset=p.rotation_offset if hasattr(p, 'rotation_offset') else None,
             ))
         
         bindings = []

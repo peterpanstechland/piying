@@ -326,3 +326,70 @@
 .btn-disconnect:hover {
   background: #b91c1c;
 }
+
+
+/* 旋转锚点输入框样式 */
+.pivot-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pivot-inputs label {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #d1d5db;
+  margin-bottom: 0;
+}
+
+.pivot-inputs input[type="number"] {
+  width: 60px;
+  padding: 6px 8px;
+  background: #2d2d44;
+  border: 1px solid #3d3d5c;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.pivot-inputs input[type="number"]:focus {
+  border-color: #4f46e5;
+  outline: none;
+}
+
+/* 旋转偏移快捷按钮 */
+.property-group .btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: #3d3d5c;
+  border: 1px solid #4d4d6c;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.property-group .btn-small:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+/* 重置大小按钮 */
+.property-group button.btn-small {
+  margin-top: 4px;
+}
+
+/* 应用推荐按钮 */
+.group-header .btn-small {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: #4f46e5;
+  border: none;
+  color: white;
+}
+
+.group-header .btn-small:hover {
+  background: #4338ca;
+}

@@ -17,6 +17,15 @@ interface CharacterPart {
   z_index: number
   connections: string[]
   joints?: Joint[]
+  editor_x?: number | null
+  editor_y?: number | null
+  editor_width?: number | null
+  editor_height?: number | null
+  // 关节锚点（用于旋转动画）
+  joint_pivot_x?: number | null
+  joint_pivot_y?: number | null
+  // 旋转偏移量（根据素材朝向，弧度）
+  rotation_offset?: number | null
 }
 
 interface Props {
@@ -58,7 +67,7 @@ const SUGGESTED_JOINTS: Record<string, { name: string; x: number; y: number }[]>
   'right-foot': [{ name: '踝部连接点', x: 0.5, y: 0.1 }],
 }
 
-type Mode = 'move' | 'pan' | 'add-joint' | 'edit-joint' | 'connect'
+type Mode = 'move' | 'pan' | 'add-joint' | 'edit-joint' | 'connect' | 'set-pivot'
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null
 
 export default function JointEditor({ characterId, parts, onSave, saving }: Props) {
@@ -85,13 +94,34 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
 
   const screenToWorld = (sx: number, sy: number) => ({ x: (sx - panOffset.x) / zoom, y: (sy - panOffset.y) / zoom })
 
-  useEffect(() => { setEditedParts(parts.map(p => ({ ...p, joints: p.joints || [] }))) }, [parts])
+  useEffect(() => { 
+    setEditedParts(parts.map(p => ({ 
+      ...p, 
+      joints: p.joints || [],
+      joint_pivot_x: p.joint_pivot_x ?? null,
+      joint_pivot_y: p.joint_pivot_y ?? null,
+      rotation_offset: p.rotation_offset ?? null,
+    }))) 
+  }, [parts])
 
   useEffect(() => {
     const loadImages = async () => {
       const images: Record<string, HTMLImageElement> = {}
       const positions: Record<string, PartPosition> = {}
-      let offsetX = 20, offsetY = 20, maxRowHeight = 0
+      let hasSavedPositions = false
+      
+      // Default humanoid layout positions (centered around 400, 400)
+      const defaultLayout: Record<string, { x: number; y: number }> = {
+        'head': { x: 350, y: 50 },
+        'body': { x: 300, y: 200 },
+        'left-arm': { x: 150, y: 180 },
+        'right-arm': { x: 450, y: 180 },
+        'left-hand': { x: 80, y: 320 },
+        'right-hand': { x: 520, y: 320 },
+        'upper-leg': { x: 300, y: 450 },
+        'left-foot': { x: 280, y: 600 },
+        'right-foot': { x: 420, y: 600 },
+      }
       
       for (const part of parts) {
         const img = new Image()
@@ -99,10 +129,29 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
         await new Promise<void>((resolve) => {
           img.onload = () => {
             images[part.name] = img
-            if (offsetX + img.width > 2000) { offsetX = 20; offsetY += maxRowHeight + 40; maxRowHeight = 0 }
-            positions[part.name] = { x: offsetX, y: offsetY, width: img.width, height: img.height, originalWidth: img.width, originalHeight: img.height }
-            offsetX += img.width + 30
-            maxRowHeight = Math.max(maxRowHeight, img.height)
+            // Use saved position if available
+            if (part.editor_x != null && part.editor_y != null) {
+              hasSavedPositions = true
+              positions[part.name] = {
+                x: part.editor_x,
+                y: part.editor_y,
+                width: part.editor_width ?? img.width,
+                height: part.editor_height ?? img.height,
+                originalWidth: img.width,
+                originalHeight: img.height
+              }
+            } else {
+              // Use default humanoid layout or fallback
+              const defaultPos = defaultLayout[part.name] || { x: 400, y: 400 }
+              positions[part.name] = {
+                x: defaultPos.x,
+                y: defaultPos.y,
+                width: img.width,
+                height: img.height,
+                originalWidth: img.width,
+                originalHeight: img.height
+              }
+            }
             resolve()
           }
           img.onerror = () => resolve()
@@ -111,6 +160,23 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
       }
       setPartImages(images)
       setPartPositions(positions)
+      
+      // Auto-center if no saved positions
+      if (!hasSavedPositions && Object.keys(positions).length > 0) {
+        // Calculate center after a short delay to ensure state is updated
+        setTimeout(() => {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+          for (const pos of Object.values(positions)) {
+            minX = Math.min(minX, pos.x)
+            minY = Math.min(minY, pos.y)
+            maxX = Math.max(maxX, pos.x + pos.width)
+            maxY = Math.max(maxY, pos.y + pos.height)
+          }
+          const centerX = (minX + maxX) / 2
+          const centerY = (minY + maxY) / 2
+          setPanOffset({ x: 400 - centerX * 0.4, y: 300 - centerY * 0.4 })
+        }, 100)
+      }
     }
     if (parts.length > 0) loadImages()
   }, [parts, characterId])
@@ -263,6 +329,21 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
         ctx.fillText(joint.name, jx, jy - 16 / zoom)
       }
 
+      // Draw joint pivot point (旋转锚点) - 用蓝色菱形表示
+      if (part.joint_pivot_x != null && part.joint_pivot_y != null) {
+        const jpx = pos.x + pos.width * part.joint_pivot_x
+        const jpy = pos.y + pos.height * part.joint_pivot_y
+        ctx.save()
+        ctx.translate(jpx, jpy)
+        ctx.rotate(Math.PI / 4)
+        ctx.fillStyle = '#3b82f6'
+        ctx.fillRect(-8 / zoom, -8 / zoom, 16 / zoom, 16 / zoom)
+        ctx.strokeStyle = 'white'
+        ctx.lineWidth = 2 / zoom
+        ctx.strokeRect(-8 / zoom, -8 / zoom, 16 / zoom, 16 / zoom)
+        ctx.restore()
+      }
+
       ctx.fillStyle = '#9ca3af'
       ctx.font = `${14 / zoom}px sans-serif`
       ctx.textAlign = 'center'
@@ -342,7 +423,20 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
     const jointKey = getJointAtPosition(x, y)
     const partName = getPartAtPosition(x, y)
 
-    if (mode === 'add-joint' && partName) {
+    if (mode === 'set-pivot' && partName) {
+      // 设置旋转锚点模式：点击部件设置 joint_pivot
+      const pos = partPositions[partName]
+      if (pos) {
+        const pivotX = Math.max(0, Math.min(1, (x - pos.x) / pos.width))
+        const pivotY = Math.max(0, Math.min(1, (y - pos.y) / pos.height))
+        setEditedParts(prev => prev.map(p => 
+          p.name === partName 
+            ? { ...p, joint_pivot_x: pivotX, joint_pivot_y: pivotY } 
+            : p
+        ))
+      }
+      setSelectedPart(partName)
+    } else if (mode === 'add-joint' && partName) {
       const pos = partPositions[partName]
       if (pos) addJoint(partName, (x - pos.x) / pos.width, (y - pos.y) / pos.height)
       setSelectedPart(partName)
@@ -427,14 +521,44 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
           <button className={`mode-btn ${mode === 'add-joint' ? 'active' : ''}`} onClick={() => setMode('add-joint')}>➕ 添加关节</button>
           <button className={`mode-btn ${mode === 'edit-joint' ? 'active' : ''}`} onClick={() => setMode('edit-joint')}>🎯 编辑关节</button>
           <button className={`mode-btn ${mode === 'connect' ? 'active' : ''}`} onClick={() => setMode('connect')}>🔗 连接</button>
+          <button className={`mode-btn ${mode === 'set-pivot' ? 'active' : ''}`} onClick={() => setMode('set-pivot')}>⚙️ 旋转锚点</button>
         </div>
         <div className="zoom-controls">
           <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}>−</button>
           <span>{Math.round(zoom * 100)}%</span>
           <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}>+</button>
+          <button onClick={() => {
+            // Center all parts in view
+            if (Object.keys(partPositions).length > 0) {
+              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+              for (const pos of Object.values(partPositions)) {
+                minX = Math.min(minX, pos.x)
+                minY = Math.min(minY, pos.y)
+                maxX = Math.max(maxX, pos.x + pos.width)
+                maxY = Math.max(maxY, pos.y + pos.height)
+              }
+              const centerX = (minX + maxX) / 2
+              const centerY = (minY + maxY) / 2
+              setZoom(0.4)
+              setPanOffset({ x: 400 - centerX * 0.4, y: 300 - centerY * 0.4 })
+            }
+          }}>居中</button>
           <button onClick={() => { setZoom(0.4); setPanOffset({ x: 0, y: 0 }) }}>重置</button>
         </div>
-        <button className="btn-primary" onClick={() => onSave(editedParts)} disabled={saving}>{saving ? '保存中...' : '保存配置'}</button>
+        <button className="btn-primary" onClick={() => {
+          // Include position data when saving
+          const partsWithPositions = editedParts.map(part => {
+            const pos = partPositions[part.name]
+            return {
+              ...part,
+              editor_x: pos?.x ?? null,
+              editor_y: pos?.y ?? null,
+              editor_width: pos?.width ?? null,
+              editor_height: pos?.height ?? null,
+            }
+          })
+          onSave(partsWithPositions)
+        }} disabled={saving}>{saving ? '保存中...' : '保存配置'}</button>
       </div>
 
       <div className="editor-content">
@@ -453,6 +577,7 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
               <li><strong>添加关节:</strong> 点击部件</li>
               <li><strong>编辑关节:</strong> 拖拽关节点</li>
               <li><strong>连接:</strong> 从一个关节拖到另一个</li>
+              <li><strong>旋转锚点:</strong> 点击设置动画旋转中心</li>
             </ul>
           </div>
 
@@ -470,6 +595,65 @@ export default function JointEditor({ characterId, parts, onSave, saving }: Prop
                   <button className="btn-small" onClick={() => { const pos = partPositions[selectedPartData.name]; setPartPositions(prev => ({ ...prev, [selectedPartData.name]: { ...pos, width: pos.originalWidth, height: pos.originalHeight } })) }}>重置大小</button>
                 </div>
               )}
+              <div className="property-group">
+                <label>旋转锚点 (动画用)</label>
+                <div className="pivot-inputs">
+                  <label>
+                    X: 
+                    <input 
+                      type="number" 
+                      min="0" max="1" step="0.05"
+                      value={selectedPartData.joint_pivot_x ?? 0.5} 
+                      onChange={(e) => setEditedParts(prev => prev.map(p => 
+                        p.name === selectedPartData.name 
+                          ? { ...p, joint_pivot_x: parseFloat(e.target.value) || 0.5 } 
+                          : p
+                      ))}
+                      style={{ width: '60px', marginLeft: '4px' }}
+                    />
+                  </label>
+                  <label style={{ marginLeft: '8px' }}>
+                    Y: 
+                    <input 
+                      type="number" 
+                      min="0" max="1" step="0.05"
+                      value={selectedPartData.joint_pivot_y ?? 0.5} 
+                      onChange={(e) => setEditedParts(prev => prev.map(p => 
+                        p.name === selectedPartData.name 
+                          ? { ...p, joint_pivot_y: parseFloat(e.target.value) || 0.5 } 
+                          : p
+                      ))}
+                      style={{ width: '60px', marginLeft: '4px' }}
+                    />
+                  </label>
+                </div>
+                <small style={{ color: '#9ca3af', fontSize: '11px' }}>点击"旋转锚点"模式可视化设置</small>
+              </div>
+
+              <div className="property-group">
+                <label>旋转偏移 (弧度)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input 
+                    type="range" 
+                    min="0" max="6.28" step="0.1"
+                    value={selectedPartData.rotation_offset ?? 1.57} 
+                    onChange={(e) => setEditedParts(prev => prev.map(p => 
+                      p.name === selectedPartData.name 
+                        ? { ...p, rotation_offset: parseFloat(e.target.value) } 
+                        : p
+                    ))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ minWidth: '50px' }}>{(selectedPartData.rotation_offset ?? 1.57).toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                  <button className="btn-small" onClick={() => setEditedParts(prev => prev.map(p => p.name === selectedPartData.name ? { ...p, rotation_offset: 0 } : p))}>0°</button>
+                  <button className="btn-small" onClick={() => setEditedParts(prev => prev.map(p => p.name === selectedPartData.name ? { ...p, rotation_offset: Math.PI / 2 } : p))}>90°</button>
+                  <button className="btn-small" onClick={() => setEditedParts(prev => prev.map(p => p.name === selectedPartData.name ? { ...p, rotation_offset: Math.PI } : p))}>180°</button>
+                </div>
+                <small style={{ color: '#9ca3af', fontSize: '11px' }}>素材朝向: 0=右, 90°=下, 180°=左</small>
+              </div>
+
               <div className="property-group">
                 <div className="group-header">
                   <label>关节点 ({(selectedPartData.joints || []).length})</label>
