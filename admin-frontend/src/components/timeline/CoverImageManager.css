@@ -1,0 +1,228 @@
+.cover-image-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #1a2744;
+  border-radius: 8px;
+  border: 1px solid #2d3a5a;
+}
+
+/* Header */
+.cover-image-manager__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cover-image-manager__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.cover-image-manager__title-en {
+  font-size: 11px;
+  font-weight: 400;
+  color: #888;
+}
+
+/* Preview container */
+.cover-image-manager__preview-container {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d1117;
+  border: 1px solid #2d3a5a;
+}
+
+/* Preview */
+.cover-image-manager__preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}
+
+.cover-image-manager__preview--pending {
+  border: 2px dashed #4fc3f7;
+}
+
+.cover-image-manager__preview--capture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a2744 0%, #0d1117 100%);
+}
+
+.cover-image-manager__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cover-image-manager__preview-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background: rgba(79, 195, 247, 0.9);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.cover-image-manager__preview-badge--capture {
+  background: rgba(255, 193, 7, 0.95);
+  color: #1a1a2e;
+  font-family: monospace;
+}
+
+/* Capture info */
+.cover-image-manager__capture-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.cover-image-manager__capture-icon {
+  font-size: 48px;
+  opacity: 0.8;
+}
+
+.cover-image-manager__capture-text {
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.cover-image-manager__capture-time {
+  font-size: 13px;
+  color: #4fc3f7;
+  font-family: monospace;
+}
+
+/* Placeholder */
+.cover-image-manager__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 24px;
+  text-align: center;
+  aspect-ratio: 4 / 3;
+}
+
+.cover-image-manager__placeholder-icon {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.cover-image-manager__placeholder-text {
+  font-size: 14px;
+  color: #888;
+}
+
+.cover-image-manager__placeholder-hint {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Actions */
+.cover-image-manager__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Button */
+.cover-image-manager__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s, transform 0.1s;
+}
+
+.cover-image-manager__btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.cover-image-manager__btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cover-image-manager__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cover-image-manager__btn--primary {
+  background: #4fc3f7;
+  color: #1a1a2e;
+}
+
+.cover-image-manager__btn--primary:hover:not(:disabled) {
+  background: #29b6f6;
+}
+
+.cover-image-manager__btn--secondary {
+  background: #2d3a5a;
+  color: #e0e0e0;
+}
+
+.cover-image-manager__btn--secondary:hover:not(:disabled) {
+  background: #3d4a6a;
+}
+
+.cover-image-manager__btn--danger {
+  background: #ff5252;
+  color: #fff;
+}
+
+.cover-image-manager__btn--danger:hover:not(:disabled) {
+  background: #ff1744;
+}
+
+.cover-image-manager__btn-icon {
+  font-size: 14px;
+}
+
+/* Hints */
+.cover-image-manager__hints {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cover-image-manager__hint {
+  margin: 0;
+  font-size: 11px;
+  color: #666;
+}
+
+.cover-image-manager__hint--en {
+  color: #555;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .cover-image-manager__actions {
+    flex-direction: column;
+  }
+
+  .cover-image-manager__btn {
+    justify-content: center;
+  }
+}

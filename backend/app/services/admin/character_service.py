@@ -166,7 +166,7 @@ class CharacterService:
         self, db: AsyncSession, character_id: str
     ) -> List[str]:
         """
-        Check if a character is bound to any storylines.
+        Check if a character is bound to any storylines (legacy character_id field).
         Returns list of storyline IDs that reference this character.
         """
         from ...models.admin.storyline import StorylineDB
@@ -176,11 +176,38 @@ class CharacterService:
         )
         return list(result.scalars().all())
 
-    async def delete_character(
+    async def check_storyline_character_configs(
         self, db: AsyncSession, character_id: str
+    ) -> List[str]:
+        """
+        Check if a character is in any storyline character configurations.
+        Returns list of storyline IDs that include this character.
+        
+        Requirements 7.5: Character Deletion Cascade
+        """
+        from ...models.admin.storyline import StorylineCharacterDB
+        
+        result = await db.execute(
+            select(StorylineCharacterDB.storyline_id).where(
+                StorylineCharacterDB.character_id == character_id
+            )
+        )
+        return list(set(result.scalars().all()))
+
+    async def delete_character(
+        self, db: AsyncSession, character_id: str, force_cascade: bool = False
     ) -> Tuple[bool, str]:
         """
-        Delete a character if not bound to any storylines.
+        Delete a character, optionally cascading removal from storyline configs.
+        
+        Requirements 7.5: Character Deletion Cascade
+        *For any* character deleted from the system, that character SHALL be 
+        removed from all storyline character configurations.
+        
+        Args:
+            db: Database session
+            character_id: Character ID to delete
+            force_cascade: If True, remove character from storyline configs before deleting
         
         Returns:
             Tuple of (success, error_message)
@@ -189,10 +216,25 @@ class CharacterService:
         if character is None:
             return False, "Character not found"
         
-        # Check for storyline bindings
+        # Check for legacy storyline bindings (character_id field)
         bound_storylines = await self.check_storyline_bindings(db, character_id)
         if bound_storylines:
             return False, f"Character is bound to storylines: {', '.join(bound_storylines)}"
+        
+        # Check for storyline character configurations
+        config_storylines = await self.check_storyline_character_configs(db, character_id)
+        
+        if config_storylines:
+            if force_cascade:
+                # Remove character from all storyline configurations
+                from .storyline_service import storyline_service
+                affected_count, error = await storyline_service.remove_character_from_all_storylines(
+                    db, character_id
+                )
+                if error:
+                    return False, f"Failed to remove character from storyline configs: {error}"
+            else:
+                return False, f"Character is configured in {len(config_storylines)} storyline(s). Use force_cascade=True to remove from configs."
         
         # Delete character directory and files
         char_dir = self.get_character_dir(character_id)

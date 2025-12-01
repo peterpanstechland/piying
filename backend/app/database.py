@@ -43,7 +43,7 @@ async def init_db() -> None:
     # This ensures all tables are created
     from .models.admin.user import User  # noqa: F401
     from .models.admin.character import CharacterDB, CharacterPartDB, SkeletonBindingDB  # noqa: F401
-    from .models.admin.storyline import StorylineDB, SegmentDB  # noqa: F401
+    from .models.admin.storyline import StorylineDB, SegmentDB, TransitionDB, StorylineCharacterDB  # noqa: F401
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

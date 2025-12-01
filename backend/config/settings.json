@@ -9,16 +9,16 @@
     "detection_confidence": 0.5
   },
   "timeouts": {
-    "idle_to_scene_select_seconds": 1,
-    "scene_select_inactivity_seconds": 10,
+    "idle_to_scene_select_seconds": 7,
+    "scene_select_inactivity_seconds": 20,
     "motion_capture_inactivity_seconds": 15,
-    "final_result_auto_reset_seconds": 30,
-    "exit_gesture_duration_seconds": 3,
+    "final_result_auto_reset_seconds": 60,
+    "exit_gesture_duration_seconds": 300,
     "exit_confirmation_duration_seconds": 2
   },
   "storage": {
     "mode": "local",
-    "local_path": "data/outputs",
+    "local_path": "data/test_complete",
     "s3_bucket": null,
     "s3_region": null,
     "s3_access_key": null,
@@ -29,14 +29,14 @@
     "emergency_cleanup_target_gb": 3
   },
   "rendering": {
-    "target_fps": 30,
+    "target_fps": 25,
     "video_codec": "H264",
-    "max_render_time_seconds": 20
+    "max_render_time_seconds": 30
   },
   "qr_code": {
     "auto_detect_ip": true,
-    "manual_ip": null,
-    "port": 8000
+    "manual_ip": "192.168.1.200",
+    "port": 8080
   },
   "interaction": {
     "hover_selection_duration_seconds": 5,

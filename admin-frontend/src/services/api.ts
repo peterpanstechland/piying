@@ -345,6 +345,215 @@ class AdminApiClient {
     return response.data
   }
 
+  // Storyline Character Configuration (Requirements 7.1, 7.2, 7.3, 7.4)
+  async getStorylineCharacters(storylineId: string): Promise<{
+    character_ids: string[];
+    default_character_id: string | null;
+    display_order: string[];
+  }> {
+    const response = await this.client.get(`/storylines/${storylineId}/characters`)
+    return response.data
+  }
+
+  async updateStorylineCharacters(
+    storylineId: string,
+    config: {
+      character_ids: string[];
+      default_character_id: string;
+      display_order: string[];
+    }
+  ): Promise<{ message: string }> {
+    const response = await this.client.put(`/storylines/${storylineId}/characters`, config)
+    return response.data
+  }
+
+  // Cover Image Management (Requirements 9.1, 9.2, 9.3, 9.4, 9.5)
+  async uploadCoverImage(storylineId: string, formData: FormData): Promise<{
+    message: string;
+    cover_image: {
+      original_path: string;
+      thumbnail_path: string;
+      medium_path: string;
+      large_path: string;
+    };
+  }> {
+    const response = await this.client.post(`/storylines/${storylineId}/cover`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  }
+
+  async captureCoverFromVideo(storylineId: string, timestamp: number): Promise<{
+    message: string;
+    timestamp: number;
+    cover_image: {
+      original_path: string;
+      thumbnail_path: string;
+      medium_path: string;
+      large_path: string;
+    };
+  }> {
+    const response = await this.client.post(`/storylines/${storylineId}/cover/capture`, null, {
+      params: { timestamp }
+    })
+    return response.data
+  }
+
+  async deleteCoverImage(storylineId: string): Promise<{ message: string }> {
+    const response = await this.client.delete(`/storylines/${storylineId}/cover`)
+    return response.data
+  }
+
+  getCoverImageUrl(storylineId: string, size: 'thumbnail' | 'medium' | 'large' = 'large'): string {
+    return `${API_BASE_URL}/storylines/${storylineId}/cover/${size}`
+  }
+
+  // Extended Storyline API (Requirements 1.1, 1.2, 10.1)
+  async getStorylineExtended(id: string) {
+    const response = await this.client.get(`/storylines/extended/${id}`)
+    return response.data
+  }
+
+  async createStorylineExtended(data: {
+    name: string;
+    name_en?: string;
+    synopsis?: string;
+    synopsis_en?: string;
+    description?: string;
+    description_en?: string;
+    icon?: string;
+  }) {
+    const response = await this.client.post('/storylines/extended', data)
+    return response.data
+  }
+
+  async updateStorylineExtended(id: string, data: {
+    name?: string;
+    name_en?: string;
+    synopsis?: string;
+    synopsis_en?: string;
+    description?: string;
+    description_en?: string;
+    icon?: string;
+    display_order?: number;
+  }) {
+    const response = await this.client.put(`/storylines/extended/${id}`, data)
+    return response.data
+  }
+
+  async getStorylinesExtendedList() {
+    const response = await this.client.get('/storylines/extended/list')
+    return response.data
+  }
+
+  // Publish/Unpublish (Requirements 1.2, 10.1)
+  async publishStoryline(id: string): Promise<{ message: string }> {
+    const response = await this.client.put(`/storylines/${id}/publish`)
+    return response.data
+  }
+
+  async unpublishStoryline(id: string): Promise<{ message: string }> {
+    const response = await this.client.put(`/storylines/${id}/unpublish`)
+    return response.data
+  }
+
+  // Timeline Segments (Requirements 4.1, 4.2, 4.6)
+  async updateTimelineSegments(storylineId: string, segments: Array<{
+    index: number;
+    start_time: number;
+    duration: number;
+    path_type?: string;
+    entry_animation?: {
+      type: string;
+      duration: number;
+      delay: number;
+    };
+    exit_animation?: {
+      type: string;
+      duration: number;
+      delay: number;
+    };
+    guidance_text?: string;
+    guidance_text_en?: string;
+    guidance_image?: string | null;
+  }>): Promise<{ message: string }> {
+    const response = await this.client.put(`/storylines/${storylineId}/timeline-segments`, segments)
+    return response.data
+  }
+
+  async deleteSegment(storylineId: string, segmentIndex: number): Promise<{ message: string }> {
+    const response = await this.client.delete(`/storylines/${storylineId}/segments/${segmentIndex}`)
+    return response.data
+  }
+
+  // Transitions (Requirements 6.2, 6.3)
+  async getTransitions(storylineId: string): Promise<{
+    transitions: Array<{
+      id: string;
+      from_segment_index: number;
+      to_segment_index: number;
+      type: string;
+      duration: number;
+    }>;
+  }> {
+    const response = await this.client.get(`/storylines/${storylineId}/transitions`)
+    return response.data
+  }
+
+  async updateTransitions(storylineId: string, transitions: Array<{
+    id?: string;
+    from_segment_index: number;
+    to_segment_index: number;
+    type: string;
+    duration: number;
+  }>): Promise<{ message: string }> {
+    const response = await this.client.put(`/storylines/${storylineId}/transitions`, transitions)
+    return response.data
+  }
+
+  // Video Frame Extraction (Requirements 9.2, 12.2)
+  async extractVideoFrame(storylineId: string, timestamp: number): Promise<{
+    frame_data: string;
+    timestamp: number;
+    format: string;
+    message: string;
+  }> {
+    const response = await this.client.get(`/storylines/${storylineId}/video/frame`, {
+      params: { timestamp }
+    })
+    return response.data
+  }
+
+  // Guidance Image (Requirements 12.1, 12.2)
+  async uploadGuidanceImage(storylineId: string, segmentIndex: number, formData: FormData): Promise<{
+    message: string;
+    image_path: string;
+  }> {
+    const response = await this.client.post(
+      `/storylines/${storylineId}/segments/${segmentIndex}/guidance-image`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return response.data
+  }
+
+  async captureGuidanceFromVideo(storylineId: string, segmentIndex: number, timestamp: number): Promise<{
+    message: string;
+    image_path: string;
+    timestamp: number;
+  }> {
+    const response = await this.client.post(
+      `/storylines/${storylineId}/segments/${segmentIndex}/capture-guidance`,
+      null,
+      { params: { timestamp } }
+    )
+    return response.data
+  }
+
+  getVideoUrl(storylineId: string): string {
+    return `${API_BASE_URL}/storylines/${storylineId}/video`
+  }
+
   // Settings
   async getSettings() {
     const response = await this.client.get('/settings')

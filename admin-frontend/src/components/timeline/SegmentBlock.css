@@ -1,0 +1,211 @@
+.segment-block {
+  position: absolute;
+  top: 10px;
+  height: 60px;
+  background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.2s, transform 0.1s;
+  min-width: 40px;
+}
+
+.segment-block:hover {
+  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.4);
+}
+
+.segment-block--selected {
+  box-shadow: 0 0 0 2px #fff, 0 4px 16px rgba(79, 195, 247, 0.5);
+  z-index: 5;
+}
+
+.segment-block--selected::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  pointer-events: none;
+  animation: selection-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes selection-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.segment-block--dragging {
+  cursor: grabbing;
+  opacity: 0.9;
+  z-index: 10;
+}
+
+/* Resize handles */
+.segment-block__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 5;
+}
+
+.segment-block__handle--left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.segment-block__handle--right {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.segment-block__handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.segment-block:hover .segment-block__handle::after,
+.segment-block--selected .segment-block__handle::after {
+  opacity: 1;
+}
+
+/* Content area */
+.segment-block__content {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 8px;
+  overflow: hidden;
+}
+
+/* Segment index */
+.segment-block__index {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* Animation indicators */
+.segment-block__animations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  margin-left: 24px;
+}
+
+.segment-block__animation {
+  font-size: 10px;
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.segment-block__animation--entry {
+  background: rgba(76, 175, 80, 0.4);
+}
+
+.segment-block__animation--exit {
+  background: rgba(244, 67, 54, 0.4);
+}
+
+/* Duration display */
+.segment-block__duration {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Animation bars */
+.segment-block__animation-bar {
+  position: absolute;
+  bottom: 0;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+}
+
+.segment-block__animation-bar--entry {
+  left: 0;
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.8) 0%, transparent 100%);
+  border-radius: 0 0 0 6px;
+}
+
+.segment-block__animation-bar--exit {
+  right: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(244, 67, 54, 0.8) 100%);
+  border-radius: 0 0 6px 0;
+}
+
+/* Different colors for different segment indices */
+.segment-block:nth-child(4n+1) {
+  background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+}
+
+.segment-block:nth-child(4n+2) {
+  background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+}
+
+.segment-block:nth-child(4n+3) {
+  background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+}
+
+.segment-block:nth-child(4n) {
+  background: linear-gradient(135deg, #ba68c8 0%, #ab47bc 100%);
+}
+
+
+/* Invalid position state (overlap detected) */
+.segment-block--invalid {
+  opacity: 0.6;
+  box-shadow: 0 0 0 2px #f44336, 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
+.segment-block--invalid::after {
+  content: '⚠';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: #f44336;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}

@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from .api import sessions_router, videos_router
+from .api import sessions_router, videos_router, public_storylines_router
 from .api.admin import auth_router, users_router, characters_router, storylines_router, settings_router, dashboard_router, export_import_router
 from .config import ConfigLoader
 from .database import init_db
@@ -136,6 +136,7 @@ if admin_frontend_dist.exists():
 # Include routers AFTER static files
 app.include_router(sessions_router)
 app.include_router(videos_router)
+app.include_router(public_storylines_router)  # Public storylines API (no auth required)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(characters_router)

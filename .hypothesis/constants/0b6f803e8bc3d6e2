@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\ext\asyncio\result.py
+# hypothesis_version: 6.148.2
+
+['Result[Any]', '_RT', '_T', '_TP', '_mapping', '_row_getter', 'raw']

@@ -1,0 +1,142 @@
+.property-panel {
+  display: flex;
+  flex-direction: column;
+  background: #16213e;
+  border-radius: 12px;
+  overflow: hidden;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.property-panel--empty {
+  min-height: 200px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Placeholder */
+.property-panel__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.property-panel__placeholder-icon {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+.property-panel__placeholder-text {
+  margin: 0;
+  font-size: 14px;
+  color: #888;
+}
+
+.property-panel__placeholder-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Header */
+.property-panel__header {
+  padding: 16px;
+  background: #1a2744;
+  border-bottom: 1px solid #2d3a5a;
+}
+
+.property-panel__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.property-panel__subtitle {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #888;
+}
+
+/* Content */
+.property-panel__content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+/* Section */
+.property-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.property-panel__section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4fc3f7;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2d3a5a;
+}
+
+/* Info grid */
+.property-panel__info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.property-panel__info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.property-panel__info-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.property-panel__info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Scrollbar styling */
+.property-panel__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.property-panel__content::-webkit-scrollbar-track {
+  background: #1a2744;
+}
+
+.property-panel__content::-webkit-scrollbar-thumb {
+  background: #3d4a6a;
+  border-radius: 3px;
+}
+
+.property-panel__content::-webkit-scrollbar-thumb:hover {
+  background: #4d5a7a;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .property-panel {
+    min-width: 100%;
+    max-width: 100%;
+  }
+}

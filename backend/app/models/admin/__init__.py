@@ -23,6 +23,8 @@ from .character import (
 from .storyline import (
     StorylineDB,
     SegmentDB,
+    TransitionDB,
+    StorylineCharacterDB,
     Storyline,
     Segment,
     StorylineCreate,
@@ -32,6 +34,19 @@ from .storyline import (
     SegmentConfigUpdate,
     VideoUploadResponse,
     VALID_PATH_TYPES,
+    # New models for timeline editor
+    StorylineStatus,
+    AnimationType,
+    TransitionType,
+    AnimationConfig,
+    Transition,
+    StorylineCharacterConfig,
+    CoverImage,
+    TimelineSegment,
+    StorylineExtended,
+    StorylineExtendedCreate,
+    StorylineExtendedUpdate,
+    StorylineExtendedListResponse,
 )
 from .settings import (
     StorageSettings,
@@ -81,6 +96,8 @@ __all__ = [
     # Storyline models
     "StorylineDB",
     "SegmentDB",
+    "TransitionDB",
+    "StorylineCharacterDB",
     "Storyline",
     "Segment",
     "StorylineCreate",
@@ -90,6 +107,19 @@ __all__ = [
     "SegmentConfigUpdate",
     "VideoUploadResponse",
     "VALID_PATH_TYPES",
+    # New models for timeline editor
+    "StorylineStatus",
+    "AnimationType",
+    "TransitionType",
+    "AnimationConfig",
+    "Transition",
+    "StorylineCharacterConfig",
+    "CoverImage",
+    "TimelineSegment",
+    "StorylineExtended",
+    "StorylineExtendedCreate",
+    "StorylineExtendedUpdate",
+    "StorylineExtendedListResponse",
     # Settings models
     "StorageSettings",
     "QRCodeSettings",

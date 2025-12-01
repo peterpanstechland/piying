@@ -1,0 +1,4 @@
+# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\orm\_orm_constructors.py
+# hypothesis_version: 6.148.2
+
+['*', '1.4', '2.0', '_T', 'aliased', 'all', 'auto', 'autoflush', 'default', 'default_factory', 'dynamic', 'expire_on_commit', 'init', 'kw_only', 'lazy', 'query_expression', 'save-update, merge', 'select']

@@ -106,22 +106,33 @@ async def update_character(
 @router.delete("/{character_id}", status_code=status.HTTP_200_OK)
 async def delete_character(
     character_id: str,
-    current_user: Annotated[TokenPayload, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    force_cascade: bool = False,
+    current_user: Annotated[TokenPayload, Depends(get_current_user)] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
 ) -> dict:
     """
     Delete a character by ID.
     
-    Character can only be deleted if it is not bound to any active storyline.
+    Requirements 7.5: Character Deletion Cascade
+    
+    - **force_cascade**: If True, removes character from all storyline configurations
+      before deleting. If False (default), deletion fails if character is in any
+      storyline configuration.
+    
+    Character can only be deleted if it is not bound to any active storyline
+    (via the legacy character_id field). Use force_cascade to remove from
+    storyline character configurations.
     """
-    success, error = await character_service.delete_character(db, character_id)
+    success, error = await character_service.delete_character(
+        db, character_id, force_cascade=force_cascade
+    )
     if not success:
         if "not found" in error.lower():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=error,
             )
-        elif "bound to storylines" in error.lower():
+        elif "bound to storylines" in error.lower() or "configured in" in error.lower():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=error,

@@ -11,6 +11,7 @@ from .storyline_service import StorylineService, storyline_service
 from .settings_service import SettingsService, settings_service
 from .dashboard_service import DashboardService, dashboard_service
 from .export_import_service import ExportImportService, export_import_service
+from .image_processor import ImageProcessor, image_processor
 
 __all__ = [
     "AuthService",
@@ -25,4 +26,6 @@ __all__ = [
     "dashboard_service",
     "ExportImportService",
     "export_import_service",
+    "ImageProcessor",
+    "image_processor",
 ]

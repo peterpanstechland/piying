@@ -1,0 +1,153 @@
+.timeline-track-container {
+  width: 100%;
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.timeline-track {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: pointer;
+}
+
+.timeline-track__content {
+  position: relative;
+  min-height: 120px;
+  background: linear-gradient(to bottom, #16213e 0%, #1a1a2e 100%);
+}
+
+/* Time ruler */
+.timeline-track__ruler {
+  position: relative;
+  height: 30px;
+  background: #16213e;
+  border-bottom: 1px solid #2d3a5a;
+}
+
+.timeline-track__marker {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: #2d3a5a;
+}
+
+.timeline-track__marker--major {
+  background: #3d4a6a;
+}
+
+.timeline-track__marker--major::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 8px;
+  background: #4fc3f7;
+}
+
+.timeline-track__marker-label {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Segments track */
+.timeline-track__segments {
+  position: relative;
+  height: 80px;
+  margin-top: 10px;
+}
+
+/* Playhead */
+.timeline-track__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  z-index: 100;
+  cursor: ew-resize;
+  transform: translateX(-50%);
+}
+
+.timeline-track__playhead-head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background: #ff5252;
+  border-radius: 2px;
+  clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+}
+
+.timeline-track__playhead-line {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  bottom: 0;
+  background: #ff5252;
+}
+
+.timeline-track__playhead:hover .timeline-track__playhead-head,
+.timeline-track__playhead--dragging .timeline-track__playhead-head {
+  background: #ff7043;
+}
+
+.timeline-track__playhead:hover .timeline-track__playhead-line,
+.timeline-track__playhead--dragging .timeline-track__playhead-line {
+  background: #ff7043;
+}
+
+/* Scrollbar styling */
+.timeline-track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.timeline-track::-webkit-scrollbar-track {
+  background: #16213e;
+}
+
+.timeline-track::-webkit-scrollbar-thumb {
+  background: #3d4a6a;
+  border-radius: 4px;
+}
+
+.timeline-track::-webkit-scrollbar-thumb:hover {
+  background: #4d5a7a;
+}
+
+
+/* Snap indicator */
+.timeline-track__snap-indicator {
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 193, 7, 0.5);
+  pointer-events: none;
+  z-index: 50;
+}
+
+.timeline-track__snap-indicator--active {
+  background: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 0 4px rgba(255, 193, 7, 0.6);
+}
+
+/* Playhead snap feedback */
+.timeline-track__playhead--snapped .timeline-track__playhead-head {
+  background: #ffc107;
+}
+
+.timeline-track__playhead--snapped .timeline-track__playhead-line {
+  background: #ffc107;
+}
