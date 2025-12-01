@@ -6,6 +6,7 @@
 export enum AppState {
   IDLE = 'IDLE',
   SCENE_SELECT = 'SCENE_SELECT',
+  CHARACTER_SELECT = 'CHARACTER_SELECT',
   SEGMENT_GUIDE = 'SEGMENT_GUIDE',
   SEGMENT_COUNTDOWN = 'SEGMENT_COUNTDOWN',
   SEGMENT_RECORD = 'SEGMENT_RECORD',
@@ -25,9 +26,19 @@ export interface SegmentData {
   frames: PoseFrame[];
 }
 
+export interface CharacterOption {
+  id: string;
+  name: string;
+  thumbnail_path: string | null;
+  is_default: boolean;
+  display_order: number;
+}
+
 export interface StateContext {
   sessionId?: string;
   sceneId?: string;
+  characterId?: string;
+  availableCharacters?: CharacterOption[];
   currentSegment: number;
   totalSegments: number;
   recordedSegments: SegmentData[];
@@ -42,7 +53,8 @@ export type StateChangeListener = (state: AppState, context: StateContext) => vo
  */
 const VALID_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.IDLE]: [AppState.SCENE_SELECT],
-  [AppState.SCENE_SELECT]: [AppState.SEGMENT_GUIDE, AppState.IDLE],
+  [AppState.SCENE_SELECT]: [AppState.CHARACTER_SELECT, AppState.SEGMENT_GUIDE, AppState.IDLE],
+  [AppState.CHARACTER_SELECT]: [AppState.SEGMENT_GUIDE, AppState.SCENE_SELECT, AppState.IDLE],
   [AppState.SEGMENT_GUIDE]: [AppState.SEGMENT_COUNTDOWN, AppState.IDLE],
   [AppState.SEGMENT_COUNTDOWN]: [AppState.SEGMENT_RECORD, AppState.IDLE],
   [AppState.SEGMENT_RECORD]: [AppState.SEGMENT_REVIEW, AppState.IDLE],

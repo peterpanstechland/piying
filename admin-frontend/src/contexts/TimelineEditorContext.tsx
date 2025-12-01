@@ -33,6 +33,8 @@ export interface Transition {
 
 export type PlaybackSpeed = 0.25 | 0.5 | 1 | 1.5 | 2
 
+export type LoopMode = 'none' | 'segment' | 'full'
+
 interface TimelineEditorState {
   // Playhead position in seconds
   playhead: number
@@ -46,6 +48,8 @@ interface TimelineEditorState {
   isPlaying: boolean
   // Playback speed
   playbackSpeed: PlaybackSpeed
+  // Loop mode (Requirements 11.5)
+  loopMode: LoopMode
   // Video duration in seconds
   videoDuration: number
   // Segments on the timeline
@@ -70,6 +74,7 @@ interface TimelineEditorActions {
   pause: () => void
   togglePlayback: () => void
   setPlaybackSpeed: (speed: PlaybackSpeed) => void
+  setLoopMode: (mode: LoopMode) => void
   // Video duration
   setVideoDuration: (duration: number) => void
   // Segment actions
@@ -116,6 +121,7 @@ export function TimelineEditorProvider({
   const [selectedTransitionId, setSelectedTransitionId] = useState<string | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeedState] = useState<PlaybackSpeed>(1)
+  const [loopMode, setLoopModeState] = useState<LoopMode>('none')
   const [videoDuration, setVideoDurationState] = useState(initialVideoDuration)
   const [segments, setSegmentsState] = useState<TimelineSegment[]>(initialSegments)
   const [transitions, setTransitionsState] = useState<Transition[]>(initialTransitions)
@@ -171,6 +177,11 @@ export function TimelineEditorProvider({
     setPlaybackSpeedState(speed)
   }, [])
 
+  // Loop mode (Requirements 11.5)
+  const setLoopMode = useCallback((mode: LoopMode) => {
+    setLoopModeState(mode)
+  }, [])
+
   // Video duration
   const setVideoDuration = useCallback((duration: number) => {
     setVideoDurationState(duration)
@@ -222,6 +233,7 @@ export function TimelineEditorProvider({
     selectedTransitionId,
     isPlaying,
     playbackSpeed,
+    loopMode,
     videoDuration,
     segments,
     transitions,
@@ -237,6 +249,7 @@ export function TimelineEditorProvider({
     pause,
     togglePlayback,
     setPlaybackSpeed,
+    setLoopMode,
     setVideoDuration,
     setSegments,
     updateSegment,
@@ -246,9 +259,9 @@ export function TimelineEditorProvider({
     updateTransition,
   }), [
     playhead, zoom, selectedSegmentId, selectedTransitionId, isPlaying,
-    playbackSpeed, videoDuration, segments, transitions,
+    playbackSpeed, loopMode, videoDuration, segments, transitions,
     setPlayhead, setZoom, zoomIn, zoomOut, selectSegment, selectTransition,
-    clearSelection, play, pause, togglePlayback, setPlaybackSpeed,
+    clearSelection, play, pause, togglePlayback, setPlaybackSpeed, setLoopMode,
     setVideoDuration, setSegments, updateSegment, addSegment, removeSegment,
     setTransitions, updateTransition,
   ])

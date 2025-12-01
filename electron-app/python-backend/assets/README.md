@@ -84,23 +84,23 @@ See `ASSET_CREATION_GUIDE.md` for detailed instructions on creating high-quality
 
 ## Scene Descriptions
 
-### Scene A: Martial Arts Performance (武术表演)
+### Scene A: Martial Arts Performance (时间迷途)
 **Theme:** Traditional Chinese martial arts
-- **Icon:** 🥋 Martial arts figure
+- **Icon:** 🌕 Martial arts figure
 - **Colors:** Red, Gold, Black
 - **Segments:** 3 (Opening stance, Dynamic moves, Closing stance)
 - **Total Duration:** 30 seconds (8s + 10s + 12s)
 
-### Scene B: Dance Performance (舞蹈表演)
+### Scene B: Dance Performance (来自五百年前的梦)
 **Theme:** Elegant dance performance
-- **Icon:** 💃 Dancing figure
+- **Icon:** 🌌 Dancing figure
 - **Colors:** Purple, Pink, White
 - **Segments:** 3 (Entrance, Performance, Finale)
 - **Total Duration:** 30 seconds (10s + 15s + 5s)
 
-### Scene C: Story Performance (故事表演)
+### Scene C: Story Performance (淘金者)
 **Theme:** Narrative storytelling
-- **Icon:** 📖 Book or storytelling figure
+- **Icon:** ⛏️ Book or storytelling figure
 - **Colors:** Blue, Orange, Brown
 - **Segments:** 4 (Entrance, Walking, Climax, Exit)
 - **Total Duration:** 30 seconds (6s + 12s + 8s + 4s)

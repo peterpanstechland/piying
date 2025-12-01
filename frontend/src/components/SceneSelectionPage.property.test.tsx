@@ -49,7 +49,7 @@ const sceneArbitrary = fc.record({
   name_en: fc.string({ minLength: 1, maxLength: 50 }),
   description: fc.string({ minLength: 1, maxLength: 200 }),
   description_en: fc.string({ minLength: 1, maxLength: 200 }),
-  icon: fc.constantFrom('🥋', '💃', '📖', '🎭', '🎨', '🎵', '⚽', '🎮'),
+  icon: fc.constantFrom('🌕', '🌌', '⛏️', '🎭', '🎨', '🎵', '⚽', '🎮'),
   segments: fc.array(
     fc.record({
       duration: fc.integer({ min: 1, max: 30 }),

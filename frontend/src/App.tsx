@@ -6,6 +6,7 @@ import { APIClient } from './services/api-client';
 import { 
   IdlePage, 
   SceneSelectionPage, 
+  CharacterSelectionPage,
   Scene, 
   MultiPersonWarning,
   ErrorBoundary,
@@ -13,6 +14,7 @@ import {
   useToast,
   CameraAccessError,
 } from './components';
+import type { CharacterOption } from './components';
 import { SegmentGuidancePage } from './components/SegmentGuidancePage';
 import { CountdownPage } from './components/CountdownPage';
 import { RecordingPage } from './components/RecordingPage';
@@ -23,41 +25,77 @@ import { errorLogger, setupGlobalErrorHandling } from './utils/error-logger';
 import { performanceMonitor } from './utils/performance-monitor';
 import './App.css';
 
-// Load scenes configuration
-const loadScenes = async (): Promise<Scene[]> => {
+// Load scenes from API (published storylines) or fallback to static config
+const loadScenes = async (apiClient: APIClient): Promise<Scene[]> => {
+  try {
+    // First try to fetch from the storylines API (published only)
+    const storylines = await apiClient.getPublishedStorylines();
+    
+    if (storylines && storylines.length > 0) {
+      // Convert API response to Scene format
+      return storylines.map(storyline => ({
+        id: storyline.id,
+        name: storyline.name,
+        name_en: storyline.name_en || storyline.name,
+        description: storyline.synopsis || '',
+        description_en: storyline.synopsis_en || '',
+        synopsis: storyline.synopsis,
+        synopsis_en: storyline.synopsis_en,
+        icon: storyline.icon || '⛏️',
+        icon_image: storyline.icon_image,
+        cover_image: storyline.cover_image,
+        video_duration: storyline.video_duration,
+        character_count: storyline.character_count,
+        segment_count: storyline.segment_count,
+        segments: [], // Will be loaded when storyline is selected
+      }));
+    }
+    
+    // Fallback to static config if no published storylines
+    console.log('No published storylines found, falling back to static config');
+    return loadScenesFromConfig();
+  } catch (error) {
+    console.error('Failed to load storylines from API:', error);
+    // Fallback to static config
+    return loadScenesFromConfig();
+  }
+};
+
+// Load scenes from static config file (fallback)
+const loadScenesFromConfig = async (): Promise<Scene[]> => {
   try {
     const response = await fetch('/config/scenes.json');
     const data = await response.json();
     return Object.values(data.scenes);
   } catch (error) {
-    console.error('Failed to load scenes:', error);
+    console.error('Failed to load scenes from config:', error);
     // Return default scenes if loading fails
     return [
       {
         id: 'sceneA',
-        name: '武术表演',
-        name_en: 'Martial Arts Performance',
-        description: '展示你的武术动作',
-        description_en: 'Show your martial arts moves',
-        icon: '🥋',
+        name: '时间迷途',
+        name_en: 'Lost in Time',
+        description: '跨越古代与未来的皮影故事，展现嫦娥与宇航员在月球相遇的动人瞬间。',
+        description_en: 'A shadow-play journey across time, portraying the encounter between Chang’e and a modern astronaut on the moon.',
+        icon: '🌕',
         segments: [],
       },
       {
         id: 'sceneB',
-        name: '舞蹈表演',
+        name: '来自五百年前的梦',
         name_en: 'Dance Performance',
-        description: '展示你的舞蹈动作',
+        description: '以皮影光影呈现从宇宙大爆炸到现代科技的史诗旅程，生命起源化作猿猴影子，与当代人物在光中重叠，完成跨越万年的梦境回响。',
         description_en: 'Show your dance moves',
-        icon: '💃',
+        icon: '🌌',
         segments: [],
       },
       {
         id: 'sceneC',
-        name: '故事表演',
+        name: '淘金者',
         name_en: 'Story Performance',
-        description: '讲述你的故事',
+        description: '以皮影光影讲述一位孤独淘金者在荒漠中寻找希望的旅程。风沙、木桥与影子的摇曳构成命运的考验，直到一束金色微光穿透镂空皮影，他在风暴中抓住属于自己的希望。',
         description_en: 'Tell your story',
-        icon: '📖',
+        icon: '⛏️',
         segments: [],
       },
     ];
@@ -76,6 +114,8 @@ function App() {
   const [multiPersonWarning, setMultiPersonWarning] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<boolean>(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
+  const [availableCharacters, setAvailableCharacters] = useState<CharacterOption[]>([]);
   
   const { toasts, showError, showWarning, closeToast } = useToast();
   
@@ -136,9 +176,9 @@ function App() {
     };
   }, []);
 
-  // Load scenes
+  // Load scenes from API
   useEffect(() => {
-    loadScenes()
+    loadScenes(apiClientRef.current)
       .then(setScenes)
       .catch((error) => {
         errorLogger.log(error, 'medium' as any, 'config');
@@ -284,41 +324,100 @@ function App() {
     }
     
     console.log('Scene selected:', sceneId);
-    const selectedScene = scenes.find((s) => s.id === sceneId);
+    const scene = scenes.find((s) => s.id === sceneId);
     
-    if (selectedScene && stateMachineRef.current) {
+    if (scene && stateMachineRef.current) {
+      setSelectedScene(scene);
+      
       try {
-        // Create session via API
-        const response = await apiClientRef.current.createSession(sceneId);
-        console.log('Session created:', response.session_id);
+        // Fetch storyline details to get available characters
+        const storylineDetail = await apiClientRef.current.getPublishedStorylineDetail(sceneId);
         
-        // Reset recorded segments
-        recordedSegmentsRef.current = [];
-        
-        // Transition to segment guidance
-        stateMachineRef.current.transition(AppState.SEGMENT_GUIDE, {
-          sessionId: response.session_id,
-          sceneId: sceneId,
-          totalSegments: selectedScene.segments.length || 3, // Default to 3 if not specified
-          currentSegment: 0,
-        });
+        if (storylineDetail.characters && storylineDetail.characters.length > 0) {
+          // Has characters - transition to character selection
+          setAvailableCharacters(storylineDetail.characters);
+          stateMachineRef.current.transition(AppState.CHARACTER_SELECT, {
+            sceneId: sceneId,
+            availableCharacters: storylineDetail.characters,
+          });
+          return;
+        }
       } catch (error) {
-        console.error('Failed to create session:', error);
-        errorLogger.logAPIError(
-          error instanceof Error ? error : new Error(String(error)),
-          { action: 'createSession', sceneId }
-        );
-        showError(
-          '创建会话失败',
-          '无法连接到服务器。请检查网络连接。',
-          {
-            label: '重试',
-            onClick: () => handleSceneSelect(sceneId),
-          }
-        );
+        // If fetching details fails, continue without character selection
+        console.warn('Failed to fetch storyline details, skipping character selection:', error);
       }
+      
+      // No characters or fetch failed - proceed directly to session creation
+      await createSessionAndStartRecording(scene, null);
     }
   }, [scenes]);
+
+  // Create session and start recording flow
+  const createSessionAndStartRecording = useCallback(async (scene: Scene, characterId: string | null) => {
+    if (!stateMachineRef.current) return;
+    
+    try {
+      // Create session via API
+      const response = await apiClientRef.current.createSession(scene.id);
+      console.log('Session created:', response.session_id);
+      
+      // Reset recorded segments
+      recordedSegmentsRef.current = [];
+      
+      // Transition to segment guidance
+      stateMachineRef.current.transition(AppState.SEGMENT_GUIDE, {
+        sessionId: response.session_id,
+        sceneId: scene.id,
+        characterId: characterId || undefined,
+        totalSegments: scene.segment_count || scene.segments.length || 3,
+        currentSegment: 0,
+      });
+    } catch (error) {
+      console.error('Failed to create session:', error);
+      errorLogger.logAPIError(
+        error instanceof Error ? error : new Error(String(error)),
+        { action: 'createSession', sceneId: scene.id }
+      );
+      showError(
+        '创建会话失败',
+        '无法连接到服务器。请检查网络连接。',
+        {
+          label: '重试',
+          onClick: () => {
+            if (selectedScene) {
+              createSessionAndStartRecording(selectedScene, null);
+            }
+          },
+        }
+      );
+    }
+  }, [showError, selectedScene]);
+
+  // Handle character selection
+  const handleCharacterSelect = useCallback(async (characterId: string) => {
+    const currentState = stateMachineRef.current?.getCurrentState();
+    
+    // Only allow from CHARACTER_SELECT state
+    if (currentState !== AppState.CHARACTER_SELECT) {
+      console.log('Ignoring character selection - not in CHARACTER_SELECT state');
+      return;
+    }
+    
+    console.log('Character selected:', characterId);
+    
+    if (selectedScene) {
+      await createSessionAndStartRecording(selectedScene, characterId);
+    }
+  }, [selectedScene, createSessionAndStartRecording]);
+
+  // Handle back from character selection
+  const handleBackToSceneSelect = useCallback(() => {
+    if (stateMachineRef.current) {
+      setSelectedScene(null);
+      setAvailableCharacters([]);
+      stateMachineRef.current.transition(AppState.SCENE_SELECT);
+    }
+  }, []);
 
   // Handle guidance complete - transition to countdown
   const handleGuidanceComplete = () => {
@@ -508,6 +607,10 @@ function App() {
     setIsUploading(false);
     setVideoUrl(null);
     
+    // Clear scene and character selection
+    setSelectedScene(null);
+    setAvailableCharacters([]);
+    
     console.log('Reset complete - returned to IDLE state');
   };
 
@@ -549,6 +652,20 @@ function App() {
             videoElement={videoElement}
             handPosition={handPosition}
             onSceneSelect={handleSceneSelect}
+            apiBaseUrl={apiClientRef.current.getBaseUrl()}
+          />
+        );
+      
+      case AppState.CHARACTER_SELECT:
+        return (
+          <CharacterSelectionPage
+            characters={availableCharacters}
+            sceneName={selectedScene?.name || ''}
+            videoElement={videoElement}
+            handPosition={handPosition}
+            onCharacterSelect={handleCharacterSelect}
+            onBack={handleBackToSceneSelect}
+            apiBaseUrl={apiClientRef.current.getBaseUrl()}
           />
         );
       

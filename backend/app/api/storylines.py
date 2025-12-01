@@ -60,7 +60,7 @@ class PublicStorylineResponse(BaseModel):
     synopsis_en: str = Field(default="", description="Story synopsis (English)")
     description: str = Field(default="", description="Short description (Chinese)")
     description_en: str = Field(default="", description="Short description (English)")
-    icon: str = Field(default="📖", description="Emoji icon")
+    icon: str = Field(default="⛏️", description="Emoji icon")
     icon_image: Optional[str] = Field(default=None, description="Icon image path")
     display_order: int = Field(default=0, description="Display order")
     
@@ -96,7 +96,7 @@ class PublicStorylineListResponse(BaseModel):
     name_en: str = ""
     synopsis: str = ""
     synopsis_en: str = ""
-    icon: str = "📖"
+    icon: str = "⛏️"
     icon_image: Optional[str] = None
     display_order: int = 0
     video_duration: float = 0.0
@@ -142,7 +142,7 @@ async def list_published_storylines(
             name_en=storyline.name_en or "",
             synopsis=storyline.synopsis or "",
             synopsis_en=storyline.synopsis_en or "",
-            icon=storyline.icon or "📖",
+            icon=storyline.icon or "⛏️",
             icon_image=storyline.icon_image,
             display_order=storyline.display_order or 0,
             video_duration=storyline.video_duration or 0.0,
@@ -238,7 +238,7 @@ async def get_published_storyline(
         synopsis_en=storyline.synopsis_en or "",
         description=storyline.description or "",
         description_en=storyline.description_en or "",
-        icon=storyline.icon or "📖",
+        icon=storyline.icon or "⛏️",
         icon_image=storyline.icon_image,
         display_order=storyline.display_order or 0,
         video_duration=storyline.video_duration or 0.0,

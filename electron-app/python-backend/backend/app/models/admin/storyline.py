@@ -52,7 +52,7 @@ class StorylineDB(Base):
     name_en: Mapped[str] = mapped_column(String(100), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     description_en: Mapped[str] = mapped_column(Text, default="")
-    icon: Mapped[str] = mapped_column(String(10), default="📖")
+    icon: Mapped[str] = mapped_column(String(10), default="⛏️")
     icon_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     base_video_path: Mapped[str] = mapped_column(String(255), nullable=False)
     video_duration: Mapped[float] = mapped_column(Float, default=0.0)
@@ -120,7 +120,7 @@ class Storyline(BaseModel):
     name_en: str = Field(default="", description="Display name (English)")
     description: str = Field(default="", description="Chinese description")
     description_en: str = Field(default="", description="English description")
-    icon: str = Field(default="📖", description="Emoji icon")
+    icon: str = Field(default="⛏️", description="Emoji icon")
     icon_image: Optional[str] = Field(default=None, description="Icon image path")
     base_video_path: str = Field(..., description="Background video path")
     video_duration: float = Field(default=0.0, ge=0, description="Video duration in seconds")
@@ -134,9 +134,9 @@ class Storyline(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440001",
-                "name": "武术表演",
+                "name": "时间迷途",
                 "name_en": "Martial Arts Performance",
-                "description": "展示你的武术动作",
+                "description": "故事从嫦娥在古代月宫中独舞展开，一道来自未来的蓝色光裂缝突然出现，古典月光与现代科技在幕布上交错。嫦娥穿越裂缝来到千年后的月球，与执行中国探月任务的宇航员相遇。全片通过实体皮影、可移动背景板与光影切换，实现从古至今、从月宫到月面的时空转换，呈现神话与科技跨越千年的浪漫邂逅。",
                 "description_en": "Show your martial arts moves",
                 "icon": "🥋",
                 "icon_image": "assets/images/sceneA_icon.png",
@@ -156,7 +156,7 @@ class StorylineCreate(BaseModel):
     name_en: str = Field(default="", max_length=100, description="Storyline name (English)")
     description: str = Field(default="", max_length=500, description="Description (Chinese)")
     description_en: str = Field(default="", max_length=500, description="Description (English)")
-    icon: str = Field(default="📖", max_length=10, description="Emoji icon")
+    icon: str = Field(default="⛏️", max_length=10, description="Emoji icon")
     character_id: Optional[str] = Field(default=None, description="Character to bind")
 
 
@@ -177,7 +177,7 @@ class StorylineResponse(BaseModel):
     name_en: str = ""
     description: str = ""
     description_en: str = ""
-    icon: str = "📖"
+    icon: str = "⛏️"
     icon_image: Optional[str] = None
     base_video_path: str
     video_duration: float = 0.0
@@ -196,7 +196,7 @@ class StorylineListResponse(BaseModel):
     name: str
     name_en: str = ""
     description: str = ""
-    icon: str = "📖"
+    icon: str = "⛏️"
     icon_image: Optional[str] = None
     video_duration: float = 0.0
     character_id: Optional[str] = None

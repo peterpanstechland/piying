@@ -1,5 +1,6 @@
 export { IdlePage } from './IdlePage';
 export { SceneSelectionPage, type Scene } from './SceneSelectionPage';
+export { CharacterSelectionPage, type CharacterOption } from './CharacterSelectionPage';
 export { SegmentGuidancePage } from './SegmentGuidancePage';
 export { CountdownPage } from './CountdownPage';
 export { RecordingPage } from './RecordingPage';

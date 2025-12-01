@@ -1,0 +1,294 @@
+/* CharacterSelectionPage - 皮影戏风格角色选择 */
+
+.character-selection-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  isolation: isolate;
+}
+
+/* 视频背景层 */
+.character-selection-page .video-feed-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* UI覆盖层 */
+.character-selection-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(45, 24, 16, 0.7) 0%, rgba(26, 10, 10, 0.9) 100%);
+  padding: 40px;
+  z-index: 10;
+}
+
+/* 幕布边框光晕 */
+.character-selection-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow: inset 0 0 200px rgba(255, 150, 50, 0.12);
+  pointer-events: none;
+}
+
+/* 光标层 */
+.character-selection-page .cursor-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* 标题区域 */
+.character-selection-header {
+  margin-bottom: 40px;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.character-selection-header h1 {
+  font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
+  font-size: 48px;
+  color: #f5e6d3;
+  letter-spacing: 0.2em;
+  margin: 0 0 10px 0;
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(255, 180, 80, 0.4);
+}
+
+.character-selection-scene {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 24px;
+  color: rgba(212, 175, 55, 0.9);
+  margin: 0 0 10px 0;
+  letter-spacing: 0.1em;
+}
+
+.character-selection-hint {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 18px;
+  color: rgba(245, 230, 211, 0.7);
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+/* 角色卡片容器 */
+.character-cards-container {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+/* 角色卡片 */
+.character-card {
+  width: 180px;
+  height: 220px;
+  border-radius: 16px;
+  text-align: center;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+  isolation: isolate;
+  will-change: transform;
+}
+
+/* SVG边框容器 */
+.character-card-border {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: calc(100% + 20px);
+  height: calc(100% + 20px);
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* 卡片背景 */
+.character-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 50%, #d4c4b0 100%);
+  border: 3px solid #8b4513;
+  border-radius: 16px;
+  box-shadow: 
+    0 0 20px rgba(255, 180, 80, 0.2),
+    0 8px 25px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(139, 69, 19, 0.15);
+  z-index: 2;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+/* 角色缩略图 */
+.character-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.character-card:hover .character-thumbnail {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.character-card.hovered .character-thumbnail {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* 占位符 */
+.character-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d4c4b0 0%, #c4b4a0 100%);
+}
+
+.character-placeholder-icon {
+  font-size: 64px;
+  opacity: 0.6;
+}
+
+/* 卡片内容层 */
+.character-card-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 15px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+  border-radius: 0 0 16px 16px;
+  z-index: 4;
+}
+
+/* 角色名称 */
+.character-name {
+  font-size: 18px;
+  font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
+  font-weight: 600;
+  color: #fff8e1;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 推荐标签 */
+.character-default-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  color: #fff;
+  background: linear-gradient(135deg, #c41e3a 0%, #8b0000 100%);
+  border-radius: 10px;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* 悬停状态 */
+.character-card:hover {
+  transform: translateY(-8px);
+}
+
+.character-card:hover .character-card-bg {
+  box-shadow: 
+    0 0 30px rgba(255, 180, 80, 0.4),
+    0 12px 35px rgba(0, 0, 0, 0.6),
+    inset 0 0 25px rgba(139, 69, 19, 0.2);
+  border-color: #d4af37;
+}
+
+.character-card.hovered {
+  transform: scale(1.1);
+}
+
+.character-card.hovered .character-card-bg {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 50%, #ffcc80 100%);
+  box-shadow: 
+    0 0 40px rgba(212, 175, 55, 0.6),
+    0 15px 45px rgba(0, 0, 0, 0.6),
+    inset 0 0 25px rgba(255, 160, 0, 0.3);
+  border-color: #c41e3a;
+}
+
+/* 默认角色高亮 */
+.character-card.default .character-card-bg {
+  border-color: #d4af37;
+}
+
+/* 进度条边框 */
+.character-card-border rect {
+  stroke-linecap: square;
+  filter: drop-shadow(0 0 12px #c41e3a);
+  stroke: #c41e3a;
+  will-change: stroke-dashoffset;
+}
+
+/* 响应式 */
+@media (max-width: 900px) {
+  .character-cards-container {
+    gap: 25px;
+  }
+  .character-card {
+    width: 150px;
+    height: 190px;
+  }
+  .character-selection-header h1 {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 600px) {
+  .character-cards-container {
+    gap: 20px;
+  }
+  .character-card {
+    width: 130px;
+    height: 170px;
+  }
+}

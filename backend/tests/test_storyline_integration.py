@@ -264,11 +264,11 @@ class TestStorylineCreationFlow:
         create_response = await async_client.post(
             "/api/admin/storylines",
             json={
-                "name": "武术表演",
+                "name": "时间迷途",
                 "name_en": "Martial Arts Performance",
-                "description": "展示你的武术动作",
+                "description": "故事从嫦娥在古代月宫中独舞展开，一道来自未来的蓝色光裂缝突然出现，古典月光与现代科技在幕布上交错。嫦娥穿越裂缝来到千年后的月球，与执行中国探月任务的宇航员相遇。全片通过实体皮影、可移动背景板与光影切换，实现从古至今、从月宫到月面的时空转换，呈现神话与科技跨越千年的浪漫邂逅。",
                 "description_en": "Show your martial arts moves",
-                "icon": "🥋"
+                "icon": "🌕"
             },
             headers=auth_headers
         )
@@ -280,9 +280,9 @@ class TestStorylineCreationFlow:
         # Verify storyline has unique ID
         assert storyline_id is not None
         assert len(storyline_id) == 36  # UUID format
-        assert storyline_data["name"] == "武术表演"
+        assert storyline_data["name"] == "时间迷途"
         assert storyline_data["name_en"] == "Martial Arts Performance"
-        assert storyline_data["icon"] == "🥋"
+        assert storyline_data["icon"] == "🌕"
         assert storyline_data["segments"] == []
         
         # Step 2: Upload background video (Requirement 6.2)

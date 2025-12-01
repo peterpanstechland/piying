@@ -1,10 +1,12 @@
-import { useRef, useCallback, useEffect, useState, MouseEvent } from 'react'
-import { useTimelineEditor, TimelineSegment } from '../../contexts/TimelineEditorContext'
+import { useRef, useCallback, useEffect, useState, MouseEvent, useMemo } from 'react'
+import { useTimelineEditor, TimelineSegment, Transition, createDefaultTransition } from '../../contexts/TimelineEditorContext'
 import SegmentBlock from './SegmentBlock'
+import TransitionZone from './TransitionZone'
 import './TimelineTrack.css'
 
 interface TimelineTrackProps {
   onSegmentChange?: (segment: TimelineSegment) => void
+  onTransitionChange?: (transition: Transition) => void
   onPlayheadDrag?: (time: number) => void
   snapToSegments?: boolean
 }
@@ -16,7 +18,8 @@ const BASE_PIXELS_PER_SECOND = 20
 const SNAP_THRESHOLD_PX = 10
 
 export default function TimelineTrack({ 
-  onSegmentChange, 
+  onSegmentChange,
+  onTransitionChange: _onTransitionChange,  // Available for future use
   onPlayheadDrag,
   snapToSegments = true 
 }: TimelineTrackProps) {
@@ -24,14 +27,21 @@ export default function TimelineTrack({
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false)
   const [isSnapped, setIsSnapped] = useState(false)
   
+  // Suppress unused variable warning
+  void _onTransitionChange
+  
   const {
     playhead,
     setPlayhead,
     zoom,
     videoDuration,
     segments,
+    transitions,
+    setTransitions,
     selectedSegmentId,
+    selectedTransitionId,
     selectSegment,
+    selectTransition,
     updateSegment,
   } = useTimelineEditor()
 
@@ -189,6 +199,52 @@ export default function TimelineTrack({
     }
   }, [updateSegment, segments, onSegmentChange])
 
+  // Handle transition selection (Requirements 6.1)
+  const handleTransitionSelect = useCallback((transitionId: string) => {
+    selectTransition(transitionId)
+  }, [selectTransition])
+
+  // Compute transition zones between adjacent segments (Requirements 6.1)
+  // Sort segments by start time and find gaps/transitions between them
+  const transitionZones = useMemo(() => {
+    if (segments.length < 2) return []
+    
+    // Sort segments by start time
+    const sortedSegments = [...segments].sort((a, b) => a.startTime - b.startTime)
+    const zones: Array<{
+      transition: Transition
+      position: number  // Position in pixels
+    }> = []
+    
+    for (let i = 0; i < sortedSegments.length - 1; i++) {
+      const currentSeg = sortedSegments[i]
+      const nextSeg = sortedSegments[i + 1]
+      
+      // Find existing transition or create a default one
+      let transition = transitions.find(
+        t => t.fromSegmentIndex === currentSeg.index && t.toSegmentIndex === nextSeg.index
+      )
+      
+      if (!transition) {
+        // Create a default transition if none exists
+        transition = createDefaultTransition(currentSeg.index, nextSeg.index)
+        // Add to transitions state
+        setTransitions([...transitions, transition])
+      }
+      
+      // Calculate position at the boundary between segments
+      const currentSegEnd = currentSeg.startTime + currentSeg.duration
+      const transitionPosition = timeToPixel(currentSegEnd)
+      
+      zones.push({
+        transition,
+        position: transitionPosition,
+      })
+    }
+    
+    return zones
+  }, [segments, transitions, setTransitions, timeToPixel])
+
   // Auto-scroll to keep playhead visible
   useEffect(() => {
     if (!trackRef.current || isDraggingPlayhead) return
@@ -247,6 +303,17 @@ export default function TimelineTrack({
                 onSelect={() => selectSegment(segment.id)}
                 onUpdate={(updates: Partial<TimelineSegment>) => handleSegmentUpdate(segment.id, updates)}
                 allSegments={segments}
+              />
+            ))}
+            
+            {/* Transition zones between segments (Requirements 6.1) */}
+            {transitionZones.map(({ transition, position }) => (
+              <TransitionZone
+                key={transition.id}
+                transition={transition}
+                leftPosition={position}
+                isSelected={selectedTransitionId === transition.id}
+                onSelect={() => handleTransitionSelect(transition.id)}
               />
             ))}
           </div>

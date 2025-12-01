@@ -58,7 +58,7 @@ export default function StorylineEditPage() {
   const [nameEn, setNameEn] = useState('')
   const [description, setDescription] = useState('')
   const [descriptionEn, setDescriptionEn] = useState('')
-  const [icon, setIcon] = useState('📖')
+  const [icon, setIcon] = useState('⛏️')
   const [characterId, setCharacterId] = useState<string>('')
   const [segments, setSegments] = useState<Segment[]>(DEFAULT_SEGMENTS)
   
@@ -84,7 +84,7 @@ export default function StorylineEditPage() {
         setNameEn(storylineData.name_en || '')
         setDescription(storylineData.description || '')
         setDescriptionEn(storylineData.description_en || '')
-        setIcon(storylineData.icon || '📖')
+        setIcon(storylineData.icon || '⛏️')
         setCharacterId(storylineData.character_id || '')
         setVideoDuration(storylineData.video_duration || 0)
         if (storylineData.segments && storylineData.segments.length > 0) {
@@ -291,7 +291,7 @@ export default function StorylineEditPage() {
               type="text"
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
-              placeholder="📖"
+              placeholder="⛏️"
               maxLength={10}
               className="icon-input"
             />

@@ -340,7 +340,7 @@ For development and testing, you can use:
 - Stock footage with appropriate themes
 
 **Icons:**
-- Emoji or Unicode symbols (🥋, 💃, 📖)
+- Emoji or Unicode symbols (🌕, 🌌, ⛏️)
 - Simple geometric shapes
 - Text-based placeholders
 

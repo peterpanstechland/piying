@@ -3,7 +3,7 @@ import './BasicInfoForm.css'
 
 // Common emoji icons for storylines
 const ICON_OPTIONS = [
-  '📖', '🎭', '🎬', '🎪', '🏮', '🎎', '🎨', '🌙',
+  '⛏️', '🎭', '🎬', '🎪', '🏮', '🎎', '🎨', '🌙',
   '⭐', '🌸', '🐉', '🦋', '🎋', '🏯', '🎑', '🎐',
   '🌺', '🍃', '🎊', '🎉', '🌟', '💫', '✨', '🔮'
 ]
@@ -47,7 +47,7 @@ export default function BasicInfoForm({
   const [nameEn, setNameEn] = useState(initialData?.name_en || '')
   const [synopsis, setSynopsis] = useState(initialData?.synopsis || '')
   const [synopsisEn, setSynopsisEn] = useState(initialData?.synopsis_en || '')
-  const [icon, setIcon] = useState(initialData?.icon || '📖')
+  const [icon, setIcon] = useState(initialData?.icon || '⛏️')
   const [showIconPicker, setShowIconPicker] = useState(false)
 
   // Validation state
@@ -109,7 +109,7 @@ export default function BasicInfoForm({
       setNameEn(initialData.name_en || '')
       setSynopsis(initialData.synopsis || '')
       setSynopsisEn(initialData.synopsis_en || '')
-      setIcon(initialData.icon || '📖')
+      setIcon(initialData.icon || '⛏️')
     }
   }, [initialData])
 

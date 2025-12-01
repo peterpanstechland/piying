@@ -446,6 +446,12 @@ class AdminApiClient {
     return response.data
   }
 
+  // Batch reorder storylines (Requirements 10.3)
+  async reorderStorylines(orders: Array<{ id: string; order: number }>): Promise<{ message: string }> {
+    const response = await this.client.put('/storylines/batch/reorder', orders)
+    return response.data
+  }
+
   // Publish/Unpublish (Requirements 1.2, 10.1)
   async publishStoryline(id: string): Promise<{ message: string }> {
     const response = await this.client.put(`/storylines/${id}/publish`)

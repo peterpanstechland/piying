@@ -77,7 +77,7 @@ export default function StorylineTimelineEditorPage() {
     name_en: '',
     synopsis: '',
     synopsis_en: '',
-    icon: '📖',
+    icon: '⛏️',
   })
   const [basicInfoValid, setBasicInfoValid] = useState(false)
   
@@ -112,7 +112,7 @@ export default function StorylineTimelineEditorPage() {
           name_en: storylineData.name_en || '',
           synopsis: storylineData.synopsis || '',
           synopsis_en: storylineData.synopsis_en || '',
-          icon: storylineData.icon || '📖',
+          icon: storylineData.icon || '⛏️',
         })
         
         // Set character configuration

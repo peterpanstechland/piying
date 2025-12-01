@@ -135,6 +135,46 @@
   z-index: 2;
   transition: all 0.2s ease;
   will-change: box-shadow, border-color, background;
+  overflow: hidden;
+}
+
+/* 封面图片 */
+.scene-card-cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.scene-card:hover .scene-card-cover {
+  opacity: 0.95;
+  transform: scale(1.05);
+}
+
+.scene-card.hovered .scene-card-cover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* 有封面图片时的内容层样式调整 */
+.scene-card.has-cover .scene-card-content {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+  justify-content: flex-end;
+  padding-bottom: 25px;
+}
+
+.scene-card.has-cover .scene-name {
+  color: #fff8e1;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.scene-card.has-cover .scene-description {
+  color: rgba(255, 248, 225, 0.9);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* 角落装饰 - 传统纹样 */
@@ -238,6 +278,19 @@
   margin: 0;
   line-height: 1.6;
   font-weight: 500;
+}
+
+/* 片段数量 */
+.scene-segment-count {
+  font-size: 13px;
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  color: #8b7355;
+  margin: 8px 0 0 0;
+  opacity: 0.8;
+}
+
+.scene-card.has-cover .scene-segment-count {
+  color: rgba(255, 248, 225, 0.7);
 }
 
 /* 标题区域 */

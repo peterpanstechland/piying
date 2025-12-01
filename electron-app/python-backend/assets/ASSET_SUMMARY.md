@@ -99,9 +99,9 @@ This document summarizes the asset creation work completed for Task 22.
 
 | File | Scene | Symbol | Size |
 |------|-------|--------|------|
-| sceneA_icon.png | Martial Arts | 🥋 Kung fu figure | 256x256 |
-| sceneB_icon.png | Dance | 💃 Dancing figure | 256x256 |
-| sceneC_icon.png | Story | 📖 Book/storyteller | 256x256 |
+| sceneA_icon.png | Martial Arts | 🌕 Kung fu figure | 256x256 |
+| sceneB_icon.png | Dance | 🌌 Dancing figure | 256x256 |
+| sceneC_icon.png | Story | ⛏️ Book/storyteller | 256x256 |
 
 **Technical Specs:**
 - Format: PNG with transparency
@@ -131,7 +131,7 @@ This document summarizes the asset creation work completed for Task 22.
 
 ## Scene Details
 
-### Scene A: Martial Arts Performance (武术表演)
+### Scene A: Martial Arts Performance (时间迷途)
 
 **Segments:**
 1. **Opening Stance (8s)** - Enter from left, fists together
@@ -144,7 +144,7 @@ This document summarizes the asset creation work completed for Task 22.
 - Energetic, powerful atmosphere
 - Decorative patterns and lanterns
 
-### Scene B: Dance Performance (舞蹈表演)
+### Scene B: Dance Performance (来自五百年前的梦)
 
 **Segments:**
 1. **Entrance (10s)** - Enter from top, arms extended
@@ -157,7 +157,7 @@ This document summarizes the asset creation work completed for Task 22.
 - Graceful, flowing atmosphere
 - Spotlight effects and curtains
 
-### Scene C: Story Performance (故事表演)
+### Scene C: Story Performance (淘金者)
 
 **Segments:**
 1. **Entrance (6s)** - Enter from right, surprise gesture

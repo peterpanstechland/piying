@@ -42,6 +42,10 @@ function TimelineEditorInner({
   
   const {
     playhead,
+    zoom,
+    setZoom,
+    zoomIn,
+    zoomOut,
     segments,
     transitions,
     addSegment,
@@ -122,6 +126,37 @@ function TimelineEditorInner({
           >
             ➕ 添加段落
           </button>
+          
+          {/* Zoom controls (Requirements 3.4) */}
+          <div className="timeline-editor__zoom-controls">
+            <button
+              className="timeline-editor__zoom-btn"
+              onClick={zoomOut}
+              disabled={zoom <= 1}
+              title="缩小 (Zoom Out)"
+            >
+              ➖
+            </button>
+            <input
+              type="range"
+              className="timeline-editor__zoom-slider"
+              min={1}
+              max={10}
+              step={1}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              title={`缩放级别: ${zoom}`}
+            />
+            <button
+              className="timeline-editor__zoom-btn"
+              onClick={zoomIn}
+              disabled={zoom >= 10}
+              title="放大 (Zoom In)"
+            >
+            ➕
+            </button>
+            <span className="timeline-editor__zoom-level">{zoom}x</span>
+          </div>
           
           <div className="timeline-editor__shortcuts-hint">
             <span>快捷键:</span>

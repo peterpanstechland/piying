@@ -227,9 +227,9 @@ def main():
     print("-" * 60)
     
     # Create icons
-    create_icon("sceneA_icon.png", "🥋", (220, 20, 60), "Martial\nArts")
-    create_icon("sceneB_icon.png", "💃", (147, 112, 219), "Dance")
-    create_icon("sceneC_icon.png", "📖", (65, 105, 225), "Story")
+    create_icon("sceneA_icon.png", "🌕", (220, 20, 60), "Martial\nArts")
+    create_icon("sceneB_icon.png", "🌌", (147, 112, 219), "Dance")
+    create_icon("sceneC_icon.png", "⛏️", (65, 105, 225), "Story")
     
     print()
     print("Creating guidance images...")

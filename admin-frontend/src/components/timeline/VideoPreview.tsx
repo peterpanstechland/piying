@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { useTimelineEditor, PlaybackSpeed } from '../../contexts/TimelineEditorContext'
+import { useTimelineEditor, PlaybackSpeed, LoopMode } from '../../contexts/TimelineEditorContext'
 import './VideoPreview.css'
 
 interface VideoPreviewProps {
@@ -10,6 +10,11 @@ interface VideoPreviewProps {
 }
 
 const PLAYBACK_SPEEDS: PlaybackSpeed[] = [0.25, 0.5, 1, 1.5, 2]
+const LOOP_MODES: { value: LoopMode; label: string }[] = [
+  { value: 'none', label: '不循环' },
+  { value: 'segment', label: '段落循环' },
+  { value: 'full', label: '全片循环' },
+]
 
 export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef }: VideoPreviewProps) {
   const internalVideoRef = useRef<HTMLVideoElement>(null)
@@ -25,8 +30,12 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
     togglePlayback,
     playbackSpeed,
     setPlaybackSpeed,
+    loopMode,
+    setLoopMode,
     videoDuration,
     setVideoDuration,
+    segments,
+    selectedSegmentId,
   } = useTimelineEditor()
 
   // Sync video playback rate with context
@@ -61,12 +70,25 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
     }
   }, [playhead, isPlaying])
 
-  // Handle video time updates during playback
+  // Handle video time updates during playback (Requirements 11.5 - segment loop)
   const handleTimeUpdate = useCallback(() => {
     if (videoRef.current && isPlaying) {
-      setPlayhead(videoRef.current.currentTime)
+      const currentTime = videoRef.current.currentTime
+      setPlayhead(currentTime)
+      
+      // Handle segment loop mode
+      if (loopMode === 'segment' && selectedSegmentId) {
+        const selectedSegment = segments.find(s => s.id === selectedSegmentId)
+        if (selectedSegment) {
+          const segmentEnd = selectedSegment.startTime + selectedSegment.duration
+          if (currentTime >= segmentEnd) {
+            videoRef.current.currentTime = selectedSegment.startTime
+            setPlayhead(selectedSegment.startTime)
+          }
+        }
+      }
     }
-  }, [isPlaying, setPlayhead])
+  }, [isPlaying, setPlayhead, loopMode, selectedSegmentId, segments])
 
   // Handle video metadata loaded
   const handleLoadedMetadata = useCallback(() => {
@@ -75,11 +97,20 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
     }
   }, [setVideoDuration])
 
-  // Handle video ended
+  // Handle video ended (Requirements 11.5 - loop mode)
   const handleEnded = useCallback(() => {
-    pause()
-    setPlayhead(0)
-  }, [pause, setPlayhead])
+    if (loopMode === 'full') {
+      // Loop full video
+      setPlayhead(0)
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0
+        videoRef.current.play().catch(() => pause())
+      }
+    } else {
+      pause()
+      setPlayhead(0)
+    }
+  }, [loopMode, pause, setPlayhead])
 
   // Capture current frame as image
   const captureFrame = useCallback(() => {
@@ -206,6 +237,22 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
             {PLAYBACK_SPEEDS.map(speed => (
               <option key={speed} value={speed}>
                 {speed}x
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Loop mode control (Requirements 11.5) */}
+        <div className="video-preview__loop">
+          <label className="video-preview__loop-label">循环:</label>
+          <select
+            className="video-preview__loop-select"
+            value={loopMode}
+            onChange={(e) => setLoopMode(e.target.value as LoopMode)}
+          >
+            {LOOP_MODES.map(mode => (
+              <option key={mode.value} value={mode.value}>
+                {mode.label}
               </option>
             ))}
           </select>

@@ -488,53 +488,94 @@
     - Publish button (validate video exists)
     - _Requirements: 1.2, 10.1_
 
-- [ ] 18. Update Storyline List Page
-  - [ ] 18.1 Update StorylineListPage with new fields
+- [x] 18. Update Storyline List Page
+
+
+
+
+
+  - [x] 18.1 Update StorylineListPage with new fields
+
     - Display cover images
     - Show status badges (draft/published)
     - Show synopsis preview
     - _Requirements: 1.3_
-  - [ ] 18.2 Implement storyline ordering
+
+  - [x] 18.2 Implement storyline ordering
+
     - Drag-to-reorder functionality
     - Save order to backend
     - _Requirements: 10.3_
 
-- [ ] 19. Update Frontend Scene Selection
-  - [ ] 19.1 Update SceneSelectionPage to use new API
+- [x] 19. Update Frontend Scene Selection
+
+
+
+
+
+  - [x] 19.1 Update SceneSelectionPage to use new API
+
+
     - Fetch from /api/storylines (published only)
     - Display cover images
     - Show synopsis
     - _Requirements: 10.1, 10.2_
-  - [ ] 19.2 Add character selection step
+
+  - [x] 19.2 Add character selection step
+
     - Show available characters for selected storyline
     - Allow user to choose character
     - _Requirements: 7.1, 7.2_
 
-- [ ] 20. Checkpoint - Ensure all tests pass
+- [x] 20. Checkpoint - Ensure all tests pass
+
+
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 21. Final Integration and Polish
-  - [ ] 21.1 Add playback speed control
+- [x] 21. Final Integration and Polish
+
+
+
+
+
+  - [x] 21.1 Add playback speed control
+
+
     - Speed selector (0.25x, 0.5x, 1x, 1.5x, 2x)
     - Update video playback rate
     - _Requirements: 11.4_
-  - [ ] 21.2 Add loop mode toggle
+  - [x] 21.2 Add loop mode toggle
+
+
     - Loop within segment or full video
     - _Requirements: 11.5_
-  - [ ] 21.3 Add timeline zoom controls
+  - [x] 21.3 Add timeline zoom controls
+
+
     - Zoom in/out buttons
     - Zoom slider
     - _Requirements: 3.4_
-  - [ ] 21.4 Add transition zone visualization
+
+  - [x] 21.4 Add transition zone visualization
+
     - Display transition indicators between segments
     - Click to edit transition
     - _Requirements: 6.1_
-  - [ ] 21.5 Write integration tests for complete workflow
+
+  - [x] 21.5 Write integration tests for complete workflow
+
     - Test storyline creation to publish flow
     - Test segment configuration
     - Test character configuration
     - _Requirements: All_
+-
 
 - [ ] 22. Final Checkpoint - Ensure all tests pass
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
 

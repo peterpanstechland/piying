@@ -142,8 +142,8 @@ Edit `config/scenes.json` to define your scenes:
   "scenes": {
     "sceneA": {
       "id": "sceneA",
-      "name": "武术表演",
-      "description": "展示你的武术动作",
+      "name": "时间迷途",
+      "description": "故事从嫦娥在古代月宫中独舞展开，一道来自未来的蓝色光裂缝突然出现，古典月光与现代科技在幕布上交错。嫦娥穿越裂缝来到千年后的月球，与执行中国探月任务的宇航员相遇。全片通过实体皮影、可移动背景板与光影切换，实现从古至今、从月宫到月面的时空转换，呈现神话与科技跨越千年的浪漫邂逅。",
       "base_video_path": "assets/scenes/sceneA_base.mp4",
       "segments": [...]
     }

@@ -113,7 +113,7 @@ See `../ASSET_CREATION_GUIDE.md` for detailed instructions on creating these ima
 For development and testing, you can use:
 
 **Icons:**
-- Emoji symbols: 🥋 (martial arts), 💃 (dance), 📖 (story)
+- Emoji symbols: 🌕 (martial arts), 🌌 (dance), ⛏️ (story)
 - Simple geometric shapes with text
 - Unicode characters
 

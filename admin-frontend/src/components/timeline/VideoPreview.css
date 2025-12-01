@@ -151,6 +151,37 @@
   border-color: #4fc3f7;
 }
 
+/* Loop mode control */
+.video-preview__loop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.video-preview__loop-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.video-preview__loop-select {
+  padding: 6px 10px;
+  border: 1px solid #3d4a6a;
+  border-radius: 4px;
+  background: #2d3a5a;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.video-preview__loop-select:hover {
+  border-color: #4fc3f7;
+}
+
+.video-preview__loop-select:focus {
+  outline: none;
+  border-color: #4fc3f7;
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px) {
   .video-preview__controls {

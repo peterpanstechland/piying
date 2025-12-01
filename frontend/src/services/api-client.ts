@@ -59,6 +59,66 @@ export interface SessionStatusResponse {
 }
 
 /**
+ * Cover image paths
+ */
+export interface CoverImage {
+  original_path: string | null;
+  thumbnail_path: string | null;
+  medium_path: string | null;
+  large_path: string | null;
+}
+
+/**
+ * Character option for storyline
+ */
+export interface StorylineCharacter {
+  id: string;
+  name: string;
+  thumbnail_path: string | null;
+  is_default: boolean;
+  display_order: number;
+}
+
+/**
+ * Segment info for storyline
+ */
+export interface StorylineSegment {
+  index: number;
+  duration: number;
+  guidance_text: string;
+  guidance_text_en: string;
+  guidance_image: string | null;
+}
+
+/**
+ * Published storyline list item
+ */
+export interface PublishedStoryline {
+  id: string;
+  name: string;
+  name_en: string;
+  synopsis: string;
+  synopsis_en: string;
+  icon: string;
+  icon_image: string | null;
+  display_order: number;
+  video_duration: number;
+  cover_image: CoverImage | null;
+  character_count: number;
+  segment_count: number;
+}
+
+/**
+ * Published storyline detail
+ */
+export interface PublishedStorylineDetail extends PublishedStoryline {
+  description: string;
+  description_en: string;
+  characters: StorylineCharacter[];
+  segments: StorylineSegment[];
+}
+
+/**
  * Cached upload data for offline resilience
  */
 interface CachedUpload {
@@ -216,6 +276,52 @@ export class APIClient {
       );
       return response.data;
     });
+  }
+
+  /**
+   * Get published storylines for scene selection
+   * Requirements 10.1, 10.2, 10.3
+   * @returns List of published storylines
+   */
+  async getPublishedStorylines(): Promise<PublishedStoryline[]> {
+    return this.retryRequest(async () => {
+      const response = await this.client.get<PublishedStoryline[]>('/api/storylines');
+      return response.data;
+    });
+  }
+
+  /**
+   * Get published storyline detail by ID
+   * Requirements 10.1, 10.2
+   * @param storylineId - Storyline identifier
+   * @returns Storyline detail with characters and segments
+   */
+  async getPublishedStorylineDetail(storylineId: string): Promise<PublishedStorylineDetail> {
+    return this.retryRequest(async () => {
+      const response = await this.client.get<PublishedStorylineDetail>(`/api/storylines/${storylineId}`);
+      return response.data;
+    });
+  }
+
+  /**
+   * Get full URL for a cover image path
+   * @param path - Relative path from API
+   * @returns Full URL
+   */
+  getCoverImageUrl(path: string | null): string | null {
+    if (!path) return null;
+    // If path already starts with http, return as-is
+    if (path.startsWith('http')) return path;
+    // Otherwise, prepend base URL
+    return `${this.client.defaults.baseURL}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+
+  /**
+   * Get the API base URL
+   * @returns Base URL string
+   */
+  getBaseUrl(): string {
+    return this.client.defaults.baseURL || '';
   }
 
   /**

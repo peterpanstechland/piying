@@ -1,6 +1,7 @@
-import { useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GestureCursorController, SceneCard } from '../services/gesture-cursor';
+import { CoverImage } from '../services/api-client';
 import './SceneSelectionPage.css';
 
 export interface Scene {
@@ -10,11 +11,23 @@ export interface Scene {
   description: string;
   description_en: string;
   icon: string;
+  // New fields from storyline API
+  synopsis?: string;
+  synopsis_en?: string;
+  icon_image?: string | null;
+  cover_image?: CoverImage | null;
+  video_duration?: number;
+  character_count?: number;
+  segment_count?: number;
+  // Legacy segments array for backward compatibility
   segments: Array<{
     duration: number;
-    path_type: string;
-    offset_start: number[];
-    offset_end: number[];
+    path_type?: string;
+    offset_start?: number[];
+    offset_end?: number[];
+    guidance_text?: string;
+    guidance_text_en?: string;
+    guidance_image?: string | null;
   }>;
 }
 
@@ -23,6 +36,7 @@ interface SceneSelectionPageProps {
   videoElement?: HTMLVideoElement | null;
   handPosition?: { x: number; y: number } | null;
   onSceneSelect?: (sceneId: string) => void;
+  apiBaseUrl?: string; // Base URL for cover images
 }
 
 /**
@@ -34,6 +48,7 @@ export const SceneSelectionPage = ({
   videoElement,
   handPosition,
   onSceneSelect,
+  apiBaseUrl = '',
 }: SceneSelectionPageProps) => {
   const { t, i18n } = useTranslation();
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -348,7 +363,18 @@ export const SceneSelectionPage = ({
           {scenes.map((scene) => {
             const isHovered = hoveredSceneId === scene.id;
             const sceneName = isChineseLanguage ? scene.name : scene.name_en;
-            const sceneDescription = isChineseLanguage ? scene.description : scene.description_en;
+            // sceneDescription is kept for backward compatibility but synopsis is preferred
+            const _sceneDescription = isChineseLanguage ? scene.description : scene.description_en;
+            void _sceneDescription; // Suppress unused warning
+            // Use synopsis if available, otherwise fall back to description
+            const sceneSynopsis = isChineseLanguage 
+              ? (scene.synopsis || scene.description) 
+              : (scene.synopsis_en || scene.description_en);
+            
+            // Get cover image URL (prefer medium size for cards)
+            const coverImageUrl = scene.cover_image?.medium_path 
+              ? `${apiBaseUrl}${scene.cover_image.medium_path.startsWith('/') ? '' : '/'}${scene.cover_image.medium_path}`
+              : null;
             
             const dims = cardDimensions.get(scene.id) || { width: 0, height: 0 };
             
@@ -379,10 +405,22 @@ export const SceneSelectionPage = ({
               <div
                 key={scene.id}
                 id={`scene-card-${scene.id}`}
-                className={`scene-card ${isHovered ? 'hovered' : ''}`}
+                className={`scene-card ${isHovered ? 'hovered' : ''} ${coverImageUrl ? 'has-cover' : ''}`}
               >
                 {/* New Background Layer */}
-                <div className="scene-card-bg" />
+                <div className="scene-card-bg">
+                  {coverImageUrl && (
+                    <img 
+                      src={coverImageUrl} 
+                      alt={sceneName}
+                      className="scene-card-cover"
+                      onError={(e) => {
+                        // Hide image on error, fall back to default background
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                </div>
 
                 {/* SVG progress border - NOW BEHIND */}
                 <svg className="scene-card-border" width="100%" height="100%">
@@ -407,9 +445,14 @@ export const SceneSelectionPage = ({
                 
                 {/* Content Layer */}
                 <div className="scene-card-content">
-                  <div className="scene-icon">{scene.icon}</div>
+                  {!coverImageUrl && <div className="scene-icon">{scene.icon}</div>}
                   <h2 className="scene-name">{sceneName}</h2>
-                  <p className="scene-description">{sceneDescription}</p>
+                  <p className="scene-description">{sceneSynopsis}</p>
+                  {scene.segment_count !== undefined && scene.segment_count > 0 && (
+                    <p className="scene-segment-count">
+                      {isChineseLanguage ? `${scene.segment_count} 个片段` : `${scene.segment_count} segments`}
+                    </p>
+                  )}
                 </div>
               </div>
             );

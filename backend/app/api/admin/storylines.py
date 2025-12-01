@@ -56,7 +56,7 @@ async def create_storyline(
     - **name_en**: Display name (English, optional)
     - **description**: Description (Chinese, optional)
     - **description_en**: Description (English, optional)
-    - **icon**: Emoji icon (optional, defaults to 📖)
+    - **icon**: Emoji icon (optional, defaults to ⛏️)
     - **character_id**: Character to bind (optional)
     
     Creates a new storyline with a unique ID. Background video must be uploaded separately.
@@ -80,7 +80,7 @@ async def create_storyline_extended(
     - **synopsis_en**: Story synopsis (English, optional)
     - **description**: Description (Chinese, optional)
     - **description_en**: Description (English, optional)
-    - **icon**: Emoji icon (optional, defaults to 📖)
+    - **icon**: Emoji icon (optional, defaults to ⛏️)
     
     Creates a new storyline with status defaulting to 'draft'.
     """

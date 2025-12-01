@@ -278,7 +278,7 @@ class StorylineExtended(BaseModel):
     synopsis_en: str = ""            # Story synopsis (English)
     description: str = ""            # Short description
     description_en: str = ""
-    icon: str = "📖"
+    icon: str = "⛏️"
     status: StorylineStatus = StorylineStatus.DRAFT
     display_order: int = 0
     
