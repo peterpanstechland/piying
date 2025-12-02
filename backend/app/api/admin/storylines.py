@@ -3,8 +3,10 @@ Storyline management API endpoints for admin panel.
 Handles storyline CRUD operations, video uploads, and segment configuration.
 """
 from typing import Annotated, List
+import os
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...database import get_db
@@ -272,6 +274,43 @@ async def upload_storyline_video(
         video_duration=duration,
         message="Video uploaded successfully",
     )
+
+
+@router.get("/{storyline_id}/video", status_code=status.HTTP_200_OK)
+async def get_storyline_video(
+    storyline_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+):
+    """
+    Get the background video file for a storyline.
+    
+    Returns the video file for playback in the timeline editor.
+    """
+    storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+    if not storyline:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Storyline not found",
+        )
+    
+    if not storyline.base_video_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No video uploaded for this storyline",
+        )
+    
+    # Build full path - data directory is at backend/data
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    data_dir = os.path.join(backend_dir, "data")
+    full_path = os.path.join(data_dir, storyline.base_video_path)
+    
+    if not os.path.exists(full_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Video file not found",
+        )
+    
+    return FileResponse(full_path, media_type="video/mp4")
 
 
 @router.get("/{storyline_id}/video/frame", response_model=FrameExtractionResponse)
@@ -839,6 +878,83 @@ async def capture_cover_from_video(
     }
 
 
+@router.get("/{storyline_id}/cover/{size}", status_code=status.HTTP_200_OK)
+async def get_cover_image(
+    storyline_id: str,
+    size: str,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+):
+    """
+    Get cover image file by size.
+    
+    Args:
+        storyline_id: Storyline ID
+        size: Image size - 'thumbnail', 'medium', 'large', or 'original'
+    
+    Returns:
+        FileResponse with the cover image
+    """
+    try:
+        # Get storyline to find cover path
+        storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+        if not storyline:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Storyline not found",
+            )
+        
+        # Get the appropriate cover path based on size
+        cover_path = None
+        if size == "thumbnail":
+            cover_path = getattr(storyline, 'cover_thumbnail', None)
+        elif size == "medium":
+            cover_path = getattr(storyline, 'cover_medium', None)
+        elif size == "large":
+            cover_path = getattr(storyline, 'cover_large', None)
+        elif size == "original":
+            cover_path = getattr(storyline, 'cover_original', None)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid size: {size}. Must be 'thumbnail', 'medium', 'large', or 'original'",
+            )
+        
+        if not cover_path:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cover image not found",
+            )
+        
+        # Build full path - data directory is at backend/data
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        data_dir = os.path.join(backend_dir, "data")
+        full_path = os.path.join(data_dir, cover_path)
+        
+        if not os.path.exists(full_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Cover image file not found at {full_path}",
+            )
+        
+        # Determine media type
+        ext = os.path.splitext(full_path)[1].lower()
+        media_type = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+        }.get(ext, "image/jpeg")
+        
+        return FileResponse(full_path, media_type=media_type)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving cover image: {str(e)}",
+        )
+
+
 @router.delete("/{storyline_id}/cover", status_code=status.HTTP_200_OK)
 async def delete_cover_image(
     storyline_id: str,
@@ -867,6 +983,46 @@ async def delete_cover_image(
             )
     
     return {"message": "Cover image deleted successfully"}
+
+
+# ==================== Enable/Disable Storyline ====================
+
+@router.put("/{storyline_id}/enabled", status_code=status.HTTP_200_OK)
+async def toggle_storyline_enabled(
+    storyline_id: str,
+    enabled: bool = Query(..., description="Whether to enable or disable the storyline"),
+    current_user: Annotated[TokenPayload, Depends(get_current_user)] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+) -> dict:
+    """
+    Toggle storyline enabled status.
+    
+    When enabled=True, the storyline will be available for selection in the frontend.
+    When enabled=False, the storyline will show as "搭建中，敬请期待" (Coming Soon).
+    """
+    storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+    if not storyline:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Storyline not found",
+        )
+    
+    try:
+        storyline.enabled = enabled
+        db.add(storyline)
+        await db.commit()
+        await db.refresh(storyline)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update enabled status: {str(e)}",
+        )
+    
+    return {
+        "message": f"Storyline {'enabled' if enabled else 'disabled'} successfully",
+        "enabled": bool(storyline.enabled)
+    }
 
 
 # ==================== Transition Management Endpoints ====================

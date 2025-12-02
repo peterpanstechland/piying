@@ -1,3 +1,4 @@
+/* 东方黑金科技风 - 关节编辑器 */
 .joint-editor {
   display: flex;
   flex-direction: column;
@@ -9,7 +10,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #1a1a2e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   gap: 16px;
   flex-wrap: wrap;
@@ -24,20 +26,23 @@
 .zoom-controls button {
   width: 28px;
   height: 28px;
-  border: 1px solid #3d3d5c;
-  background: #2d2d44;
-  color: white;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
+  transition: all 0.2s;
 }
 
 .zoom-controls button:hover {
-  background: #4f46e5;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--bg-base);
 }
 
 .zoom-controls span {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 13px;
   min-width: 45px;
   text-align: center;
@@ -50,9 +55,9 @@
 
 .mode-btn {
   padding: 8px 16px;
-  border: 1px solid #3d3d5c;
-  background: #2d2d44;
-  color: #9ca3af;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
@@ -60,19 +65,19 @@
 }
 
 .mode-btn:hover {
-  background: #3d3d5c;
-  color: white;
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 .mode-btn.active {
-  background: #4f46e5;
-  border-color: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--bg-base);
 }
 
 .btn-primary {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -82,7 +87,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: var(--accent-primary-hover);
 }
 
 .btn-primary:disabled {
@@ -99,6 +104,8 @@
   flex: 1;
   border-radius: 8px;
   overflow: hidden;
+  background: var(--bg-base);
+  border: 1px solid var(--divider);
 }
 
 .canvas-container canvas {
@@ -114,7 +121,8 @@
 }
 
 .sidebar-section {
-  background: #1a1a2e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   padding: 16px;
 }
@@ -122,7 +130,7 @@
 .sidebar-section h3 {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: white;
+  color: var(--accent-gold-light);
   font-weight: 600;
 }
 
@@ -134,12 +142,12 @@
 
 .instructions li {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .instructions li strong {
-  color: #d1d5db;
+  color: var(--text-primary);
 }
 
 .property-group {
@@ -153,35 +161,36 @@
 .property-group label {
   display: block;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .property-group input[type="range"] {
   width: calc(100% - 40px);
   vertical-align: middle;
+  accent-color: var(--accent-primary);
 }
 
 .property-group input[type="text"] {
   width: 100%;
   padding: 8px 10px;
-  background: #2d2d44;
-  border: 1px solid #3d3d5c;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: white;
+  color: var(--text-primary);
   font-size: 13px;
   outline: none;
 }
 
 .property-group input[type="text"]:focus {
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
 }
 
 .property-group .value {
   display: inline-block;
   width: 30px;
   text-align: right;
-  color: #d1d5db;
+  color: var(--text-primary);
   font-size: 12px;
 }
 
@@ -199,16 +208,18 @@
 .btn-small {
   padding: 4px 10px;
   font-size: 11px;
-  background: #3d3d5c;
-  border: none;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #d1d5db;
+  color: var(--text-primary);
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn-small:hover {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--bg-base);
 }
 
 .joints-list {
@@ -221,7 +232,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: #2d2d44;
+  background: var(--bg-hover);
   border-radius: 6px;
   margin-bottom: 6px;
   cursor: pointer;
@@ -229,42 +240,42 @@
 }
 
 .joint-item:hover {
-  background: #3d3d5c;
+  background: var(--bg-active);
 }
 
 .joint-item.selected {
-  background: #4f46e5;
+  background: var(--accent-primary);
 }
 
 .joint-dot {
   width: 10px;
   height: 10px;
-  background: #22c55e;
+  background: var(--success);
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .joint-item.selected .joint-dot {
-  background: white;
+  background: var(--bg-base);
 }
 
 .joint-name {
   flex: 1;
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .joint-item.selected .joint-name {
-  color: white;
+  color: var(--bg-base);
 }
 
 .btn-remove-joint {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 16px;
   cursor: pointer;
   padding: 0 4px;
@@ -272,16 +283,16 @@
 }
 
 .btn-remove-joint:hover {
-  color: #dc2626;
+  color: var(--error);
 }
 
 .no-joints {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin: 0;
   padding: 12px;
   text-align: center;
-  background: #2d2d44;
+  background: var(--bg-hover);
   border-radius: 6px;
 }
 
@@ -290,13 +301,13 @@
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: #d1d5db;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .position-values span {
   font-size: 13px;
-  color: #d1d5db;
+  color: var(--text-primary);
 }
 
 .connection-info {
@@ -304,29 +315,29 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  background: #2d2d44;
+  background: var(--bg-hover);
   border-radius: 6px;
 }
 
 .connection-info span {
   font-size: 13px;
-  color: #d1d5db;
+  color: var(--text-primary);
 }
 
 .btn-disconnect {
   padding: 4px 10px;
   font-size: 11px;
-  background: #dc2626;
+  background: var(--error);
   border: none;
   border-radius: 4px;
   color: white;
   cursor: pointer;
+  transition: opacity 0.2s;
 }
 
 .btn-disconnect:hover {
-  background: #b91c1c;
+  opacity: 0.8;
 }
-
 
 /* 旋转锚点输入框样式 */
 .pivot-inputs {
@@ -339,23 +350,23 @@
   display: flex;
   align-items: center;
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--text-primary);
   margin-bottom: 0;
 }
 
 .pivot-inputs input[type="number"] {
   width: 60px;
   padding: 6px 8px;
-  background: #2d2d44;
-  border: 1px solid #3d3d5c;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: white;
+  color: var(--text-primary);
   font-size: 12px;
   margin-left: 4px;
 }
 
 .pivot-inputs input[type="number"]:focus {
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
   outline: none;
 }
 
@@ -363,17 +374,18 @@
 .property-group .btn-small {
   padding: 6px 12px;
   font-size: 12px;
-  background: #3d3d5c;
-  border: 1px solid #4d4d6c;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: white;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .property-group .btn-small:hover {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--bg-base);
 }
 
 /* 重置大小按钮 */
@@ -385,11 +397,11 @@
 .group-header .btn-small {
   padding: 4px 10px;
   font-size: 11px;
-  background: #4f46e5;
+  background: var(--accent-primary);
   border: none;
-  color: white;
+  color: var(--bg-base);
 }
 
 .group-header .btn-small:hover {
-  background: #4338ca;
+  background: var(--accent-primary-hover);
 }

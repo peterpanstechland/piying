@@ -1,6 +1,7 @@
+/* 东方黑金科技风 - 活动日志查看器 */
 .activity-log-viewer {
-  background: #2a2a3e;
-  border: 1px solid #3a3a4e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 12px;
   padding: 20px;
 }
@@ -14,32 +15,33 @@
 
 .level-filter {
   padding: 8px 12px;
-  background: #1a1a2e;
-  border: 1px solid #3a3a4e;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.875rem;
   cursor: pointer;
 }
 
 .level-filter:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
 }
 
 .refresh-btn {
   padding: 8px 16px;
-  background: #374151;
-  border: none;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.875rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .refresh-btn:hover {
-  background: #4b5563;
+  background: var(--bg-active);
+  border-color: var(--accent-primary);
 }
 
 /* Log List */
@@ -49,7 +51,7 @@
 }
 
 .log-entry {
-  border-bottom: 1px solid #3a3a4e;
+  border-bottom: 1px solid var(--divider);
 }
 
 .log-entry:last-child {
@@ -66,7 +68,7 @@
 }
 
 .log-summary:hover {
-  background: rgba(79, 70, 229, 0.1);
+  background: var(--bg-hover);
 }
 
 .log-level {
@@ -80,55 +82,55 @@
 }
 
 .level-error {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  background: rgba(198, 67, 47, 0.2);
+  color: var(--error);
 }
 
 .level-warning {
-  background: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
+  background: rgba(230, 160, 57, 0.2);
+  color: var(--warning);
 }
 
 .level-info {
-  background: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
+  background: rgba(61, 163, 255, 0.2);
+  color: var(--accent-blue);
 }
 
 .level-debug {
-  background: rgba(107, 114, 128, 0.2);
-  color: #9ca3af;
+  background: rgba(159, 159, 159, 0.2);
+  color: var(--text-secondary);
 }
 
 .level-default {
-  background: rgba(107, 114, 128, 0.2);
-  color: #9ca3af;
+  background: rgba(159, 159, 159, 0.2);
+  color: var(--text-secondary);
 }
 
 .log-timestamp {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-muted);
   min-width: 150px;
 }
 
 .log-message {
   flex: 1;
   font-size: 0.875rem;
-  color: #d1d5db;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .log-expand-icon {
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
 /* Log Details */
 .log-details {
   padding: 12px 12px 12px 92px;
-  background: #1a1a2e;
-  border-top: 1px solid #3a3a4e;
+  background: var(--bg-base);
+  border-top: 1px solid var(--divider);
 }
 
 .log-detail-row {
@@ -139,12 +141,12 @@
 }
 
 .detail-label {
-  color: #6b7280;
+  color: var(--text-muted);
   min-width: 80px;
 }
 
 .detail-value {
-  color: #d1d5db;
+  color: var(--text-primary);
 }
 
 .log-detail-section {
@@ -154,11 +156,12 @@
 .detail-code {
   margin-top: 8px;
   padding: 12px;
-  background: #0d0d1a;
+  background: var(--bg-base);
+  border: 1px solid var(--divider);
   border-radius: 6px;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 0.75rem;
-  color: #a5b4fc;
+  color: var(--accent-blue);
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
@@ -166,15 +169,15 @@
 
 /* Exception Section */
 .exception-section {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(198, 67, 47, 0.1);
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(198, 67, 47, 0.3);
 }
 
 .exception-type {
   font-weight: 600;
-  color: #ef4444;
+  color: var(--error);
   margin-top: 8px;
 }
 
@@ -187,7 +190,7 @@
 .exception-traceback {
   margin-top: 12px;
   padding: 12px;
-  background: #0d0d1a;
+  background: var(--bg-base);
   border-radius: 6px;
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 0.75rem;
@@ -207,22 +210,23 @@
   gap: 16px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #3a3a4e;
+  border-top: 1px solid var(--divider);
 }
 
 .pagination-btn {
   padding: 8px 16px;
-  background: #374151;
-  border: none;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.875rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: #4b5563;
+  background: var(--bg-active);
+  border-color: var(--accent-primary);
 }
 
 .pagination-btn:disabled {
@@ -231,7 +235,7 @@
 }
 
 .pagination-info {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
@@ -240,13 +244,13 @@
 .log-empty {
   text-align: center;
   padding: 2rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .log-error {
   text-align: center;
   padding: 2rem;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  background: rgba(198, 67, 47, 0.1);
   border-radius: 8px;
 }

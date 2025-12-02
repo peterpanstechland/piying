@@ -102,7 +102,10 @@ class TransitionDB(Base):
 
 
 class StorylineCharacterDB(Base):
-    """SQLAlchemy model for storyline-character associations (Requirements 7.2, 7.3, 7.4)."""
+    """SQLAlchemy model for storyline-character associations (Requirements 7.2, 7.3, 7.4).
+    
+    Extended with character-specific video fields for the character-specific-videos feature.
+    """
     __tablename__ = "storyline_characters"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -110,6 +113,12 @@ class StorylineCharacterDB(Base):
     character_id: Mapped[str] = mapped_column(String(36), ForeignKey("characters.id", ondelete="CASCADE"), nullable=False)
     is_default: Mapped[bool] = mapped_column(Integer, default=False)  # SQLite doesn't have native bool
     display_order: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Character-specific video fields (character-specific-videos feature, Requirements 5.1)
+    video_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    video_duration: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    video_thumbnail: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    video_uploaded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Relationships
     storyline: Mapped["StorylineDB"] = relationship("StorylineDB", back_populates="storyline_characters")
@@ -137,6 +146,7 @@ class StorylineDB(Base):
     synopsis_en: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(20), default=StorylineStatus.DRAFT.value)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(Integer, default=False)  # SQLite doesn't have native bool
     
     # Video resolution fields
     video_width: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -475,6 +485,7 @@ class StorylineExtended(BaseModel):
     icon_image: Optional[str] = Field(default=None, description="Icon image path")
     status: StorylineStatus = Field(default=StorylineStatus.DRAFT, description="Publication status")
     display_order: int = Field(default=0, ge=0, description="Display order in list")
+    enabled: bool = Field(default=False, description="Whether storyline is enabled for frontend display")
     
     # Video fields
     base_video_path: Optional[str] = Field(default=None, description="Background video path")
@@ -565,6 +576,7 @@ class StorylineExtendedListResponse(BaseModel):
     icon_image: Optional[str] = None
     status: StorylineStatus = StorylineStatus.DRAFT
     display_order: int = 0
+    enabled: bool = False
     video_duration: float = 0.0
     cover_image: Optional[CoverImage] = None
     segment_count: int = 0
@@ -572,3 +584,125 @@ class StorylineExtendedListResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Pydantic models for Character-Specific Videos feature (Requirements 5.1, 5.2)
+
+class CharacterVideoUpload(BaseModel):
+    """Schema for character video upload response."""
+    video_path: str = Field(..., description="Path to the uploaded video file")
+    video_duration: float = Field(..., ge=0, description="Video duration in seconds")
+    video_thumbnail: str = Field(..., description="Path to the video thumbnail")
+    message: str = Field(default="Video uploaded successfully", description="Status message")
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "video_path": "data/storylines/abc123/videos/char456.mp4",
+                "video_duration": 30.0,
+                "video_thumbnail": "data/storylines/abc123/videos/char456_thumb.jpg",
+                "message": "Video uploaded successfully"
+            }
+        }
+
+
+class CharacterVideoStatus(BaseModel):
+    """Schema for character video status."""
+    character_id: str = Field(..., description="Character ID")
+    character_name: str = Field(..., description="Character display name")
+    character_thumbnail: Optional[str] = Field(default=None, description="Character thumbnail path")
+    has_video: bool = Field(default=False, description="Whether a character-specific video exists")
+    video_path: Optional[str] = Field(default=None, description="Path to character-specific video")
+    video_duration: Optional[float] = Field(default=None, description="Video duration in seconds")
+    video_thumbnail: Optional[str] = Field(default=None, description="Path to video thumbnail")
+    uploaded_at: Optional[datetime] = Field(default=None, description="Video upload timestamp")
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "character_id": "550e8400-e29b-41d4-a716-446655440000",
+                "character_name": "嫦娥",
+                "character_thumbnail": "data/characters/char123/thumbnail.png",
+                "has_video": True,
+                "video_path": "data/storylines/abc123/videos/char456.mp4",
+                "video_duration": 30.0,
+                "video_thumbnail": "data/storylines/abc123/videos/char456_thumb.jpg",
+                "uploaded_at": "2024-01-01T12:00:00"
+            }
+        }
+
+
+class CharacterVideoListResponse(BaseModel):
+    """Schema for listing all character videos in a storyline."""
+    storyline_id: str = Field(..., description="Storyline ID")
+    base_video_duration: float = Field(..., ge=0, description="Base video duration in seconds")
+    characters: List[CharacterVideoStatus] = Field(default_factory=list, description="List of character video statuses")
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "storyline_id": "550e8400-e29b-41d4-a716-446655440001",
+                "base_video_duration": 30.0,
+                "characters": [
+                    {
+                        "character_id": "char-1",
+                        "character_name": "嫦娥",
+                        "has_video": True,
+                        "video_path": "data/storylines/abc123/videos/char-1.mp4",
+                        "video_duration": 30.0
+                    },
+                    {
+                        "character_id": "char-2",
+                        "character_name": "宇航员",
+                        "has_video": False
+                    }
+                ]
+            }
+        }
+
+
+class StorylineCharacterExtended(BaseModel):
+    """Extended character info including video data."""
+    character_id: str = Field(..., description="Character ID")
+    is_default: bool = Field(default=False, description="Whether this is the default character")
+    display_order: int = Field(default=0, ge=0, description="Display order")
+    video_path: Optional[str] = Field(default=None, description="Character-specific video path")
+    video_duration: Optional[float] = Field(default=None, description="Video duration in seconds")
+    video_thumbnail: Optional[str] = Field(default=None, description="Video thumbnail path")
+    video_uploaded_at: Optional[datetime] = Field(default=None, description="Video upload timestamp")
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "character_id": "550e8400-e29b-41d4-a716-446655440000",
+                "is_default": True,
+                "display_order": 0,
+                "video_path": "data/storylines/abc123/videos/char456.mp4",
+                "video_duration": 30.0,
+                "video_thumbnail": "data/storylines/abc123/videos/char456_thumb.jpg",
+                "video_uploaded_at": "2024-01-01T12:00:00"
+            }
+        }
+
+
+class CharacterVideoPathResponse(BaseModel):
+    """Schema for video path resolution response (public API)."""
+    storyline_id: str = Field(..., description="Storyline ID")
+    character_id: str = Field(..., description="Character ID")
+    video_path: str = Field(..., description="Resolved video path (character-specific or base)")
+    is_character_specific: bool = Field(default=False, description="Whether the video is character-specific")
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "storyline_id": "550e8400-e29b-41d4-a716-446655440001",
+                "character_id": "550e8400-e29b-41d4-a716-446655440000",
+                "video_path": "data/storylines/abc123/videos/char456.mp4",
+                "is_character_specific": True
+            }
+        }

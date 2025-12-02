@@ -106,6 +106,7 @@ export interface PublishedStoryline {
   cover_image: CoverImage | null;
   character_count: number;
   segment_count: number;
+  enabled: boolean;  // Whether storyline is enabled for user selection
 }
 
 /**
@@ -116,6 +117,17 @@ export interface PublishedStorylineDetail extends PublishedStoryline {
   description_en: string;
   characters: StorylineCharacter[];
   segments: StorylineSegment[];
+}
+
+/**
+ * Character video path response
+ * Requirements 3.2, 3.3
+ */
+export interface CharacterVideoPathResponse {
+  storyline_id: string;
+  character_id: string;
+  video_path: string;
+  is_character_specific: boolean;
 }
 
 /**
@@ -173,13 +185,24 @@ export class APIClient {
 
   /**
    * Create a new session
+   * Requirements 3.4:
+   * - Session stores selected character ID and corresponding video path
+   * 
    * @param sceneId - Scene identifier
+   * @param characterId - Optional character identifier for motion capture
+   * @param videoPath - Optional resolved video path (character-specific or default)
    * @returns Session creation response
    */
-  async createSession(sceneId: string): Promise<CreateSessionResponse> {
+  async createSession(
+    sceneId: string,
+    characterId?: string,
+    videoPath?: string
+  ): Promise<CreateSessionResponse> {
     return this.retryRequest(async () => {
       const response = await this.client.post<CreateSessionResponse>('/api/sessions', {
         scene_id: sceneId,
+        character_id: characterId,
+        video_path: videoPath,
       });
       return response.data;
     });
@@ -322,6 +345,29 @@ export class APIClient {
    */
   getBaseUrl(): string {
     return this.client.defaults.baseURL || '';
+  }
+
+  /**
+   * Get character-specific video path for a storyline
+   * Requirements 3.2, 3.3:
+   * - Returns character-specific video path if it exists
+   * - Falls back to storyline's base video if no specific video exists
+   * 
+   * @param storylineId - Storyline identifier
+   * @param characterId - Character identifier
+   * @returns Character video path response with resolved video path
+   */
+  async getCharacterVideoPath(
+    storylineId: string,
+    characterId: string
+  ): Promise<CharacterVideoPathResponse> {
+    return this.retryRequest(async () => {
+      const response = await this.client.get<CharacterVideoPathResponse>(
+        `/api/storylines/${storylineId}/video`,
+        { params: { character_id: characterId } }
+      );
+      return response.data;
+    });
   }
 
   /**

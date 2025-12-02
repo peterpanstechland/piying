@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ...models.admin.character import CharacterDB, CharacterPartDB, SkeletonBindingDB
-from ...models.admin.storyline import StorylineDB, SegmentDB
+from ...models.admin.storyline import StorylineDB, SegmentDB, StorylineCharacterDB
 from .settings_service import settings_service
 
 
@@ -157,10 +157,16 @@ class ExportImportService:
     async def _export_storylines(
         self, db: AsyncSession, zf: zipfile.ZipFile
     ) -> List[Dict[str, Any]]:
-        """Export all storylines with their segments."""
+        """Export all storylines with their segments and character-specific videos.
+        
+        Requirements 6.3: Include character-specific videos in export package.
+        """
         result = await db.execute(
             select(StorylineDB)
-            .options(selectinload(StorylineDB.segments))
+            .options(
+                selectinload(StorylineDB.segments),
+                selectinload(StorylineDB.storyline_characters)
+            )
         )
         storylines = list(result.scalars().all())
         
@@ -179,7 +185,8 @@ class ExportImportService:
                 "character_id": storyline.character_id,
                 "created_at": storyline.created_at.isoformat() if storyline.created_at else None,
                 "updated_at": storyline.updated_at.isoformat() if storyline.updated_at else None,
-                "segments": []
+                "segments": [],
+                "character_videos": []  # New field for character-specific videos
             }
             
             # Export segments
@@ -203,6 +210,31 @@ class ExportImportService:
                     img_path = Path("data") / segment.guidance_image
                     if img_path.exists():
                         zf.write(str(img_path), f"storylines/{storyline.id}/segment{segment.index}_guide.png")
+            
+            # Export character-specific videos (Requirements 6.3)
+            for char_assoc in sorted(storyline.storyline_characters, key=lambda c: c.display_order):
+                char_video_data = {
+                    "character_id": char_assoc.character_id,
+                    "is_default": bool(char_assoc.is_default),
+                    "display_order": char_assoc.display_order,
+                    "video_path": char_assoc.video_path,
+                    "video_duration": char_assoc.video_duration,
+                    "video_thumbnail": char_assoc.video_thumbnail,
+                    "video_uploaded_at": char_assoc.video_uploaded_at.isoformat() if char_assoc.video_uploaded_at else None
+                }
+                storyline_data["character_videos"].append(char_video_data)
+                
+                # Add character-specific video file if exists
+                if char_assoc.video_path:
+                    video_path = Path("data") / char_assoc.video_path
+                    if video_path.exists():
+                        zf.write(str(video_path), f"storylines/{storyline.id}/videos/{char_assoc.character_id}.mp4")
+                
+                # Add character video thumbnail if exists
+                if char_assoc.video_thumbnail:
+                    thumb_path = Path("data") / char_assoc.video_thumbnail
+                    if thumb_path.exists():
+                        zf.write(str(thumb_path), f"storylines/{storyline.id}/videos/{char_assoc.character_id}_thumb.jpg")
             
             # Add base video if exists
             if storyline.base_video_path:
@@ -338,12 +370,19 @@ class ExportImportService:
                         for c in chars_data
                     ]
                 
-                # Preview storylines
+                # Preview storylines (including character video count)
                 if "storylines/storylines.json" in zf.namelist():
                     storylines_content = zf.read("storylines/storylines.json")
                     storylines_data = json.loads(storylines_content.decode('utf-8'))
                     preview["storylines"] = [
-                        {"id": s["id"], "name": s["name"]}
+                        {
+                            "id": s["id"],
+                            "name": s["name"],
+                            "character_video_count": len([
+                                cv for cv in s.get("character_videos", [])
+                                if cv.get("video_path")
+                            ])
+                        }
                         for s in storylines_data
                     ]
                 
@@ -508,7 +547,10 @@ class ExportImportService:
         zf: zipfile.ZipFile,
         overwrite: bool
     ) -> Dict[str, int]:
-        """Import storylines from ZIP file."""
+        """Import storylines from ZIP file.
+        
+        Requirements 6.4: Restore character-specific videos from import package.
+        """
         stats = {"imported": 0, "skipped": 0}
         
         storylines_content = zf.read("storylines/storylines.json")
@@ -577,6 +619,50 @@ class ExportImportService:
                     guide_path = storyline_dir / f"segment{segment_data['index']}_guide.png"
                     with open(guide_path, 'wb') as f:
                         f.write(zf.read(guide_zip_path))
+            
+            # Import character-specific videos (Requirements 6.4)
+            videos_dir = storyline_dir / "videos"
+            for char_video_data in storyline_data.get("character_videos", []):
+                character_id = char_video_data["character_id"]
+                
+                # Check if character exists in database
+                char_result = await db.execute(
+                    select(CharacterDB).where(CharacterDB.id == character_id)
+                )
+                character_exists = char_result.scalar_one_or_none() is not None
+                
+                if not character_exists:
+                    # Skip character video if character doesn't exist
+                    continue
+                
+                # Create storyline-character association
+                char_assoc = StorylineCharacterDB(
+                    storyline_id=storyline_id,
+                    character_id=character_id,
+                    is_default=char_video_data.get("is_default", False),
+                    display_order=char_video_data.get("display_order", 0),
+                    video_path=char_video_data.get("video_path"),
+                    video_duration=char_video_data.get("video_duration"),
+                    video_thumbnail=char_video_data.get("video_thumbnail"),
+                    video_uploaded_at=datetime.fromisoformat(char_video_data["video_uploaded_at"]) if char_video_data.get("video_uploaded_at") else None
+                )
+                db.add(char_assoc)
+                
+                # Extract character-specific video file if exists
+                video_zip_path = f"storylines/{storyline_id}/videos/{character_id}.mp4"
+                if video_zip_path in zf.namelist():
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    video_file_path = videos_dir / f"{character_id}.mp4"
+                    with open(video_file_path, 'wb') as f:
+                        f.write(zf.read(video_zip_path))
+                
+                # Extract character video thumbnail if exists
+                thumb_zip_path = f"storylines/{storyline_id}/videos/{character_id}_thumb.jpg"
+                if thumb_zip_path in zf.namelist():
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    thumb_file_path = videos_dir / f"{character_id}_thumb.jpg"
+                    with open(thumb_file_path, 'wb') as f:
+                        f.write(zf.read(thumb_zip_path))
             
             # Extract base video
             video_zip_path = f"storylines/{storyline_id}/base_video.mp4"

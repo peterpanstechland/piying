@@ -28,8 +28,6 @@ export const CountdownPage = ({
 
   // Single useEffect to handle countdown logic
   useEffect(() => {
-    console.log('CountdownPage mounted, starting countdown from', countdownDuration);
-    
     // Reset state
     setCountdown(countdownDuration);
     completedRef.current = false;
@@ -43,8 +41,6 @@ export const CountdownPage = ({
     // Start countdown interval
     intervalRef.current = window.setInterval(() => {
       setCountdown((prev) => {
-        console.log('Countdown tick:', prev);
-        
         if (prev <= 1) {
           // Clear interval
           if (intervalRef.current !== null) {
@@ -55,7 +51,6 @@ export const CountdownPage = ({
           // Trigger callback using ref
           if (onCountdownCompleteRef.current && !completedRef.current) {
             completedRef.current = true;
-            console.log('Countdown complete, triggering callback');
             setTimeout(() => onCountdownCompleteRef.current?.(), 100);
           }
           return 0;
@@ -67,7 +62,6 @@ export const CountdownPage = ({
 
     // Cleanup on unmount
     return () => {
-      console.log('Cleaning up countdown interval');
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;

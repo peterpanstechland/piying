@@ -1,3 +1,4 @@
+/* 东方黑金科技风 - 转场编辑器 */
 .transition-editor {
   display: flex;
   flex-direction: column;
@@ -18,13 +19,13 @@
   gap: 2px;
   font-size: 13px;
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .transition-editor__label-en {
   font-size: 11px;
   font-weight: 400;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Type grid */
@@ -41,21 +42,21 @@
   align-items: center;
   gap: 4px;
   padding: 12px 8px;
-  background: #1a2744;
-  border: 2px solid #2d3a5a;
+  background: var(--bg-base);
+  border: 2px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .transition-editor__type-btn:hover {
-  border-color: #4fc3f7;
-  background: #1e2d4d;
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
 }
 
 .transition-editor__type-btn--active {
-  border-color: #4fc3f7;
-  background: rgba(79, 195, 247, 0.15);
+  border-color: var(--accent-primary);
+  background: rgba(217, 164, 65, 0.15);
 }
 
 .transition-editor__type-icon {
@@ -65,12 +66,12 @@
 .transition-editor__type-label {
   font-size: 12px;
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .transition-editor__type-label-en {
   font-size: 10px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Slider group */
@@ -85,7 +86,7 @@
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #2d3a5a;
+  background: var(--border);
   border-radius: 3px;
   cursor: pointer;
 }
@@ -95,7 +96,7 @@
   appearance: none;
   width: 16px;
   height: 16px;
-  background: #4fc3f7;
+  background: var(--accent-primary);
   border-radius: 50%;
   cursor: pointer;
   transition: transform 0.1s;
@@ -108,7 +109,7 @@
 .transition-editor__slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #4fc3f7;
+  background: var(--accent-primary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -118,10 +119,10 @@
 .transition-editor__number {
   width: 60px;
   padding: 6px 8px;
-  background: #1a2744;
-  border: 1px solid #2d3a5a;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: 'Consolas', 'Monaco', monospace;
   text-align: center;
@@ -129,19 +130,19 @@
 
 .transition-editor__number:focus {
   outline: none;
-  border-color: #4fc3f7;
+  border-color: var(--accent-primary);
 }
 
 /* Unit label */
 .transition-editor__unit {
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Hint text */
 .transition-editor__hint {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* Preview hint */
@@ -150,8 +151,8 @@
   align-items: flex-start;
   gap: 8px;
   padding: 12px;
-  background: rgba(79, 195, 247, 0.1);
-  border: 1px solid rgba(79, 195, 247, 0.2);
+  background: rgba(217, 164, 65, 0.1);
+  border: 1px solid rgba(217, 164, 65, 0.2);
   border-radius: 8px;
 }
 
@@ -162,12 +163,12 @@
 
 .transition-editor__preview-text {
   font-size: 12px;
-  color: #b0b0b0;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .transition-editor__preview-text-en {
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Remove number input spinners */

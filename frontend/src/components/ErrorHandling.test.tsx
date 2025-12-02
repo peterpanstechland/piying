@@ -32,7 +32,7 @@ describe('Error Handling Components', () => {
       );
 
       expect(screen.getByText(/出现错误/)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /刷新页面/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /刷新页面.*Reload Page/ })).toBeInTheDocument();
 
       consoleSpy.mockRestore();
     });

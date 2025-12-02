@@ -4,7 +4,7 @@
     "fallback_language": "en"
   },
   "camera": {
-    "default_camera_id": "5c9705bf8d6d33c470594cfe2b464404269e040c73de00ce449c965473ce7c76",
+    "default_camera_id": "6c5b45d7e1544c97b20c54f7515d52cbeac3dd6cf4cf0d2c379565eabdf20751",
     "min_fps": 20,
     "detection_confidence": 0.5
   },
@@ -19,10 +19,10 @@
   "storage": {
     "mode": "local",
     "local_path": "data/test_complete",
-    "s3_bucket": null,
-    "s3_region": null,
-    "s3_access_key": null,
-    "s3_secret_key": null,
+    "s3_bucket": "",
+    "s3_region": "",
+    "s3_access_key": "",
+    "s3_secret_key": "",
     "max_age_days": 7,
     "min_disk_space_gb": 5,
     "emergency_cleanup_threshold_gb": 2,

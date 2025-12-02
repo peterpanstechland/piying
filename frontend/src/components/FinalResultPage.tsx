@@ -108,8 +108,14 @@ export const FinalResultPage = ({
     if (!video) return;
 
     const handleCanPlay = () => {
-      video.play().catch((error) => {
-        console.error('Error auto-playing video:', error);
+      // Try to play with sound first
+      video.muted = false;
+      video.play().catch(() => {
+        // If autoplay with sound fails, try muted (browser policy)
+        video.muted = true;
+        video.play().catch(() => {
+          // Silent fail - user can click to play
+        });
       });
     };
 
@@ -156,6 +162,7 @@ export const FinalResultPage = ({
             loop
             className="result-video"
             playsInline
+            muted={false}
           />
           {!isPlaying && (
             <div className="play-overlay">

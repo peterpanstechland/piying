@@ -1,87 +1,93 @@
+/* 东方黑金科技风 - 用户管理页面 */
 .user-management-page {
-  padding: 2rem;
+  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
-.page-header {
+.user-management-page .page-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.page-header h1 {
+.user-management-page .page-header h1 {
   flex: 1;
   margin: 0;
-  font-size: 1.8rem;
-  color: #333;
+  font-size: 24px;
+  color: var(--text-primary);
 }
 
 .header-actions {
   display: flex;
-  gap: 0.8rem;
+  gap: 12px;
 }
 
-.back-button {
-  padding: 0.5rem 1rem;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-}
-
-.back-button:hover {
-  background: #e8e8e8;
-}
-
-.password-button {
-  padding: 0.6rem 1.2rem;
-  background: #2196F3;
-  color: white;
+.btn-back {
+  background: none;
   border: none;
-  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 14px;
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
   transition: all 0.2s;
 }
 
-.password-button:hover {
-  background: #1976D2;
+.btn-back:hover {
+  color: var(--accent-primary);
+  background: var(--bg-hover);
 }
 
-.create-button {
-  padding: 0.6rem 1.2rem;
-  background: #4CAF50;
-  color: white;
+.btn-secondary {
+  padding: 10px 20px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.95rem;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.create-button:hover {
-  background: #45a049;
+.btn-primary:hover {
+  background: var(--accent-primary-hover);
 }
 
 .loading {
   text-align: center;
   padding: 3rem;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 1.1rem;
 }
 
 .error-message {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
+  background: rgba(198, 67, 47, 0.15);
+  border: 1px solid var(--error);
+  color: var(--error);
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-bottom: 1rem;
   display: flex;
   justify-content: space-between;
@@ -91,7 +97,7 @@
 .error-message button {
   background: none;
   border: none;
-  color: #c33;
+  color: var(--error);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0 0.5rem;
@@ -99,9 +105,9 @@
 
 /* Password Change Form */
 .password-change-container {
-  background: #e3f2fd;
-  border: 1px solid #90caf9;
-  border-radius: 8px;
+  background: rgba(61, 163, 255, 0.1);
+  border: 1px solid var(--accent-blue);
+  border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -109,14 +115,14 @@
 .password-change-container h2 {
   margin: 0 0 1.5rem 0;
   font-size: 1.3rem;
-  color: #1976D2;
+  color: var(--accent-blue);
 }
 
 /* Create Form */
 .create-form-container {
-  background: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -124,7 +130,7 @@
 .create-form-container h2 {
   margin: 0 0 1.5rem 0;
   font-size: 1.3rem;
-  color: #333;
+  color: var(--accent-gold-light);
 }
 
 .form-group {
@@ -135,48 +141,50 @@
   display: block;
   margin-bottom: 0.4rem;
   font-weight: 500;
-  color: #555;
+  color: var(--text-primary);
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
   padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   font-size: 0.95rem;
   box-sizing: border-box;
+  background: var(--bg-base);
+  color: var(--text-primary);
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: var(--accent-primary);
 }
 
 .form-group small {
   display: block;
   margin-top: 0.3rem;
-  color: #777;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
 .form-error {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
+  background: rgba(198, 67, 47, 0.15);
+  border: 1px solid var(--error);
+  color: var(--error);
   padding: 0.8rem;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
 
 .form-success {
-  background: #e8f5e9;
-  border: 1px solid #a5d6a7;
-  color: #2e7d32;
+  background: rgba(79, 227, 193, 0.15);
+  border: 1px solid var(--success);
+  color: var(--success);
   padding: 0.8rem;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-bottom: 1rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -190,10 +198,10 @@
 
 .submit-button {
   padding: 0.7rem 1.5rem;
-  background: #4CAF50;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 500;
@@ -201,30 +209,31 @@
 }
 
 .submit-button:hover {
-  background: #45a049;
+  background: var(--accent-primary-hover);
 }
 
 .cancel-button {
   padding: 0.7rem 1.5rem;
-  background: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.95rem;
   transition: all 0.2s;
 }
 
 .cancel-button:hover {
-  background: #e8e8e8;
+  background: var(--bg-hover);
 }
 
 /* Users List */
 .users-list {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 2px 8px var(--shadow-card);
 }
 
 .users-list table {
@@ -233,20 +242,21 @@
 }
 
 .users-list thead {
-  background: #f5f5f5;
+  background: var(--bg-base);
 }
 
 .users-list th {
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  color: #555;
-  border-bottom: 2px solid #ddd;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--divider);
 }
 
 .users-list td {
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text-primary);
 }
 
 .users-list tr:last-child td {
@@ -254,36 +264,38 @@
 }
 
 .users-list tr.current-user {
-  background: #f0f8ff;
+  background: rgba(217, 164, 65, 0.1);
 }
 
 .badge {
   display: inline-block;
   margin-left: 0.5rem;
   padding: 0.2rem 0.5rem;
-  background: #2196F3;
-  color: white;
+  background: var(--accent-blue);
+  color: var(--bg-base);
   font-size: 0.75rem;
-  border-radius: 3px;
+  border-radius: 4px;
   font-weight: 500;
 }
 
 .role-badge {
   display: inline-block;
   padding: 0.3rem 0.7rem;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
 }
 
 .role-badge.admin {
-  background: #ff9800;
-  color: white;
+  background: rgba(217, 164, 65, 0.2);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
 }
 
 .role-badge.operator {
-  background: #2196F3;
-  color: white;
+  background: rgba(61, 163, 255, 0.2);
+  color: var(--accent-blue);
+  border: 1px solid var(--accent-blue);
 }
 
 .action-buttons {
@@ -294,36 +306,39 @@
 
 .reset-password-button {
   padding: 0.4rem 0.8rem;
-  background: #FF9800;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: rgba(230, 160, 57, 0.2);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s;
 }
 
 .reset-password-button:hover {
-  background: #F57C00;
+  background: var(--warning);
+  color: var(--bg-base);
 }
 
 .delete-button {
   padding: 0.4rem 0.8rem;
-  background: #f44336;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s;
 }
 
 .delete-button:hover {
-  background: #d32f2f;
+  background: var(--error);
+  color: var(--text-primary);
 }
 
 .delete-button.confirm {
-  background: #d32f2f;
+  background: var(--error);
+  color: var(--text-primary);
   animation: pulse 0.5s ease-in-out;
 }
 
@@ -333,14 +348,14 @@
 }
 
 .no-action {
-  color: #999;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
 .empty-state {
   padding: 3rem;
   text-align: center;
-  color: #999;
+  color: var(--text-muted);
   font-size: 1rem;
 }
 
@@ -348,15 +363,15 @@
 .help-section {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
 }
 
 .help-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
-  color: #333;
+  color: var(--accent-gold-light);
 }
 
 .help-section ul {
@@ -366,12 +381,12 @@
 
 .help-section li {
   margin-bottom: 0.5rem;
-  color: #555;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 .help-section strong {
-  color: #333;
+  color: var(--text-primary);
 }
 
 /* Modal */
@@ -381,7 +396,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--shadow-popup);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -389,30 +404,31 @@
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
   padding: 2rem;
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px var(--shadow-card);
 }
 
 .modal-content h2 {
   margin: 0 0 1rem 0;
   font-size: 1.4rem;
-  color: #333;
+  color: var(--accent-gold-light);
 }
 
 .modal-description {
   margin-bottom: 1.5rem;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 .modal-description strong {
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 

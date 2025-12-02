@@ -38,6 +38,7 @@ export interface StateContext {
   sessionId?: string;
   sceneId?: string;
   characterId?: string;
+  videoPath?: string;  // Resolved video path (character-specific or default) - Requirements 3.4
   availableCharacters?: CharacterOption[];
   currentSegment: number;
   totalSegments: number;

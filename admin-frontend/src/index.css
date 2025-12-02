@@ -1,12 +1,46 @@
+/* 东方黑金科技风 - 皮影戏互动装置后台管理界面配色 */
 :root {
+  /* 主色体系 */
+  --bg-base: #111111;
+  --bg-panel: #1A1A1A;
+  --bg-hover: #242424;
+  --bg-active: #2A2A2A;
+  
+  /* 文字颜色 */
+  --text-primary: #E9E5D8;
+  --text-secondary: #9F9F9F;
+  --text-muted: #6B6B6B;
+  
+  /* 强调色 */
+  --accent-primary: #D9A441;
+  --accent-primary-hover: #C69A33;
+  --accent-primary-active: #A87F29;
+  --accent-blue: #3DA3FF;
+  --accent-gold-light: #F2D7A0;
+  
+  /* 状态色 */
+  --success: #4FE3C1;
+  --error: #C6432F;
+  --warning: #E6A039;
+  
+  /* 边框和分割线 */
+  --divider: #2A2A2A;
+  --border: #3A3A3A;
+  --border-focus: #D9A441;
+  
+  /* 阴影 */
+  --shadow-card: rgba(0, 0, 0, 0.35);
+  --shadow-popup: rgba(0, 0, 0, 0.5);
+  
+  /* 图表色 */
+  --chart-1: #F2D7A0;
+  --chart-2: #D9A441;
+  --chart-3: #3DA3FF;
+  
+  /* 字体 */
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light;
-  color: #1a1a2e;
-  background-color: #1a1a2e;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,17 +56,31 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
 }
 
-/* Reset input colors for light backgrounds */
-input,
-textarea,
-select {
-  color: #1a1a2e;
-  background-color: white;
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #9ca3af;
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* 选中文字样式 */
+::selection {
+  background: var(--accent-primary);
+  color: var(--bg-base);
 }

@@ -204,6 +204,12 @@ class CharacterService:
         *For any* character deleted from the system, that character SHALL be 
         removed from all storyline character configurations.
         
+        Property 8: Character Cascade Delete
+        *For any* character deletion, all video associations for that character
+        across all storylines SHALL be removed.
+        
+        Requirements 5.4
+        
         Args:
             db: Database session
             character_id: Character ID to delete
@@ -226,6 +232,10 @@ class CharacterService:
         
         if config_storylines:
             if force_cascade:
+                # Delete all character-specific videos for this character (Property 8, Requirements 5.4)
+                from .character_video_service import character_video_service
+                await character_video_service.delete_all_videos_for_character(db, character_id)
+                
                 # Remove character from all storyline configurations
                 from .storyline_service import storyline_service
                 affected_count, error = await storyline_service.remove_character_from_all_storylines(

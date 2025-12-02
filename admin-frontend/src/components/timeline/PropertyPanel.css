@@ -1,7 +1,9 @@
+/* 东方黑金科技风 - 属性面板 */
 .property-panel {
   display: flex;
   flex-direction: column;
-  background: #16213e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 12px;
   overflow: hidden;
   min-width: 300px;
@@ -32,34 +34,34 @@
 .property-panel__placeholder-text {
   margin: 0;
   font-size: 14px;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .property-panel__placeholder-hint {
   margin: 0;
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* Header */
 .property-panel__header {
   padding: 16px;
-  background: #1a2744;
-  border-bottom: 1px solid #2d3a5a;
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--divider);
 }
 
 .property-panel__title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--accent-gold-light);
 }
 
 .property-panel__subtitle {
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 /* Content */
@@ -83,9 +85,9 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #4fc3f7;
+  color: var(--accent-primary);
   padding-bottom: 8px;
-  border-bottom: 1px solid #2d3a5a;
+  border-bottom: 1px solid var(--divider);
 }
 
 /* Info grid */
@@ -103,7 +105,7 @@
 
 .property-panel__info-label {
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -111,7 +113,7 @@
 .property-panel__info-value {
   font-size: 14px;
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-family: 'Consolas', 'Monaco', monospace;
 }
 
@@ -121,16 +123,16 @@
 }
 
 .property-panel__content::-webkit-scrollbar-track {
-  background: #1a2744;
+  background: var(--bg-panel);
 }
 
 .property-panel__content::-webkit-scrollbar-thumb {
-  background: #3d4a6a;
+  background: var(--border);
   border-radius: 3px;
 }
 
 .property-panel__content::-webkit-scrollbar-thumb:hover {
-  background: #4d5a7a;
+  background: var(--accent-primary);
 }
 
 /* Responsive */

@@ -6,6 +6,7 @@ import BasicInfoForm, { BasicInfoFormData } from '../components/timeline/BasicIn
 import '../components/timeline/BasicInfoForm.css'
 import CharacterSelector from '../components/timeline/CharacterSelector'
 import CoverImageManager from '../components/timeline/CoverImageManager'
+import CharacterVideoPanel from '../components/timeline/CharacterVideoPanel'
 import { TimelineSegment, Transition } from '../contexts/TimelineEditorContext'
 import './StorylineTimelineEditorPage.css'
 
@@ -20,6 +21,7 @@ interface StorylineExtended {
   icon: string
   status: 'draft' | 'published'
   display_order: number
+  enabled: boolean
   base_video_path: string | null
   video_duration: number
   video_width: number | null
@@ -61,7 +63,7 @@ interface Character {
 export default function StorylineTimelineEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const isNew = id === 'new'
+  const isNew = !id || id === 'new'
 
   // State
   const [storyline, setStoryline] = useState<StorylineExtended | null>(null)
@@ -90,6 +92,9 @@ export default function StorylineTimelineEditorPage() {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [defaultCharacterId, setDefaultCharacterId] = useState<string | null>(null)
   const [characterDisplayOrder, setCharacterDisplayOrder] = useState<string[]>([])
+  
+  // Video playhead time for cover capture
+  const [currentVideoTime, setCurrentVideoTime] = useState(0)
 
   // Load storyline and characters data
   const loadData = useCallback(async () => {
@@ -142,11 +147,15 @@ export default function StorylineTimelineEditorPage() {
 
   // Save basic info (Requirements 1.1, 8.1, 8.2)
   const handleSaveBasicInfo = async (data: BasicInfoFormData) => {
+    console.log('handleSaveBasicInfo called with:', data)
+    console.log('isNew:', isNew, 'id:', id)
+    
     try {
       setSaving(true)
       setError(null)
       
       if (isNew) {
+        console.log('Creating new storyline...')
         // Create new storyline
         const created = await adminApi.createStorylineExtended({
           name: data.name,
@@ -155,10 +164,12 @@ export default function StorylineTimelineEditorPage() {
           synopsis_en: data.synopsis_en,
           icon: data.icon,
         })
+        console.log('Created storyline:', created)
         setSuccess('故事线创建成功')
         // Navigate to edit page for the new storyline
         navigate(`/storylines/${created.id}/timeline`, { replace: true })
       } else if (id) {
+        console.log('Updating existing storyline...')
         // Update existing storyline
         await adminApi.updateStorylineExtended(id, {
           name: data.name,
@@ -167,10 +178,12 @@ export default function StorylineTimelineEditorPage() {
           synopsis_en: data.synopsis_en,
           icon: data.icon,
         })
+        console.log('Update successful')
         setSuccess('基本信息保存成功')
         loadData()
       }
     } catch (err: unknown) {
+      console.error('Save error:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to save'
       setError(errorMessage)
     } finally {
@@ -455,8 +468,30 @@ export default function StorylineTimelineEditorPage() {
     }
   }
 
+  // Handle toggle enabled
+  const handleToggleEnabled = async () => {
+    if (!id || isNew || !storyline) return
+    
+    try {
+      setSaving(true)
+      const newEnabled = !storyline.enabled
+      await adminApi.toggleStorylineEnabled(id, newEnabled)
+      setSuccess(newEnabled ? '故事线已启用' : '故事线已禁用')
+      loadData()
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle enabled'
+      setError(errorMessage)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Handle save draft
   const handleSaveDraft = async () => {
+    console.log('handleSaveDraft called')
+    console.log('basicInfoValid:', basicInfoValid)
+    console.log('basicInfo:', basicInfo)
+    
     if (!basicInfoValid) {
       setError('请填写必填字段')
       return
@@ -478,17 +513,21 @@ export default function StorylineTimelineEditorPage() {
   // Convert API segments to timeline format
   const getTimelineSegments = (): TimelineSegment[] => {
     if (!storyline?.segments) return []
-    return storyline.segments.map(seg => ({
-      id: seg.id || `segment-${seg.index}`,
-      index: seg.index,
-      startTime: seg.startTime || 0,
-      duration: seg.duration || 10,
-      entryAnimation: seg.entryAnimation || { type: 'instant', duration: 1, delay: 0 },
-      exitAnimation: seg.exitAnimation || { type: 'instant', duration: 1, delay: 0 },
-      guidanceText: seg.guidanceText || '',
-      guidanceTextEn: seg.guidanceTextEn || '',
-      guidanceImage: seg.guidanceImage || null,
-    }))
+    return storyline.segments.map(seg => {
+      // Handle both camelCase and snake_case from API
+      const apiSeg = seg as unknown as Record<string, unknown>
+      return {
+        id: seg.id || `segment-${seg.index}`,
+        index: seg.index,
+        startTime: (apiSeg.start_time as number) ?? seg.startTime ?? 0,
+        duration: seg.duration || 10,
+        entryAnimation: (apiSeg.entry_animation as typeof seg.entryAnimation) ?? seg.entryAnimation ?? { type: 'instant', duration: 1, delay: 0 },
+        exitAnimation: (apiSeg.exit_animation as typeof seg.exitAnimation) ?? seg.exitAnimation ?? { type: 'instant', duration: 1, delay: 0 },
+        guidanceText: (apiSeg.guidance_text as string) ?? seg.guidanceText ?? '',
+        guidanceTextEn: (apiSeg.guidance_text_en as string) ?? seg.guidanceTextEn ?? '',
+        guidanceImage: (apiSeg.guidance_image as string | null) ?? seg.guidanceImage ?? null,
+      }
+    })
   }
 
   // Convert API transitions to timeline format
@@ -528,6 +567,34 @@ export default function StorylineTimelineEditorPage() {
           <span className={`status-badge ${storyline.status}`}>
             {storyline.status === 'published' ? '已发布' : '草稿'}
           </span>
+        )}
+        
+        {/* Enable Toggle */}
+        {!isNew && storyline && (
+          <div className="storyline-timeline-page__enable-toggle">
+            {storyline.status === 'published' ? (
+              <label className="enable-switch">
+                <input
+                  type="checkbox"
+                  checked={storyline.enabled}
+                  onChange={handleToggleEnabled}
+                  disabled={saving}
+                />
+                <span className="enable-switch__slider"></span>
+                <span className="enable-switch__label">
+                  {storyline.enabled ? '已启用' : '未启用'}
+                </span>
+              </label>
+            ) : (
+              <div className="enable-switch enable-switch--disabled">
+                <input type="checkbox" disabled checked={false} />
+                <span className="enable-switch__slider"></span>
+                <span className="enable-switch__label enable-switch__label--coming-soon">
+                  搭建中，敬请期待
+                </span>
+              </div>
+            )}
+          </div>
         )}
         
         {/* Action Buttons */}
@@ -653,7 +720,7 @@ export default function StorylineTimelineEditorPage() {
                 storylineId={id}
                 currentCover={storyline?.cover_image || null}
                 videoUrl={getVideoUrl()}
-                currentTime={0}
+                currentTime={currentVideoTime}
                 onUpload={handleCoverUpload}
                 onFrameCapture={handleCoverFrameCapture}
                 onDelete={handleCoverDelete}
@@ -684,6 +751,17 @@ export default function StorylineTimelineEditorPage() {
               </div>
             </div>
           )}
+
+          {/* Character Video Panel (Requirements 4.1) */}
+          {!isNew && id && storyline?.base_video_path && selectedCharacterIds.length > 0 && (
+            <div className="sidebar-section">
+              <CharacterVideoPanel
+                storylineId={id}
+                baseVideoDuration={storyline.video_duration || 0}
+                onVideoChange={loadData}
+              />
+            </div>
+          )}
         </div>
 
         {/* Main Content - Timeline Editor */}
@@ -699,6 +777,7 @@ export default function StorylineTimelineEditorPage() {
               onSegmentDelete={handleSegmentDelete}
               onGuidanceImageUpload={handleGuidanceImageUpload}
               onGuidanceFrameCapture={handleGuidanceFrameCapture}
+              onTimeUpdate={setCurrentVideoTime}
             />
           ) : (
             <div className="timeline-placeholder">

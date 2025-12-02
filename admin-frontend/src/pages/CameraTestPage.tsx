@@ -479,9 +479,10 @@ export default function CameraTestPage() {
   return (
     <div className="camera-test-page">
       <div className="page-header">
-        <h1>📷 摄像头测试</h1>
+        <a href="/admin/dashboard" className="btn-back">← 返回首页</a>
+        <h1>摄像头测试</h1>
         <div className="header-actions">
-          <a href="/admin/dashboard" className="btn-secondary">返回管理面板</a>
+          {/* 预留操作按钮位置 */}
         </div>
       </div>
 

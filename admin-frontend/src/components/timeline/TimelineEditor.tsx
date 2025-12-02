@@ -23,6 +23,7 @@ interface TimelineEditorProps {
   onFrameCapture?: (imageData: string) => void
   onGuidanceImageUpload?: (segmentId: string, file: File) => Promise<void>
   onGuidanceFrameCapture?: (segmentId: string, time: number) => Promise<void>
+  onTimeUpdate?: (time: number) => void
 }
 
 /**
@@ -37,6 +38,7 @@ function TimelineEditorInner({
   onFrameCapture,
   onGuidanceImageUpload,
   onGuidanceFrameCapture,
+  onTimeUpdate,
 }: Omit<TimelineEditorProps, 'initialSegments' | 'initialTransitions'>) {
   const containerRef = useRef<HTMLDivElement>(null)
   
@@ -73,6 +75,13 @@ function TimelineEditorInner({
       onTransitionsChange(transitions)
     }
   }, [transitions, onTransitionsChange])
+
+  // Notify parent when playhead changes
+  useEffect(() => {
+    if (onTimeUpdate) {
+      onTimeUpdate(playhead)
+    }
+  }, [playhead, onTimeUpdate])
 
   // Handle segment changes from timeline track
   const handleSegmentChange = useCallback((_segment: TimelineSegment) => {
@@ -214,6 +223,7 @@ export default function TimelineEditor({
   onFrameCapture,
   onGuidanceImageUpload,
   onGuidanceFrameCapture,
+  onTimeUpdate,
 }: TimelineEditorProps) {
   return (
     <TimelineEditorProvider 
@@ -229,6 +239,7 @@ export default function TimelineEditor({
         onFrameCapture={onFrameCapture}
         onGuidanceImageUpload={onGuidanceImageUpload}
         onGuidanceFrameCapture={onGuidanceFrameCapture}
+        onTimeUpdate={onTimeUpdate}
       />
     </TimelineEditorProvider>
   )

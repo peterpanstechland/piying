@@ -16,8 +16,10 @@ from ..models.admin.storyline import (
     TimelineSegment,
     AnimationConfig,
     AnimationType,
+    CharacterVideoPathResponse,
 )
 from ..services.admin.storyline_service import storyline_service
+from ..services.admin.character_video_service import character_video_service
 
 router = APIRouter(prefix="/api/storylines", tags=["Public Storylines"])
 
@@ -103,6 +105,7 @@ class PublicStorylineListResponse(BaseModel):
     cover_image: Optional[CoverImage] = None
     character_count: int = 0
     segment_count: int = 0
+    enabled: bool = True  # Whether storyline is enabled for user selection
 
     class Config:
         from_attributes = True
@@ -149,6 +152,7 @@ async def list_published_storylines(
             cover_image=cover_image,
             character_count=len(storyline.storyline_characters) if storyline.storyline_characters else 0,
             segment_count=len(storyline.segments) if storyline.segments else 0,
+            enabled=storyline.enabled if storyline.enabled is not None else True,
         ))
     
     return result
@@ -246,3 +250,75 @@ async def get_published_storyline(
         characters=characters,
         segments=segments,
     )
+
+
+
+@router.get("/{storyline_id}/video", response_model=CharacterVideoPathResponse)
+async def get_character_video_path(
+    storyline_id: str,
+    character_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterVideoPathResponse:
+    """
+    Get the video path for a character in a storyline.
+    
+    Property 4: Video Path Resolution
+    *For any* character selection in a storyline, the resolved video path
+    SHALL be the character-specific video path if it exists, otherwise
+    the storyline's base video path.
+    
+    Requirements 3.2, 3.3:
+    - Returns character-specific video path if it exists
+    - Falls back to storyline's base video if no specific video exists
+    
+    This endpoint is public and does not require authentication.
+    It is used by the frontend when a user selects a character.
+    
+    Args:
+        storyline_id: The storyline ID
+        character_id: The character ID
+    
+    Returns:
+        CharacterVideoPathResponse with resolved video path
+    
+    Raises:
+        404: Storyline not found
+    """
+    # Get storyline to verify it exists and get base video path
+    storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+    
+    if storyline is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Check if storyline is published
+    if storyline.status != StorylineStatus.PUBLISHED.value:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Get character-specific video path
+    character_video_path = await character_video_service.get_character_video_path(
+        db, storyline_id, character_id
+    )
+    
+    # Determine which video path to use
+    if character_video_path:
+        return CharacterVideoPathResponse(
+            storyline_id=storyline_id,
+            character_id=character_id,
+            video_path=character_video_path,
+            is_character_specific=True,
+        )
+    else:
+        # Fall back to base video
+        base_video_path = storyline.base_video_path or ""
+        return CharacterVideoPathResponse(
+            storyline_id=storyline_id,
+            character_id=character_id,
+            video_path=base_video_path,
+            is_character_specific=False,
+        )

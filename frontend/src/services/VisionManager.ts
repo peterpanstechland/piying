@@ -6,10 +6,16 @@ import {
   HandLandmarkerResult,
 } from "@mediapipe/tasks-vision";
 
-// Configuration Constants
-const VISION_BASE_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm";
-const POSE_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
-const HAND_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+// Use local files for offline deployment
+function getWasmBaseUrl(): string {
+  return `${window.location.origin}/mediapipe/wasm`;
+}
+function getPoseModelUrl(): string {
+  return `${window.location.origin}/mediapipe/pose_landmarker_lite.task`;
+}
+function getHandModelUrl(): string {
+  return `${window.location.origin}/mediapipe/hand_landmarker.task`;
+}
 
 /**
  * Singleton manager for MediaPipe Vision tasks
@@ -57,13 +63,23 @@ export class VisionManager {
       console.log("🚀 Starting Vision System Initialization...");
       
       try {
-        // 1. Load the unified WASM runtime ONCE
-        const vision = await FilesetResolver.forVisionTasks(VISION_BASE_URL);
+        const wasmUrl = getWasmBaseUrl();
+        const poseUrl = getPoseModelUrl();
+        const handUrl = getHandModelUrl();
+        
+        console.log("📦 Loading MediaPipe WASM from local files...");
+        console.log("WASM URL:", wasmUrl);
+        console.log("Pose Model URL:", poseUrl);
+        console.log("Hand Model URL:", handUrl);
+        
+        const vision = await FilesetResolver.forVisionTasks(wasmUrl);
+        console.log("✅ WASM loaded successfully");
 
-        // 2. Initialize Pose (GPU Accelerated)
+        // 2. Initialize Pose Landmarker
+        console.log("🎯 Loading Pose model...");
         this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: POSE_MODEL_URL,
+            modelAssetPath: poseUrl,
             delegate: "GPU",
           },
           runningMode: "VIDEO",
@@ -72,11 +88,13 @@ export class VisionManager {
           minPosePresenceConfidence: 0.5,
           minTrackingConfidence: 0.5,
         });
+        console.log("✅ Pose Landmarker ready");
 
-        // 3. Initialize Hands (GPU Accelerated)
+        // 3. Initialize Hand Landmarker
+        console.log("👋 Loading Hand model...");
         this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: HAND_MODEL_URL,
+            modelAssetPath: handUrl,
             delegate: "GPU",
           },
           runningMode: "VIDEO",
@@ -85,10 +103,15 @@ export class VisionManager {
           minHandPresenceConfidence: 0.5,
           minTrackingConfidence: 0.5,
         });
+        console.log("✅ Hand Landmarker ready");
 
-        console.log("✅ Vision System Ready.");
+        console.log("🎉 Vision System Ready.");
       } catch (error) {
         console.error("❌ Vision Init Failed:", error);
+        console.error("Error details:", {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         this.poseLandmarker = null;
         this.handLandmarker = null;
         throw error;

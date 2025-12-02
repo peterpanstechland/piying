@@ -204,46 +204,70 @@ export default function TimelineTrack({
     selectTransition(transitionId)
   }, [selectTransition])
 
+  // Auto-create missing transitions between adjacent segments (Requirements 6.1)
+  // Use a ref to track if we've already processed this segment count
+  const lastSegmentCountRef = useRef(0)
+  
+  useEffect(() => {
+    // Only process when segment count actually changes
+    if (segments.length < 2 || segments.length === lastSegmentCountRef.current) return
+    lastSegmentCountRef.current = segments.length
+    
+    const sortedSegments = [...segments].sort((a, b) => a.startTime - b.startTime)
+    
+    // Build a set of existing transition keys for fast lookup
+    const existingKeys = new Set(
+      transitions.map(t => `${t.fromSegmentIndex}-${t.toSegmentIndex}`)
+    )
+    
+    const missingTransitions: Transition[] = []
+    
+    for (let i = 0; i < sortedSegments.length - 1; i++) {
+      const currentSeg = sortedSegments[i]
+      const nextSeg = sortedSegments[i + 1]
+      const key = `${currentSeg.index}-${nextSeg.index}`
+      
+      if (!existingKeys.has(key)) {
+        missingTransitions.push(createDefaultTransition(currentSeg.index, nextSeg.index))
+      }
+    }
+    
+    if (missingTransitions.length > 0) {
+      setTransitions([...transitions, ...missingTransitions])
+    }
+  }, [segments, transitions, setTransitions])
+
   // Compute transition zones between adjacent segments (Requirements 6.1)
-  // Sort segments by start time and find gaps/transitions between them
   const transitionZones = useMemo(() => {
     if (segments.length < 2) return []
     
-    // Sort segments by start time
     const sortedSegments = [...segments].sort((a, b) => a.startTime - b.startTime)
     const zones: Array<{
       transition: Transition
-      position: number  // Position in pixels
+      position: number
     }> = []
     
     for (let i = 0; i < sortedSegments.length - 1; i++) {
       const currentSeg = sortedSegments[i]
       const nextSeg = sortedSegments[i + 1]
       
-      // Find existing transition or create a default one
-      let transition = transitions.find(
+      const transition = transitions.find(
         t => t.fromSegmentIndex === currentSeg.index && t.toSegmentIndex === nextSeg.index
       )
       
-      if (!transition) {
-        // Create a default transition if none exists
-        transition = createDefaultTransition(currentSeg.index, nextSeg.index)
-        // Add to transitions state
-        setTransitions([...transitions, transition])
+      if (transition) {
+        const currentSegEnd = currentSeg.startTime + currentSeg.duration
+        const transitionPosition = timeToPixel(currentSegEnd)
+        
+        zones.push({
+          transition,
+          position: transitionPosition,
+        })
       }
-      
-      // Calculate position at the boundary between segments
-      const currentSegEnd = currentSeg.startTime + currentSeg.duration
-      const transitionPosition = timeToPixel(currentSegEnd)
-      
-      zones.push({
-        transition,
-        position: transitionPosition,
-      })
     }
     
     return zones
-  }, [segments, transitions, setTransitions, timeToPixel])
+  }, [segments, transitions, timeToPixel])
 
   // Auto-scroll to keep playhead visible
   useEffect(() => {

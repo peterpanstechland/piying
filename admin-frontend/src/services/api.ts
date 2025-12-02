@@ -463,6 +463,14 @@ class AdminApiClient {
     return response.data
   }
 
+  // Enable/Disable storyline
+  async toggleStorylineEnabled(id: string, enabled: boolean): Promise<{ message: string; enabled: boolean }> {
+    const response = await this.client.put(`/storylines/${id}/enabled`, null, {
+      params: { enabled }
+    })
+    return response.data
+  }
+
   // Timeline Segments (Requirements 4.1, 4.2, 4.6)
   async updateTimelineSegments(storylineId: string, segments: Array<{
     index: number;
@@ -652,6 +660,83 @@ class AdminApiClient {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return response.data
+  }
+
+  // Character Video Management (Requirements 1.1, 1.2, 1.3, 1.4, 4.1, 4.2, 4.3, 4.4, 4.5)
+  async getCharacterVideos(storylineId: string): Promise<{
+    storyline_id: string
+    base_video_duration: number
+    characters: Array<{
+      character_id: string
+      character_name: string
+      character_thumbnail: string | null
+      has_video: boolean
+      video_path: string | null
+      video_duration: number | null
+      video_thumbnail: string | null
+      uploaded_at: string | null
+    }>
+  }> {
+    const response = await this.client.get(`/storylines/${storylineId}/character-videos`)
+    return response.data
+  }
+
+  async uploadCharacterVideo(
+    storylineId: string,
+    characterId: string,
+    formData: FormData,
+    onProgress?: (progress: number) => void
+  ): Promise<{
+    video_path: string
+    video_duration: number
+    video_thumbnail: string
+    message: string
+  }> {
+    const response = await this.client.post(
+      `/storylines/${storylineId}/characters/${characterId}/video`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            onProgress(progress)
+          }
+        },
+      }
+    )
+    return response.data
+  }
+
+  async getCharacterVideo(storylineId: string, characterId: string): Promise<{
+    character_id: string
+    character_name: string
+    character_thumbnail: string | null
+    has_video: boolean
+    video_path: string | null
+    video_duration: number | null
+    video_thumbnail: string | null
+    uploaded_at: string | null
+  }> {
+    const response = await this.client.get(
+      `/storylines/${storylineId}/characters/${characterId}/video`
+    )
+    return response.data
+  }
+
+  async deleteCharacterVideo(storylineId: string, characterId: string): Promise<{ message: string }> {
+    const response = await this.client.delete(
+      `/storylines/${storylineId}/characters/${characterId}/video`
+    )
+    return response.data
+  }
+
+  getCharacterVideoUrl(storylineId: string, characterId: string): string {
+    return `${API_BASE_URL}/storylines/${storylineId}/characters/${characterId}/video/stream`
+  }
+
+  getCharacterVideoThumbnailUrl(storylineId: string, characterId: string): string {
+    return `${API_BASE_URL}/storylines/${storylineId}/characters/${characterId}/video/thumbnail`
   }
 }
 

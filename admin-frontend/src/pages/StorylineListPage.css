@@ -1,7 +1,10 @@
+/* 东方黑金科技风 - 故事线列表页 */
 .storyline-list-page {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg-base);
 }
 
 .page-header {
@@ -20,13 +23,13 @@
 .page-header h1 {
   margin: 0;
   font-size: 24px;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
 .btn-back {
   background: none;
   border: none;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
   padding: 8px 12px;
@@ -35,16 +38,17 @@
 }
 
 .btn-back:hover {
-  color: #4f46e5;
-  background: #f3f4f6;
+  color: var(--accent-primary);
+  background: var(--bg-hover);
 }
 
 .saving-indicator {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--accent-primary);
   padding: 4px 12px;
-  background: #f3f4f6;
+  background: var(--bg-panel);
   border-radius: 12px;
+  border: 1px solid var(--divider);
 }
 
 .reorder-hint {
@@ -52,37 +56,43 @@
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-primary);
   border-radius: 8px;
   margin-bottom: 16px;
   font-size: 13px;
-  color: #0369a1;
+  color: var(--accent-gold-light);
 }
 
 .hint-icon {
   font-size: 16px;
 }
 
+/* 按钮样式 */
 .btn-primary {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: var(--accent-primary-hover);
+}
+
+.btn-primary:active {
+  background: var(--accent-primary-active);
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -91,13 +101,14 @@
 }
 
 .btn-secondary:hover {
-  background: #e5e7eb;
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
 }
 
 .btn-danger {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -106,28 +117,32 @@
 }
 
 .btn-danger:hover {
-  background: #fecaca;
+  background: var(--error);
+  color: var(--text-primary);
 }
 
+/* 错误提示 */
 .error-banner {
-  background: #fee2e2;
-  color: #dc2626;
+  background: rgba(198, 67, 47, 0.15);
+  color: var(--error);
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid var(--error);
 }
 
 .error-banner button {
   background: none;
   border: none;
-  color: #dc2626;
+  color: var(--error);
   font-size: 18px;
   cursor: pointer;
 }
 
+/* 加载状态 */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -139,8 +154,8 @@
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #4f46e5;
+  border: 3px solid var(--divider);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -151,16 +166,18 @@
   }
 }
 
+/* 空状态 */
 .empty-state {
   text-align: center;
   padding: 80px 0;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .empty-state p {
   margin-bottom: 16px;
 }
 
+/* 故事线列表 */
 .storyline-list {
   display: flex;
   flex-direction: column;
@@ -168,19 +185,21 @@
 }
 
 .storyline-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 12px;
   padding: 16px;
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+  transition: all 0.2s;
   cursor: grab;
+  box-shadow: 0 2px 8px var(--shadow-card);
 }
 
 .storyline-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 16px var(--shadow-card);
 }
 
 .storyline-card:active {
@@ -190,16 +209,16 @@
 .storyline-card.dragging {
   opacity: 0.5;
   transform: scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px var(--shadow-card);
 }
 
 .storyline-card.drag-over {
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
   border-style: dashed;
-  background: #f5f3ff;
+  background: var(--bg-hover);
 }
 
-/* Drag handle */
+/* 拖拽手柄 */
 .drag-handle {
   display: flex;
   align-items: center;
@@ -207,14 +226,14 @@
   width: 24px;
   height: 100%;
   min-height: 80px;
-  color: #9ca3af;
+  color: var(--text-muted);
   cursor: grab;
   flex-shrink: 0;
   user-select: none;
 }
 
 .drag-handle:hover {
-  color: #6b7280;
+  color: var(--accent-primary);
 }
 
 .drag-handle:active {
@@ -226,15 +245,16 @@
   letter-spacing: 2px;
 }
 
-/* Cover image styles */
+/* 封面图片 */
 .storyline-cover {
   width: 160px;
   height: 120px;
-  background: #f3f4f6;
+  background: var(--bg-base);
   border-radius: 8px;
   flex-shrink: 0;
   overflow: hidden;
   position: relative;
+  border: 1px solid var(--divider);
 }
 
 .storyline-cover img {
@@ -249,7 +269,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
+  background: var(--bg-base);
 }
 
 .cover-fallback .icon-fallback {
@@ -262,6 +282,7 @@
   font-size: 48px;
 }
 
+/* 故事线信息 */
 .storyline-info {
   flex: 1;
   min-width: 0;
@@ -277,10 +298,10 @@
 .storyline-info h3 {
   margin: 0;
   font-size: 18px;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
-/* Status badge styles */
+/* 状态标签 */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -292,25 +313,27 @@
 }
 
 .status-badge.status-published {
-  background: #dcfce7;
-  color: #16a34a;
+  background: rgba(79, 227, 193, 0.15);
+  color: var(--success);
+  border: 1px solid var(--success);
 }
 
 .status-badge.status-draft {
-  background: #fef3c7;
-  color: #d97706;
+  background: rgba(230, 160, 57, 0.15);
+  color: var(--warning);
+  border: 1px solid var(--warning);
 }
 
 .storyline-info .name-en {
   margin: 0 0 8px 0;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .storyline-info .synopsis {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #4b5563;
+  color: var(--text-secondary);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -332,15 +355,15 @@
 }
 
 .meta-label {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .meta-value {
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .meta-value.unbound {
-  color: #f59e0b;
+  color: var(--warning);
 }
 
 .storyline-actions {
@@ -350,14 +373,14 @@
   flex-shrink: 0;
 }
 
-/* Modal styles */
+/* 模态框 */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--shadow-popup);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -365,21 +388,24 @@
 }
 
 .modal {
-  background: white;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 12px;
   padding: 24px;
   max-width: 400px;
   width: 90%;
+  box-shadow: 0 8px 32px var(--shadow-card);
 }
 
 .modal h3 {
   margin: 0 0 12px 0;
   font-size: 18px;
+  color: var(--accent-gold-light);
 }
 
 .modal p {
   margin: 0 0 20px 0;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .modal-actions {
@@ -388,7 +414,7 @@
   justify-content: flex-end;
 }
 
-/* Responsive adjustments */
+/* 响应式 */
 @media (max-width: 768px) {
   .storyline-card {
     flex-direction: column;
@@ -402,7 +428,7 @@
     width: 32px;
     height: 32px;
     min-height: auto;
-    background: #f3f4f6;
+    background: var(--bg-hover);
     border-radius: 6px;
   }
 

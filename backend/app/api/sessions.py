@@ -15,8 +15,9 @@ from ..models import (
 )
 from ..services import SessionManager
 from ..services.video_renderer import VideoRenderer
-from ..config import ConfigLoader
+from ..config import ConfigLoader, SceneConfig, SegmentConfig
 from ..utils.logger import log_error_with_context
+from ..database import async_session_maker
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +28,91 @@ session_manager = SessionManager()
 config_loader = ConfigLoader()
 
 
+async def _get_scene_config_from_storyline(scene_id: str) -> SceneConfig | None:
+    """
+    Try to load scene configuration from database storyline.
+    
+    Args:
+        scene_id: Storyline ID (UUID format)
+        
+    Returns:
+        SceneConfig if found, None otherwise
+    """
+    from ..services.admin.storyline_service import storyline_service
+    
+    try:
+        async with async_session_maker() as db:
+            storyline = await storyline_service.get_storyline_by_id(db, scene_id)
+            
+            if storyline is None:
+                return None
+            
+            # Check if storyline has a base video
+            if not storyline.base_video_path:
+                logger.error(f"Storyline {scene_id} has no base video")
+                return None
+            
+            # Convert storyline segments to SegmentConfig format
+            segment_configs = []
+            if storyline.segments:
+                for seg in sorted(storyline.segments, key=lambda x: x.index):
+                    segment_configs.append(SegmentConfig(
+                        duration=seg.duration,
+                        path_type=seg.path_type or "static",
+                        offset_start=[seg.offset_start_x or 0, seg.offset_start_y or 0],
+                        offset_end=[seg.offset_end_x or 0, seg.offset_end_y or 0],
+                    ))
+            
+            # If no segments, create a default one based on video duration
+            if not segment_configs:
+                segment_configs.append(SegmentConfig(
+                    duration=storyline.video_duration or 30.0,
+                    path_type="static",
+                    offset_start=[0, 0],
+                    offset_end=[0, 0],
+                ))
+            
+            # Fix video path: storyline paths are stored as "storylines/{id}/base_video.mp4"
+            # but actual files are in "backend/data/storylines/{id}/base_video.mp4"
+            base_video_path = storyline.base_video_path
+            if base_video_path.startswith("storylines/"):
+                base_video_path = f"backend/data/{base_video_path}"
+            
+            # Create SceneConfig from storyline
+            return SceneConfig(
+                id=storyline.id,
+                name=storyline.name,
+                name_en=storyline.name_en or storyline.name,
+                description=storyline.description or "",
+                description_en=storyline.description_en or "",
+                base_video_path=base_video_path,
+                icon=storyline.icon or "⛏️",
+                segments=segment_configs,
+            )
+    except Exception as e:
+        logger.error(f"Failed to load storyline {scene_id}: {e}")
+        return None
+
+
 @router.post("", response_model=CreateSessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(request: CreateSessionRequest):
     """
     Create a new session
     
     Args:
-        request: Session creation request with scene_id
+        request: Session creation request with scene_id, optional character_id and video_path
         
     Returns:
         Created session information
+        
+    Requirements 3.4:
+    - Session stores selected character ID and corresponding video path
     """
-    session = session_manager.create_session(request.scene_id)
+    session = session_manager.create_session(
+        scene_id=request.scene_id,
+        character_id=request.character_id,
+        video_path=request.video_path
+    )
     return CreateSessionResponse(
         session_id=session.id,
         scene_id=session.scene_id,
@@ -195,13 +269,19 @@ async def _render_video_background(session_id: str):
             extra={"context": {"session_id": session_id, "status": "processing"}}
         )
         
-        # Get scene configuration
+        # Get scene configuration - try static config first, then database storyline
         scene_config = config_loader.get_scene(session.scene_id)
+        
+        if scene_config is None:
+            # Try to load from database storyline (UUID format scene_id)
+            logger.info(f"Scene {session.scene_id} not found in static config, trying database storyline")
+            scene_config = await _get_scene_config_from_storyline(session.scene_id)
+        
         if scene_config is None:
             log_error_with_context(
                 logger,
                 f"Scene configuration not found for scene {session.scene_id}",
-                ValueError(f"Scene {session.scene_id} not found"),
+                ValueError(f"Scene {session.scene_id} not found in config or database"),
                 session_id=session_id,
                 scene_id=session.scene_id,
                 error_type="scene_not_found"

@@ -1,6 +1,8 @@
+/* 东方黑金科技风 - 时间轴轨道 */
 .timeline-track-container {
   width: 100%;
-  background: #1a1a2e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -15,15 +17,15 @@
 .timeline-track__content {
   position: relative;
   min-height: 120px;
-  background: linear-gradient(to bottom, #16213e 0%, #1a1a2e 100%);
+  background: linear-gradient(to bottom, var(--bg-hover) 0%, var(--bg-panel) 100%);
 }
 
 /* Time ruler */
 .timeline-track__ruler {
   position: relative;
   height: 30px;
-  background: #16213e;
-  border-bottom: 1px solid #2d3a5a;
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--divider);
 }
 
 .timeline-track__marker {
@@ -31,11 +33,11 @@
   top: 0;
   width: 1px;
   height: 100%;
-  background: #2d3a5a;
+  background: var(--divider);
 }
 
 .timeline-track__marker--major {
-  background: #3d4a6a;
+  background: var(--border);
 }
 
 .timeline-track__marker--major::after {
@@ -45,7 +47,7 @@
   left: 0;
   width: 1px;
   height: 8px;
-  background: #4fc3f7;
+  background: var(--accent-primary);
 }
 
 .timeline-track__marker-label {
@@ -53,7 +55,7 @@
   top: 4px;
   left: 4px;
   font-size: 11px;
-  color: #888;
+  color: var(--text-secondary);
   white-space: nowrap;
   user-select: none;
 }
@@ -83,7 +85,7 @@
   transform: translateX(-50%);
   width: 14px;
   height: 14px;
-  background: #ff5252;
+  background: var(--error);
   border-radius: 2px;
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
 }
@@ -95,17 +97,17 @@
   transform: translateX(-50%);
   width: 2px;
   bottom: 0;
-  background: #ff5252;
+  background: var(--error);
 }
 
 .timeline-track__playhead:hover .timeline-track__playhead-head,
 .timeline-track__playhead--dragging .timeline-track__playhead-head {
-  background: #ff7043;
+  background: var(--warning);
 }
 
 .timeline-track__playhead:hover .timeline-track__playhead-line,
 .timeline-track__playhead--dragging .timeline-track__playhead-line {
-  background: #ff7043;
+  background: var(--warning);
 }
 
 /* Scrollbar styling */
@@ -114,18 +116,17 @@
 }
 
 .timeline-track::-webkit-scrollbar-track {
-  background: #16213e;
+  background: var(--bg-hover);
 }
 
 .timeline-track::-webkit-scrollbar-thumb {
-  background: #3d4a6a;
+  background: var(--border);
   border-radius: 4px;
 }
 
 .timeline-track::-webkit-scrollbar-thumb:hover {
-  background: #4d5a7a;
+  background: var(--accent-primary);
 }
-
 
 /* Snap indicator */
 .timeline-track__snap-indicator {
@@ -133,21 +134,21 @@
   top: 30px;
   bottom: 0;
   width: 1px;
-  background: rgba(255, 193, 7, 0.5);
+  background: rgba(230, 160, 57, 0.5);
   pointer-events: none;
   z-index: 50;
 }
 
 .timeline-track__snap-indicator--active {
-  background: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 0 4px rgba(255, 193, 7, 0.6);
+  background: rgba(230, 160, 57, 0.8);
+  box-shadow: 0 0 4px rgba(230, 160, 57, 0.6);
 }
 
 /* Playhead snap feedback */
 .timeline-track__playhead--snapped .timeline-track__playhead-head {
-  background: #ffc107;
+  background: var(--warning);
 }
 
 .timeline-track__playhead--snapped .timeline-track__playhead-line {
-  background: #ffc107;
+  background: var(--warning);
 }

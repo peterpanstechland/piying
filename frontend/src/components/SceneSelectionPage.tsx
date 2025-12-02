@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react';
+import { useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GestureCursorController, SceneCard } from '../services/gesture-cursor';
 import { CoverImage } from '../services/api-client';
@@ -19,6 +19,7 @@ export interface Scene {
   video_duration?: number;
   character_count?: number;
   segment_count?: number;
+  enabled?: boolean; // Whether storyline is enabled for user selection
   // Legacy segments array for backward compatibility
   segments: Array<{
     duration: number;
@@ -59,6 +60,13 @@ export const SceneSelectionPage = ({
   const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
   const [hoverProgress, setHoverProgress] = useState<number>(0);
   const [cardDimensions, setCardDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
+  const [isEntered, setIsEntered] = useState(false); // For entrance animation
+
+  // Trigger entrance animation after mount
+  useEffect(() => {
+    const timer = setTimeout(() => setIsEntered(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Helper to calculate screen coordinates
   const getScreenCoordinates = useCallback((normalizedX: number, normalizedY: number, canvasWidth: number, canvasHeight: number) => {
@@ -148,7 +156,11 @@ export const SceneSelectionPage = ({
     const updateHover = () => {
       const sceneCards: SceneCard[] = [];
       
+      // Only include enabled scenes for hover detection
       scenes.forEach((scene) => {
+        // Skip disabled scenes - they can't be selected
+        if (scene.enabled === false) return;
+        
         const element = document.getElementById(`scene-card-${scene.id}`);
         if (element) {
           const rect = element.getBoundingClientRect();
@@ -350,8 +362,18 @@ export const SceneSelectionPage = ({
   const isChineseLanguage = i18n.language === 'zh' || i18n.language === 'zh-CN';
 
   return (
-    <div className="scene-selection-page">
+    <div className={`scene-selection-page ${isEntered ? 'entered' : ''}`}>
       <canvas ref={videoCanvasRef} className="video-feed-layer" />
+      
+      {/* 皮影装饰元素 - 从两侧推入 */}
+      <div className="shadow-puppet-decor left">
+        <div className="puppet-silhouette puppet-1"></div>
+        <div className="puppet-silhouette puppet-2"></div>
+      </div>
+      <div className="shadow-puppet-decor right">
+        <div className="puppet-silhouette puppet-3"></div>
+        <div className="puppet-silhouette puppet-4"></div>
+      </div>
       
       <div className="scene-selection-overlay">
         <div className="scene-selection-header">
@@ -360,7 +382,7 @@ export const SceneSelectionPage = ({
         </div>
 
         <div className="scene-cards-container" ref={cardsContainerRef}>
-          {scenes.map((scene) => {
+          {scenes.map((scene, index) => {
             const isHovered = hoveredSceneId === scene.id;
             const sceneName = isChineseLanguage ? scene.name : scene.name_en;
             // sceneDescription is kept for backward compatibility but synopsis is preferred
@@ -401,11 +423,15 @@ export const SceneSelectionPage = ({
             const rectX = 12; // Center horizontally in the expansion zone
             const rectY = 12 + shadowOffset; // Shift down to balance shadow
 
+            // Check if scene is disabled (enabled is false or undefined defaults to true)
+            const isDisabled = scene.enabled === false;
+            
             return (
               <div
                 key={scene.id}
                 id={`scene-card-${scene.id}`}
-                className={`scene-card ${isHovered ? 'hovered' : ''} ${coverImageUrl ? 'has-cover' : ''}`}
+                className={`scene-card ${isHovered && !isDisabled ? 'hovered' : ''} ${coverImageUrl ? 'has-cover' : ''} ${isDisabled ? 'disabled' : ''}`}
+                style={{ animationDelay: `${index * 0.15}s` }}
               >
                 {/* New Background Layer */}
                 <div className="scene-card-bg">

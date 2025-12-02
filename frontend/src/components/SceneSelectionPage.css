@@ -9,6 +9,120 @@
   isolation: isolate;
 }
 
+/* ========== 皮影装饰元素 ========== */
+.shadow-puppet-decor {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 400px;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px 0;
+}
+
+.shadow-puppet-decor.left {
+  left: 0;
+  transform: translateX(-100%);
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  align-items: flex-start;
+  padding-left: 10px;
+}
+
+.shadow-puppet-decor.right {
+  right: 0;
+  transform: translateX(100%);
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0.3s;
+  align-items: flex-end;
+  padding-right: 10px;
+}
+
+.scene-selection-page.entered .shadow-puppet-decor.left {
+  transform: translateX(0);
+}
+
+.scene-selection-page.entered .shadow-puppet-decor.right {
+  transform: translateX(0);
+}
+
+/* 皮影剪影 - 使用真实图片，放大尺寸 */
+.puppet-silhouette {
+  width: 350px;
+  height: 400px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: 
+    drop-shadow(0 0 40px rgba(255, 150, 50, 0.5))
+    drop-shadow(0 0 80px rgba(255, 100, 30, 0.3))
+    brightness(0.25) sepia(1) hue-rotate(-10deg) saturate(2.5);
+  opacity: 0.9;
+  animation: puppet-sway 6s ease-in-out infinite;
+}
+
+/* 龙 - 左侧上方 */
+.puppet-silhouette.puppet-1 {
+  background-image: url('/images/dragon.png');
+  width: 380px;
+  height: 320px;
+  animation-delay: 0s;
+}
+
+/* 花1 - 左侧下方 */
+.puppet-silhouette.puppet-2 {
+  background-image: url('/images/flower1.png');
+  width: 280px;
+  height: 320px;
+  animation-delay: 1.2s;
+  opacity: 0.75;
+}
+
+/* 怪物 - 右侧上方 */
+.puppet-silhouette.puppet-3 {
+  background-image: url('/images/monster.webp');
+  width: 360px;
+  height: 420px;
+  animation-delay: 0.6s;
+  transform: scaleX(-1);
+}
+
+/* 树 - 右侧下方 */
+.puppet-silhouette.puppet-4 {
+  background-image: url('/images/tree0.webp');
+  width: 300px;
+  height: 380px;
+  animation-delay: 1.8s;
+  opacity: 0.7;
+  transform: scaleX(-1);
+}
+
+@keyframes puppet-sway {
+  0%, 100% {
+    transform: rotate(-1deg) translateY(0);
+  }
+  50% {
+    transform: rotate(1deg) translateY(-8px);
+  }
+}
+
+.puppet-silhouette.puppet-3,
+.puppet-silhouette.puppet-4 {
+  animation-name: puppet-sway-reverse;
+}
+
+@keyframes puppet-sway-reverse {
+  0%, 100% {
+    transform: scaleX(-1) rotate(-1deg) translateY(0);
+  }
+  50% {
+    transform: scaleX(-1) rotate(1deg) translateY(-8px);
+  }
+}
+
 /* 视频背景层 */
 .video-feed-layer {
   position: absolute;
@@ -80,61 +194,79 @@
 /* 场景卡片容器 */
 .scene-cards-container {
   display: flex;
-  gap: 50px;
+  gap: 40px;
   justify-content: center;
   align-items: stretch;
-  max-width: 1400px;
+  max-width: 1600px;
   width: 100%;
   position: relative;
   z-index: 2;
+  padding: 0 40px;
 }
 
-/* 场景卡片 - 皮影风格 */
+/* 场景卡片 - 横向卡片风格 */
 .scene-card {
   flex: 1;
-  min-width: 280px;
-  max-width: 380px;
-  border-radius: 8px;
-  padding: 45px 25px;
-  text-align: center;
-  transition: transform 0.2s ease;
+  min-width: 420px;
+  max-width: 520px;
+  aspect-ratio: 16 / 10;
+  border-radius: 16px;
+  text-align: left;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
   cursor: pointer;
   position: relative;
   overflow: visible;
   z-index: 1;
   isolation: isolate;
   will-change: transform;
+  
+  /* 出场动画初始状态 */
+  opacity: 0;
+  transform: translateY(80px) scale(0.85);
+  animation: card-entrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* SVG边框容器 */
+/* 卡片出场动画 */
+@keyframes card-entrance {
+  0% {
+    opacity: 0;
+    transform: translateY(80px) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* SVG边框容器 - 选中进度 */
 .scene-card-border {
   position: absolute;
-  top: -12px;
-  left: -12px;
-  width: calc(100% + 24px);
-  height: calc(100% + 24px);
+  top: -8px;
+  left: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
   pointer-events: none;
-  z-index: 1;
+  z-index: 10;
   overflow: visible;
 }
 
-/* 卡片背景 - 宣纸/皮革质感 */
+/* 卡片背景 - 封面图片容器 */
 .scene-card-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 50%, #d4c4b0 100%);
-  border: 3px solid #8b4513;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #3a2a1a 0%, #2a1a0a 100%);
+  border: 4px solid rgba(139, 69, 19, 0.6);
+  border-radius: 16px;
   box-shadow: 
-    0 0 30px rgba(255, 180, 80, 0.2),
-    0 10px 30px rgba(0, 0, 0, 0.5),
-    inset 0 0 40px rgba(139, 69, 19, 0.15);
+    0 0 40px rgba(255, 150, 50, 0.15),
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    inset 0 0 60px rgba(0, 0, 0, 0.3);
   z-index: 2;
-  transition: all 0.2s ease;
-  will-change: box-shadow, border-color, background;
+  transition: all 0.4s ease;
+  will-change: box-shadow, border-color;
   overflow: hidden;
 }
 
@@ -146,177 +278,230 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.85;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.scene-card:hover .scene-card-cover {
-  opacity: 0.95;
-  transform: scale(1.05);
-}
-
-.scene-card.hovered .scene-card-cover {
   opacity: 1;
+  transition: transform 0.5s ease;
+}
+
+.scene-card:hover .scene-card-cover,
+.scene-card.hovered .scene-card-cover {
   transform: scale(1.08);
 }
 
-/* 有封面图片时的内容层样式调整 */
-.scene-card.has-cover .scene-card-content {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
-  justify-content: flex-end;
-  padding-bottom: 25px;
-}
-
-.scene-card.has-cover .scene-name {
-  color: #fff8e1;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.scene-card.has-cover .scene-description {
-  color: rgba(255, 248, 225, 0.9);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-/* 角落装饰 - 传统纹样 */
-.scene-card-bg::before,
-.scene-card-bg::after {
-  content: '◆';
-  position: absolute;
-  font-size: 16px;
-  color: #8b4513;
-  transition: all 0.3s ease;
-  opacity: 0.7;
-  z-index: 3;
-}
-
-.scene-card-bg::before {
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.scene-card-bg::after {
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* 卡片内容层 */
+/* 卡片内容层 - 底部渐变文字区 */
 .scene-card-content {
-  position: relative;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 4;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  padding: 30px 25px 25px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.8) 40%,
+    rgba(0, 0, 0, 0.4) 70%,
+    transparent 100%
+  );
+  border-radius: 0 0 12px 12px;
 }
 
 /* 悬停状态 */
 .scene-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-12px) scale(1.02);
 }
 
-.scene-card:hover .scene-card-bg {
-  box-shadow: 
-    0 0 40px rgba(255, 180, 80, 0.4),
-    0 15px 40px rgba(0, 0, 0, 0.6),
-    inset 0 0 30px rgba(139, 69, 19, 0.2);
-  border-color: #d4af37;
-}
-
-.scene-card.hovered {
-  transform: scale(1.08);
-}
-
+.scene-card:hover .scene-card-bg,
 .scene-card.hovered .scene-card-bg {
-  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 50%, #ffcc80 100%);
+  border-color: rgba(255, 180, 80, 0.8);
   box-shadow: 
-    0 0 50px rgba(212, 175, 55, 0.6),
-    0 20px 50px rgba(0, 0, 0, 0.6),
-    inset 0 0 30px rgba(255, 160, 0, 0.3);
-  border-color: #c41e3a;
+    0 0 60px rgba(255, 150, 50, 0.4),
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    inset 0 0 40px rgba(255, 150, 50, 0.1);
 }
 
-.scene-card.hovered .scene-card-bg::before,
-.scene-card.hovered .scene-card-bg::after {
-  color: #c41e3a;
+/* 选中进度边框发光 */
+.scene-card.hovered .scene-card-bg {
+  border-color: rgba(255, 120, 0, 0.9);
+  box-shadow: 
+    0 0 80px rgba(255, 120, 0, 0.6),
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    inset 0 0 60px rgba(255, 120, 0, 0.15);
+}
+
+/* 有封面图片时的样式 */
+.scene-card.has-cover .scene-card-bg {
+  background: #000;
+}
+
+.scene-card.has-cover .scene-name {
+  color: #fff8e1;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.scene-card.has-cover .scene-description {
+  color: rgba(255, 248, 225, 0.9);
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* 无封面图片时的默认背景 - 皮影风格渐变 */
+.scene-card:not(.has-cover) .scene-card-bg {
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(139, 69, 19, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(255, 150, 50, 0.2) 0%, transparent 50%),
+    linear-gradient(135deg, #5a4030 0%, #3a2515 50%, #2a1a0a 100%);
+}
+
+.scene-card:not(.has-cover) .scene-card-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M50 10 L60 40 L90 40 L65 60 L75 90 L50 70 L25 90 L35 60 L10 40 L40 40 Z' fill='rgba(255,200,100,0.05)'/%3E%3C/svg%3E");
+  background-size: 80px 80px;
+  background-position: center;
+  background-repeat: repeat;
+  opacity: 0.5;
+}
+
+.scene-card:not(.has-cover) .scene-card-content {
+  background: linear-gradient(
+    to top,
+    rgba(20, 10, 5, 0.95) 0%,
+    rgba(30, 20, 10, 0.8) 40%,
+    transparent 100%
+  );
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-radius: 12px;
+}
+
+.scene-card:not(.has-cover) .scene-name {
+  color: #f5e6d3;
+}
+
+.scene-card:not(.has-cover) .scene-description {
+  color: rgba(245, 230, 211, 0.8);
 }
 
 /* 进度条边框 - 优化性能 */
 .scene-card-border rect {
-  stroke-linecap: square;
-  filter: drop-shadow(0 0 15px #c41e3a);
-  stroke: #c41e3a;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 20px rgba(255, 120, 0, 0.8));
+  stroke: #ff8c00;
   will-change: stroke-dashoffset;
 }
 
-/* 场景图标 */
+/* 场景图标 - 无封面时显示 */
 .scene-icon {
-  font-size: 90px;
-  margin-bottom: 20px;
-  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+  font-size: 60px;
+  margin-bottom: 15px;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
   opacity: 0.9;
 }
 
-/* 场景名称 - 书法风格 */
+/* 场景名称 - 大标题 */
 .scene-name {
-  font-size: 38px;
+  font-size: 32px;
   font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
-  font-weight: 600;
-  color: #3e2723;
-  margin: 0 0 12px 0;
-  letter-spacing: 0.15em;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  color: #fff8e1;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.1em;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+  line-height: 1.2;
 }
 
 /* 场景描述 */
 .scene-description {
-  font-size: 16px;
+  font-size: 14px;
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-  color: #5d4037;
+  color: rgba(255, 248, 225, 0.85);
   margin: 0;
-  line-height: 1.6;
-  font-weight: 500;
+  line-height: 1.5;
+  font-weight: 400;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 片段数量 */
 .scene-segment-count {
-  font-size: 13px;
+  font-size: 12px;
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-  color: #8b7355;
-  margin: 8px 0 0 0;
-  opacity: 0.8;
+  color: rgba(255, 200, 100, 0.8);
+  margin: 10px 0 0 0;
+  padding: 4px 12px;
+  background: rgba(255, 150, 50, 0.2);
+  border-radius: 12px;
+  display: inline-block;
+  border: 1px solid rgba(255, 150, 50, 0.3);
 }
 
 .scene-card.has-cover .scene-segment-count {
-  color: rgba(255, 248, 225, 0.7);
+  color: rgba(255, 200, 100, 0.9);
 }
 
 /* 标题区域 */
 .scene-selection-header {
   margin-bottom: 50px;
-  text-align: center;
-  position: relative;
-  z-index: 10;
+  opacity: 0;
+  transform: translateY(-30px);
+  animation: header-entrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+}
+
+@keyframes header-entrance {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .scene-selection-header h1 {
-  font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
-  font-size: 56px;
-  color: #f5e6d3;
-  letter-spacing: 0.2em;
-  margin: 0 0 15px 0;
-  text-shadow: 
-    2px 2px 4px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(255, 180, 80, 0.4);
+  opacity: 0;
+  animation: title-glow 1s ease-out 0.4s forwards;
+}
+
+@keyframes title-glow {
+  0% {
+    opacity: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    text-shadow: 
+      2px 2px 4px rgba(0, 0, 0, 0.8),
+      0 0 60px rgba(255, 180, 80, 0.8),
+      0 0 100px rgba(255, 150, 50, 0.5);
+  }
+  100% {
+    opacity: 1;
+    text-shadow: 
+      2px 2px 4px rgba(0, 0, 0, 0.8),
+      0 0 40px rgba(255, 180, 80, 0.4);
+  }
 }
 
 .scene-selection-hint {
-  font-family: 'Noto Sans SC', sans-serif;
-  font-size: 22px;
-  color: rgba(212, 175, 55, 0.9);
-  letter-spacing: 0.1em;
+  opacity: 0;
+  animation: hint-fade 0.6s ease-out 0.8s forwards;
+}
+
+@keyframes hint-fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* 响应式 */
@@ -341,4 +526,55 @@
   .scene-card {
     max-width: 450px;
   }
+}
+
+/* 禁用状态 - 灰显不可选择 */
+.scene-card.disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.scene-card.disabled .scene-card-bg {
+  filter: grayscale(100%);
+  opacity: 0.5;
+  background: linear-gradient(135deg, #a0a0a0 0%, #808080 50%, #606060 100%);
+  border-color: #666;
+  box-shadow: 
+    0 0 10px rgba(100, 100, 100, 0.2),
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    inset 0 0 20px rgba(50, 50, 50, 0.15);
+}
+
+.scene-card.disabled .scene-card-cover {
+  filter: grayscale(100%);
+  opacity: 0.4;
+}
+
+.scene-card.disabled .scene-card-content {
+  opacity: 0.6;
+}
+
+.scene-card.disabled .scene-name {
+  color: #888;
+}
+
+.scene-card.disabled .scene-description {
+  color: #777;
+}
+
+.scene-card.disabled .scene-segment-count {
+  color: #666;
+}
+
+.scene-card.disabled .scene-card-bg::before,
+.scene-card.disabled .scene-card-bg::after {
+  color: #666;
+  opacity: 0.4;
+}
+
+/* 禁用状态下有封面图片的样式 */
+.scene-card.disabled.has-cover .scene-name,
+.scene-card.disabled.has-cover .scene-description,
+.scene-card.disabled.has-cover .scene-segment-count {
+  color: rgba(200, 200, 200, 0.7);
 }

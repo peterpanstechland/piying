@@ -73,7 +73,7 @@ class TestAbandonedSessionProperties:
         shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     @given(session_strategy())
-    @settings(max_examples=20, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_mark_cancelled_updates_status_to_cancelled(self, session_data):
         """
         Property: For any session, calling mark_cancelled should update status to CANCELLED
@@ -97,7 +97,7 @@ class TestAbandonedSessionProperties:
         assert updated_session.status == SessionStatus.CANCELLED
     
     @given(session_strategy())
-    @settings(max_examples=20, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_cancelled_session_persists_to_storage(self, session_data):
         """
         Property: For any session marked as cancelled, the status should persist to storage
@@ -117,7 +117,7 @@ class TestAbandonedSessionProperties:
         assert reloaded_session.status == SessionStatus.CANCELLED
     
     @given(session_strategy())
-    @settings(max_examples=20, deadline=None)
+    @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.data_too_large])
     def test_mark_cancelled_preserves_session_data(self, session_data):
         """
         Property: For any session, marking as cancelled should preserve all other session data

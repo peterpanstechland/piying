@@ -78,7 +78,7 @@ function App() {
           }
         />
         <Route
-          path="/storylines/:id/timeline"
+          path="/storylines/new/timeline"
           element={
             <ProtectedRoute>
               <StorylineTimelineEditorPage />
@@ -86,7 +86,7 @@ function App() {
           }
         />
         <Route
-          path="/storylines/new/timeline"
+          path="/storylines/:id/timeline"
           element={
             <ProtectedRoute>
               <StorylineTimelineEditorPage />

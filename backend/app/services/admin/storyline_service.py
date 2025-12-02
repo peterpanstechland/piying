@@ -447,6 +447,12 @@ class StorylineService:
         Delete a storyline and its associated files.
         Implements cascade deletion (Requirements 1.4, Property 4).
         
+        Property 7: Storyline Cascade Delete
+        *For any* storyline deletion, all associated character-video records
+        and their video files SHALL be deleted.
+        
+        Requirements 5.3
+        
         Returns:
             Tuple of (success, error_message, deleted_files)
         """
@@ -455,6 +461,13 @@ class StorylineService:
             return False, "Storyline not found", []
         
         deleted_files = []
+        
+        # Delete character-specific videos first (Property 7, Requirements 5.3)
+        from .character_video_service import character_video_service
+        _, char_video_deleted_files = await character_video_service.delete_all_character_videos_for_storyline(
+            db, storyline_id
+        )
+        deleted_files.extend(char_video_deleted_files)
         
         # Collect all file paths to delete
         files_to_delete = []
@@ -1094,6 +1107,7 @@ class StorylineService:
             icon_image=storyline.icon_image,
             status=StorylineStatus(storyline.status) if storyline.status else StorylineStatus.DRAFT,
             display_order=storyline.display_order or 0,
+            enabled=bool(storyline.enabled) if hasattr(storyline, 'enabled') else False,
             base_video_path=storyline.base_video_path,
             video_duration=storyline.video_duration or 0.0,
             video_resolution=video_resolution,
@@ -1128,6 +1142,7 @@ class StorylineService:
             icon_image=storyline.icon_image,
             status=StorylineStatus(storyline.status) if storyline.status else StorylineStatus.DRAFT,
             display_order=storyline.display_order or 0,
+            enabled=bool(storyline.enabled) if hasattr(storyline, 'enabled') else False,
             video_duration=storyline.video_duration or 0.0,
             cover_image=cover_image,
             segment_count=len(storyline.segments),
@@ -1201,9 +1216,10 @@ class StorylineService:
 
     async def get_published_storylines(self, db: AsyncSession) -> List[StorylineDB]:
         """
-        Get only published storylines sorted by display_order (Requirements 10.1, 10.2).
+        Get all published storylines sorted by display_order (Requirements 10.1, 10.2).
         
-        For frontend integration - only returns storylines with status 'published'.
+        For frontend integration - returns all storylines with status 'published'.
+        The 'enabled' field is included so frontend can grey out disabled storylines.
         """
         result = await db.execute(
             select(StorylineDB)
@@ -1758,6 +1774,13 @@ class StorylineService:
         
         Requirements 7.2, 7.3, 7.4: Manage character associations.
         
+        Property 3: Cascade Delete on Character Removal
+        *For any* storyline-character association with an uploaded video,
+        removing the character from the storyline SHALL result in the
+        video file being deleted from the file system.
+        
+        Requirements 1.4
+        
         Property 16: Character Count Validation
         *For any* storyline character configuration, the number of selected 
         characters SHALL be between 1 and 10 inclusive.
@@ -1775,7 +1798,14 @@ class StorylineService:
         Returns:
             Tuple of (success, error_message)
         """
-        storyline = await self.get_storyline_by_id(db, storyline_id)
+        # Load storyline with character associations
+        result = await db.execute(
+            select(StorylineDB)
+            .where(StorylineDB.id == storyline_id)
+            .options(selectinload(StorylineDB.storyline_characters))
+        )
+        storyline = result.scalar_one_or_none()
+        
         if storyline is None:
             return False, "Storyline not found"
         
@@ -1791,11 +1821,24 @@ class StorylineService:
         
         # Verify all characters exist
         for char_id in character_config.character_ids:
-            result = await db.execute(
+            char_result = await db.execute(
                 select(CharacterDB).where(CharacterDB.id == char_id)
             )
-            if result.scalar_one_or_none() is None:
+            if char_result.scalar_one_or_none() is None:
                 return False, f"Character '{char_id}' not found"
+        
+        # Identify characters being removed (Property 3, Requirements 1.4)
+        existing_char_ids = {sc.character_id for sc in storyline.storyline_characters}
+        new_char_ids = set(character_config.character_ids)
+        removed_char_ids = existing_char_ids - new_char_ids
+        
+        # Delete character videos for removed characters
+        if removed_char_ids:
+            from .character_video_service import character_video_service
+            for char_id in removed_char_ids:
+                await character_video_service.delete_character_video_on_removal(
+                    db, storyline_id, char_id
+                )
         
         # Delete existing character associations
         await db.execute(
@@ -1832,6 +1875,13 @@ class StorylineService:
         *For any* character deleted from the system, that character SHALL be 
         removed from all storyline character configurations.
         
+        Property 3: Cascade Delete on Character Removal
+        *For any* storyline-character association with an uploaded video,
+        removing the character from the storyline SHALL result in the
+        video file being deleted from the file system.
+        
+        Requirements 1.4
+        
         Property 19: Character Deletion Cascade
         
         Args:
@@ -1851,8 +1901,16 @@ class StorylineService:
         
         affected_storyline_ids = set()
         
+        # Import character video service for video cleanup
+        from .character_video_service import character_video_service
+        
         for assoc in associations:
             affected_storyline_ids.add(assoc.storyline_id)
+            
+            # Delete character video if it exists (Property 3, Requirements 1.4)
+            await character_video_service.delete_character_video_on_removal(
+                db, assoc.storyline_id, character_id
+            )
             
             # If this was the default character, we need to update the default
             if assoc.is_default:

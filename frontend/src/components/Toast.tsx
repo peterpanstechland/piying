@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import './Toast.css';
 
 export enum ToastType {
@@ -171,14 +171,48 @@ export const useToast = () => {
     return unsubscribe;
   }, []);
 
-  return {
+  // Memoize all callback functions to prevent unnecessary re-renders
+  const showToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
+    return toastManager.show(toast);
+  }, []);
+
+  const showSuccess = useCallback((title: string, message: string, duration?: number) => {
+    return toastManager.success(title, message, duration);
+  }, []);
+
+  const showError = useCallback((
+    title: string, 
+    message: string, 
+    action?: ToastMessage['action'], 
+    duration?: number
+  ) => {
+    return toastManager.error(title, message, action, duration);
+  }, []);
+
+  const showWarning = useCallback((title: string, message: string, duration?: number) => {
+    return toastManager.warning(title, message, duration);
+  }, []);
+
+  const showInfo = useCallback((title: string, message: string, duration?: number) => {
+    return toastManager.info(title, message, duration);
+  }, []);
+
+  const closeToast = useCallback((id: string) => {
+    toastManager.close(id);
+  }, []);
+
+  const closeAll = useCallback(() => {
+    toastManager.closeAll();
+  }, []);
+
+  return useMemo(() => ({
     toasts,
-    showToast: toastManager.show.bind(toastManager),
-    showSuccess: toastManager.success.bind(toastManager),
-    showError: toastManager.error.bind(toastManager),
-    showWarning: toastManager.warning.bind(toastManager),
-    showInfo: toastManager.info.bind(toastManager),
-    closeToast: toastManager.close.bind(toastManager),
-    closeAll: toastManager.closeAll.bind(toastManager),
-  };
+    showToast,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    closeToast,
+    closeAll,
+  }), [toasts, showToast, showSuccess, showError, showWarning, showInfo, closeToast, closeAll]);
 };

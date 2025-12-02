@@ -1,101 +1,113 @@
+/* 东方黑金科技风 - 导出导入页面 */
 .export-import-container {
   min-height: 100vh;
-  background: #1a1a2e;
+  background: var(--bg-base);
 }
 
-.page-header {
+.export-import-container .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background: #1e1e2e;
-  border-bottom: 1px solid #333;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.back-link {
-  color: #9ca3af;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.back-link:hover {
-  color: #fff;
-}
-
-.page-header h1 {
-  color: #fff;
-  font-size: 1.5rem;
+.export-import-container .page-header h1 {
+  color: var(--text-primary);
+  font-size: 24px;
   margin: 0;
+  flex: 1;
 }
 
-.user-info {
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
 }
 
-.user-info span {
-  color: #ccc;
+.user-name {
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 
-.user-info button {
-  padding: 0.5rem 1rem;
-  background: #444;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+.btn-secondary {
+  padding: 10px 20px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
 }
 
-.user-info button:hover {
-  background: #555;
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
 }
 
 .page-content {
-  padding: 2rem;
-  max-width: 800px;
+  padding: 0 24px 24px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .settings-card {
-  background: #2a2a3e;
-  border: 1px solid #3a3a4e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow-card);
 }
 
 .settings-card h2 {
-  color: #fff;
+  color: var(--accent-gold-light);
   font-size: 1.2rem;
   margin: 0 0 0.5rem 0;
 }
 
 .section-description {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0 0 1.5rem 0;
 }
 
 .error-message {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid #ef4444;
-  color: #fca5a5;
+  background: rgba(198, 67, 47, 0.15);
+  border: 1px solid var(--error);
+  color: var(--error);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .success-message {
-  background: rgba(34, 197, 94, 0.2);
-  border: 1px solid #22c55e;
-  color: #86efac;
+  background: rgba(79, 227, 193, 0.15);
+  border: 1px solid var(--success);
+  color: var(--success);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -108,15 +120,15 @@
 }
 
 .result-message.success {
-  background: rgba(34, 197, 94, 0.2);
-  border: 1px solid #22c55e;
-  color: #86efac;
+  background: rgba(79, 227, 193, 0.15);
+  border: 1px solid var(--success);
+  color: var(--success);
 }
 
 .result-message.error {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid #ef4444;
-  color: #fca5a5;
+  background: rgba(198, 67, 47, 0.15);
+  border: 1px solid var(--error);
+  color: var(--error);
 }
 
 .result-message p {
@@ -136,9 +148,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: #1e1e2e;
+  background: var(--bg-base);
   border-radius: 8px;
-  color: #d1d5db;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -148,18 +160,18 @@
 
 .export-btn {
   padding: 0.75rem 2rem;
-  background: #4f46e5;
-  color: #fff;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .export-btn:hover:not(:disabled) {
-  background: #4338ca;
+  background: var(--accent-primary-hover);
 }
 
 .export-btn:disabled {
@@ -183,8 +195,8 @@
 .file-label {
   display: block;
   padding: 2rem;
-  background: #1e1e2e;
-  border: 2px dashed #3a3a4e;
+  background: var(--bg-base);
+  border: 2px dashed var(--divider);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -192,8 +204,8 @@
 }
 
 .file-label:hover {
-  border-color: #4f46e5;
-  background: rgba(79, 70, 229, 0.05);
+  border-color: var(--accent-primary);
+  background: rgba(217, 164, 65, 0.05);
 }
 
 .upload-prompt {
@@ -201,7 +213,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .upload-icon {
@@ -210,7 +222,7 @@
 
 .file-hint {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .selected-file {
@@ -218,7 +230,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .file-icon {
@@ -230,7 +242,7 @@
 }
 
 .file-size {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -241,8 +253,8 @@
   width: 24px;
   height: 24px;
   padding: 0;
-  background: #374151;
-  color: #9ca3af;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -252,23 +264,24 @@
 }
 
 .clear-file-btn:hover {
-  background: #4b5563;
-  color: #fff;
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 .preview-btn {
   padding: 0.75rem 1.5rem;
-  background: #374151;
-  color: #fff;
-  border: none;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .preview-btn:hover:not(:disabled) {
-  background: #4b5563;
+  background: var(--bg-active);
+  border-color: var(--accent-primary);
 }
 
 .preview-btn:disabled {
@@ -280,11 +293,11 @@
 .import-preview {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #3a3a4e;
+  border-top: 1px solid var(--divider);
 }
 
 .import-preview h3 {
-  color: #fff;
+  color: var(--text-primary);
   font-size: 1rem;
   margin: 0 0 1rem 0;
 }
@@ -292,7 +305,7 @@
 .preview-section {
   margin-bottom: 1rem;
   padding: 1rem;
-  background: #1e1e2e;
+  background: var(--bg-base);
   border-radius: 8px;
 }
 
@@ -300,7 +313,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #d1d5db;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0 0 0.5rem 0;
 }
@@ -312,7 +325,7 @@
 .preview-list {
   margin: 0;
   padding-left: 1.5rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
@@ -323,18 +336,18 @@
 .import-btn {
   margin-top: 1rem;
   padding: 0.75rem 2rem;
-  background: #22c55e;
-  color: #fff;
+  background: var(--success);
+  color: var(--bg-base);
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .import-btn:hover:not(:disabled) {
-  background: #16a34a;
+  opacity: 0.9;
 }
 
 .import-btn:disabled {
@@ -349,7 +362,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--shadow-popup);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,22 +370,23 @@
 }
 
 .confirm-dialog {
-  background: #2a2a3e;
-  border: 1px solid #3a3a4e;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 12px;
   padding: 1.5rem;
   max-width: 450px;
   width: 90%;
+  box-shadow: 0 8px 32px var(--shadow-card);
 }
 
 .confirm-dialog h3 {
-  color: #fff;
+  color: var(--accent-gold-light);
   font-size: 1.2rem;
   margin: 0 0 1rem 0;
 }
 
 .confirm-dialog p {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   margin: 0 0 1.5rem 0;
   line-height: 1.5;
@@ -381,7 +395,7 @@
 .overwrite-option {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: #1e1e2e;
+  background: var(--bg-base);
   border-radius: 8px;
 }
 
@@ -389,21 +403,21 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: #fff;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
 .checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #4f46e5;
+  accent-color: var(--accent-primary);
 }
 
 .option-hint {
   display: block;
   margin-top: 0.5rem;
   margin-left: 1.75rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -415,31 +429,31 @@
 
 .cancel-btn {
   padding: 0.75rem 1.5rem;
-  background: #374151;
-  color: #fff;
-  border: none;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .cancel-btn:hover {
-  background: #4b5563;
+  background: var(--bg-active);
 }
 
 .confirm-btn {
   padding: 0.75rem 1.5rem;
-  background: #22c55e;
-  color: #fff;
+  background: var(--success);
+  color: var(--bg-base);
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .confirm-btn:hover {
-  background: #16a34a;
+  opacity: 0.9;
 }

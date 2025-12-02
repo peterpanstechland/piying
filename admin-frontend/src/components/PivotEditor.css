@@ -1,3 +1,4 @@
+/* 东方黑金科技风 - 旋转锚点编辑器 */
 .pivot-editor {
   display: flex;
   flex-direction: column;
@@ -9,7 +10,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f9fafb;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
 }
 
@@ -19,28 +21,30 @@
 }
 
 .mode-btn {
-  background: white;
-  border: 1px solid #d1d5db;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .mode-btn:hover {
-  background: #f3f4f6;
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 .mode-btn.active {
-  background: #4f46e5;
-  color: white;
-  border-color: #4f46e5;
+  background: var(--accent-primary);
+  color: var(--bg-base);
+  border-color: var(--accent-primary);
 }
 
 .btn-primary {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -50,7 +54,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: var(--accent-primary-hover);
 }
 
 .btn-primary:disabled {
@@ -65,9 +69,10 @@
 
 .canvas-container {
   flex: 1;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--divider);
   border-radius: 8px;
   overflow: hidden;
+  background: var(--bg-base);
 }
 
 .canvas-container canvas {
@@ -83,8 +88,8 @@
 }
 
 .sidebar-section {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   padding: 16px;
 }
@@ -92,7 +97,7 @@
 .sidebar-section h3 {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #374151;
+  color: var(--accent-gold-light);
 }
 
 .instructions {
@@ -103,13 +108,13 @@
 
 .instructions li {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   line-height: 1.4;
 }
 
 .instructions li strong {
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .property-group {
@@ -123,13 +128,14 @@
 .property-group label {
   display: block;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .property-group input[type="range"] {
   width: calc(100% - 40px);
   vertical-align: middle;
+  accent-color: var(--accent-primary);
 }
 
 .property-group .value {
@@ -137,14 +143,14 @@
   width: 30px;
   text-align: right;
   font-size: 12px;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .pivot-values {
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .connections-list {
@@ -157,23 +163,24 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: var(--bg-hover);
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 13px;
+  color: var(--text-primary);
 }
 
 .btn-remove-conn {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 16px;
   cursor: pointer;
   padding: 0 4px;
 }
 
 .btn-remove-conn:hover {
-  color: #dc2626;
+  color: var(--error);
 }
 
 .z-order-list {
@@ -187,45 +194,45 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: white;
+  background: var(--bg-hover);
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .z-order-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-active);
 }
 
 .z-order-item.selected {
-  background: #ede9fe;
-  border: 1px solid #4f46e5;
+  background: rgba(217, 164, 65, 0.15);
+  border: 1px solid var(--accent-primary);
 }
 
 .z-order-rank {
   width: 20px;
   height: 20px;
-  background: #e5e7eb;
+  background: var(--border);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .z-order-item.selected .z-order-rank {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
 }
 
 .z-order-name {
   flex: 1;
   font-size: 13px;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .z-order-value {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--text-muted);
 }

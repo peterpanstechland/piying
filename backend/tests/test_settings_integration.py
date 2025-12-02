@@ -236,6 +236,20 @@ class TestS3Configuration:
     @pytest.mark.asyncio
     async def test_s3_mode_requires_all_credentials(self, async_client: AsyncClient, auth_token: str):
         """Test that S3 mode requires all credentials."""
+        # First, reset to local mode and clear any existing S3 credentials
+        # This ensures the test is isolated from any previous state
+        await async_client.put(
+            "/api/admin/settings/storage",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={
+                "mode": "local",
+                "s3_bucket": "",
+                "s3_region": "",
+                "s3_access_key": "",
+                "s3_secret_key": ""
+            }
+        )
+        
         # Try to set S3 mode without credentials
         response = await async_client.put(
             "/api/admin/settings/storage",

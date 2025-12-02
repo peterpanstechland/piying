@@ -24,12 +24,19 @@ class SessionManager:
         """
         self.storage_manager = storage_manager or StorageManager()
     
-    def create_session(self, scene_id: str) -> Session:
+    def create_session(
+        self, 
+        scene_id: str, 
+        character_id: Optional[str] = None,
+        video_path: Optional[str] = None
+    ) -> Session:
         """
         Create a new session
         
         Args:
             scene_id: Scene identifier for this session
+            character_id: Optional selected character ID for motion capture
+            video_path: Optional resolved video path (character-specific or default)
             
         Returns:
             Created Session object with unique ID and pending status
@@ -38,6 +45,8 @@ class SessionManager:
         session = Session(
             id=session_id,
             scene_id=scene_id,
+            character_id=character_id,
+            video_path=video_path,
             status=SessionStatus.PENDING,
             segments=[],
             output_path=None,
@@ -52,6 +61,8 @@ class SessionManager:
             "created",
             session_id,
             scene_id=scene_id,
+            character_id=character_id,
+            video_path=video_path,
             status=session.status.value
         )
         

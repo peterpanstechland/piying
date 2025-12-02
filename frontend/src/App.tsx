@@ -47,6 +47,7 @@ const loadScenes = async (apiClient: APIClient): Promise<Scene[]> => {
         video_duration: storyline.video_duration,
         character_count: storyline.character_count,
         segment_count: storyline.segment_count,
+        enabled: storyline.enabled, // Pass enabled status for grey-out display
         segments: [], // Will be loaded when storyline is selected
       }));
     }
@@ -176,7 +177,7 @@ function App() {
     };
   }, []);
 
-  // Load scenes from API
+  // Load scenes from API (only once on mount)
   useEffect(() => {
     loadScenes(apiClientRef.current)
       .then(setScenes)
@@ -187,7 +188,8 @@ function App() {
           '使用默认场景配置。部分功能可能受限。'
         );
       });
-  }, [showWarning]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - showWarning is stable via toastManager singleton
 
   // Initialize camera and detection (only once on mount)
   useEffect(() => {
@@ -269,9 +271,10 @@ function App() {
       }
     }
 
-    // Handle hand cursor in SCENE_SELECT, SEGMENT_REVIEW, and FINAL_RESULT states
+    // Handle hand cursor in SCENE_SELECT, CHARACTER_SELECT, SEGMENT_REVIEW, and FINAL_RESULT states
     if (
       currentState === AppState.SCENE_SELECT || 
+      currentState === AppState.CHARACTER_SELECT ||
       currentState === AppState.SEGMENT_REVIEW ||
       currentState === AppState.FINAL_RESULT
     ) {
@@ -348,18 +351,28 @@ function App() {
       }
       
       // No characters or fetch failed - proceed directly to session creation
-      await createSessionAndStartRecording(scene, null);
+      // No character-specific video path needed when no characters
+      await createSessionAndStartRecording(scene, null, undefined);
     }
   }, [scenes]);
 
   // Create session and start recording flow
-  const createSessionAndStartRecording = useCallback(async (scene: Scene, characterId: string | null) => {
+  // Requirements 3.4: Session stores selected character ID and corresponding video path
+  const createSessionAndStartRecording = useCallback(async (
+    scene: Scene, 
+    characterId: string | null,
+    videoPath?: string
+  ) => {
     if (!stateMachineRef.current) return;
     
     try {
-      // Create session via API
-      const response = await apiClientRef.current.createSession(scene.id);
-      console.log('Session created:', response.session_id);
+      // Create session via API with character ID and video path
+      const response = await apiClientRef.current.createSession(
+        scene.id,
+        characterId || undefined,
+        videoPath
+      );
+      console.log('Session created:', response.session_id, 'with character:', characterId, 'video:', videoPath);
       
       // Reset recorded segments
       recordedSegmentsRef.current = [];
@@ -369,6 +382,7 @@ function App() {
         sessionId: response.session_id,
         sceneId: scene.id,
         characterId: characterId || undefined,
+        videoPath: videoPath,
         totalSegments: scene.segment_count || scene.segments.length || 3,
         currentSegment: 0,
       });
@@ -394,6 +408,7 @@ function App() {
   }, [showError, selectedScene]);
 
   // Handle character selection
+  // Requirements 3.1, 3.2, 3.3: Fetch character-specific video path when character is selected
   const handleCharacterSelect = useCallback(async (characterId: string) => {
     const currentState = stateMachineRef.current?.getCurrentState();
     
@@ -406,7 +421,33 @@ function App() {
     console.log('Character selected:', characterId);
     
     if (selectedScene) {
-      await createSessionAndStartRecording(selectedScene, characterId);
+      try {
+        // Fetch character-specific video path
+        // Property 4: Video Path Resolution - returns character-specific video if exists, else base video
+        const videoPathResponse = await apiClientRef.current.getCharacterVideoPath(
+          selectedScene.id,
+          characterId
+        );
+        
+        console.log(
+          'Video path resolved:',
+          videoPathResponse.video_path,
+          'is character-specific:',
+          videoPathResponse.is_character_specific
+        );
+        
+        // Create session with character ID and resolved video path
+        await createSessionAndStartRecording(
+          selectedScene, 
+          characterId, 
+          videoPathResponse.video_path
+        );
+      } catch (error) {
+        console.warn('Failed to fetch character video path, using default:', error);
+        // Fall back to creating session without specific video path
+        // The backend will use the base video path
+        await createSessionAndStartRecording(selectedScene, characterId);
+      }
     }
   }, [selectedScene, createSessionAndStartRecording]);
 

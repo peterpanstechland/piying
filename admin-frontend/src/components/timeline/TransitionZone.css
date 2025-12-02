@@ -1,6 +1,4 @@
-/* TransitionZone component styles */
-/* Requirements 6.1: Display transition zones between adjacent segments */
-
+/* 东方黑金科技风 - 转场区域 */
 .transition-zone {
   position: absolute;
   top: 10px;
@@ -27,21 +25,21 @@
 .transition-zone__indicator {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  background: linear-gradient(135deg, var(--warning) 0%, #d99030 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(230, 160, 57, 0.4);
   transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .transition-zone:hover .transition-zone__indicator {
-  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(230, 160, 57, 0.6);
 }
 
 .transition-zone--selected .transition-zone__indicator {
-  box-shadow: 0 0 0 3px #fff, 0 4px 16px rgba(255, 152, 0, 0.6);
+  box-shadow: 0 0 0 3px var(--text-primary), 0 4px 16px rgba(230, 160, 57, 0.6);
   transform: scale(1.1);
 }
 
@@ -53,9 +51,9 @@
 .transition-zone__label {
   margin-top: 4px;
   font-size: 10px;
-  color: #888;
+  color: var(--text-secondary);
   white-space: nowrap;
-  background: rgba(22, 33, 62, 0.9);
+  background: rgba(26, 26, 26, 0.9);
   padding: 2px 6px;
   border-radius: 3px;
   opacity: 0;
@@ -79,9 +77,9 @@
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(255, 152, 0, 0.3) 20%,
-    rgba(255, 152, 0, 0.5) 50%,
-    rgba(255, 152, 0, 0.3) 80%,
+    rgba(230, 160, 57, 0.3) 20%,
+    rgba(230, 160, 57, 0.5) 50%,
+    rgba(230, 160, 57, 0.3) 80%,
     transparent 100%
   );
   z-index: -1;
@@ -91,9 +89,9 @@
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(255, 152, 0, 0.5) 20%,
-    rgba(255, 152, 0, 0.8) 50%,
-    rgba(255, 152, 0, 0.5) 80%,
+    rgba(230, 160, 57, 0.5) 20%,
+    rgba(230, 160, 57, 0.8) 50%,
+    rgba(230, 160, 57, 0.5) 80%,
     transparent 100%
   );
 }

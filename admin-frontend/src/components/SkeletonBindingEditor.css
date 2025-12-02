@@ -1,3 +1,4 @@
+/* 东方黑金科技风 - 骨骼绑定编辑器 */
 .skeleton-binding-editor {
   display: flex;
   flex-direction: column;
@@ -5,14 +6,14 @@
 }
 
 .binding-warnings {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: rgba(230, 160, 57, 0.15);
+  border: 1px solid var(--warning);
   border-radius: 8px;
   padding: 16px;
 }
 
 .binding-warnings strong {
-  color: #92400e;
+  color: var(--warning);
   display: block;
   margin-bottom: 8px;
 }
@@ -23,7 +24,7 @@
 }
 
 .binding-warnings li {
-  color: #92400e;
+  color: var(--warning);
   font-size: 13px;
   margin-bottom: 4px;
 }
@@ -36,8 +37,8 @@
 
 .parts-panel {
   width: 220px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   padding: 16px;
 }
@@ -45,7 +46,7 @@
 .parts-panel h3 {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #374151;
+  color: var(--accent-gold-light);
 }
 
 .parts-list {
@@ -59,45 +60,45 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-hover);
+  border: 1px solid var(--divider);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .part-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-active);
 }
 
 .part-item.selected {
-  background: #ede9fe;
-  border-color: #4f46e5;
+  background: rgba(217, 164, 65, 0.15);
+  border-color: var(--accent-primary);
 }
 
 .part-item.warning {
-  border-color: #f59e0b;
-  background: #fffbeb;
+  border-color: var(--warning);
+  background: rgba(230, 160, 57, 0.1);
 }
 
 .part-item.warning.selected {
-  background: #fef3c7;
+  background: rgba(230, 160, 57, 0.2);
 }
 
 .part-name {
   font-size: 13px;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .binding-count {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .landmarks-panel {
   flex: 1;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   padding: 16px;
   overflow: auto;
@@ -113,7 +114,7 @@
 .landmarks-header h3 {
   margin: 0;
   font-size: 14px;
-  color: #374151;
+  color: var(--accent-gold-light);
 }
 
 .landmark-actions {
@@ -122,32 +123,34 @@
 }
 
 .btn-small {
-  background: white;
-  border: 1px solid #d1d5db;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
   padding: 6px 12px;
   border-radius: 4px;
   font-size: 12px;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-small:hover {
-  background: #f3f4f6;
+  background: var(--bg-active);
+  border-color: var(--accent-primary);
 }
 
 .btn-small.btn-danger {
-  color: #dc2626;
-  border-color: #fecaca;
+  color: var(--error);
+  border-color: rgba(198, 67, 47, 0.5);
 }
 
 .btn-small.btn-danger:hover {
-  background: #fee2e2;
+  background: rgba(198, 67, 47, 0.15);
 }
 
 .no-selection {
   text-align: center;
   padding: 60px 20px;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .pose-diagram {
@@ -159,7 +162,7 @@
 .pose-svg {
   width: 200px;
   height: 300px;
-  background: white;
+  background: var(--bg-base);
   border-radius: 8px;
 }
 
@@ -183,44 +186,44 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-hover);
+  border: 1px solid var(--divider);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .landmark-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-active);
 }
 
 .landmark-item.selected {
-  background: #ede9fe;
-  border-color: #4f46e5;
+  background: rgba(217, 164, 65, 0.15);
+  border-color: var(--accent-primary);
 }
 
 .landmark-id {
   width: 24px;
   height: 24px;
-  background: #e5e7eb;
+  background: var(--border);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
 .landmark-item.selected .landmark-id {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
 }
 
 .landmark-label {
   flex: 1;
   font-size: 12px;
-  color: #374151;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -236,13 +239,14 @@
   align-items: center;
   gap: 2px;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
 .landmark-options input {
   width: 12px;
   height: 12px;
+  accent-color: var(--accent-primary);
 }
 
 .editor-footer {
@@ -250,7 +254,7 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--divider);
 }
 
 .legend {
@@ -263,7 +267,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .dot {
@@ -273,16 +277,16 @@
 }
 
 .dot.rotation {
-  background: #dc2626;
+  background: var(--error);
 }
 
 .dot.scale {
-  background: #059669;
+  background: var(--success);
 }
 
 .btn-primary {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-base);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -292,7 +296,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: var(--accent-primary-hover);
 }
 
 .btn-primary:disabled {
@@ -300,18 +304,17 @@
   cursor: not-allowed;
 }
 
-
 /* Joint count badge in part list */
 .joint-count {
   font-size: 11px;
-  color: #22c55e;
+  color: var(--success);
   margin-left: 4px;
 }
 
 /* Part joints info section */
 .part-joints-info {
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: rgba(79, 227, 193, 0.1);
+  border: 1px solid var(--success);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
@@ -320,7 +323,7 @@
 .part-joints-info h4 {
   margin: 0 0 8px 0;
   font-size: 13px;
-  color: #166534;
+  color: var(--success);
 }
 
 .joints-list-compact {
@@ -333,22 +336,22 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: white;
-  border: 1px solid #86efac;
+  background: var(--bg-hover);
+  border: 1px solid var(--success);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 12px;
-  color: #166534;
+  color: var(--success);
 }
 
 .joint-dot-small {
   width: 8px;
   height: 8px;
-  background: #22c55e;
+  background: var(--success);
   border-radius: 50%;
 }
 
 .connected-to {
-  color: #4f46e5;
+  color: var(--accent-primary);
   font-weight: bold;
 }

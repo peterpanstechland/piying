@@ -267,20 +267,20 @@ export default function UserManagementPage() {
   return (
     <div className="user-management-page">
       <div className="page-header">
-        <button className="back-button" onClick={() => navigate('/dashboard')}>
-          ← 返回
+        <button className="btn-back" onClick={() => navigate('/admin/dashboard')}>
+          ← 返回首页
         </button>
         <h1>用户管理</h1>
         <div className="header-actions">
           <button 
-            className="password-button"
+            className="btn-secondary"
             onClick={() => setShowPasswordChange(!showPasswordChange)}
           >
             {showPasswordChange ? '取消' : '🔑 修改密码'}
           </button>
           {currentUser?.role === 'admin' && (
             <button 
-              className="create-button"
+              className="btn-primary"
               onClick={() => setShowCreateForm(!showCreateForm)}
             >
               {showCreateForm ? '取消' : '+ 创建新用户'}

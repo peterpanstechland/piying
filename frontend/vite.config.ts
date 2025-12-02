@@ -7,6 +7,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    fs: {
+      strict: false,
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
@@ -22,6 +25,7 @@ export default defineConfig({
       },
     },
   },
+  assetsInclude: ['**/*.wasm', '**/*.task'],
   build: {
     outDir: 'dist',
     sourcemap: true,

@@ -1,3 +1,4 @@
+/* 东方黑金科技风 - 动画配置编辑器 */
 .animation-config-editor {
   display: flex;
   flex-direction: column;
@@ -18,35 +19,35 @@
   gap: 2px;
   font-size: 13px;
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .animation-config-editor__label-en {
   font-size: 11px;
   font-weight: 400;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Select dropdown */
 .animation-config-editor__select {
   padding: 10px 12px;
-  background: #1a2744;
-  border: 1px solid #2d3a5a;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .animation-config-editor__select:hover {
-  border-color: #4fc3f7;
+  border-color: var(--accent-primary);
 }
 
 .animation-config-editor__select:focus {
   outline: none;
-  border-color: #4fc3f7;
-  box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.2);
 }
 
 /* Slider group */
@@ -61,7 +62,7 @@
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #2d3a5a;
+  background: var(--border);
   border-radius: 3px;
   cursor: pointer;
 }
@@ -71,7 +72,7 @@
   appearance: none;
   width: 16px;
   height: 16px;
-  background: #4fc3f7;
+  background: var(--accent-primary);
   border-radius: 50%;
   cursor: pointer;
   transition: transform 0.1s;
@@ -84,7 +85,7 @@
 .animation-config-editor__slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #4fc3f7;
+  background: var(--accent-primary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -94,10 +95,10 @@
 .animation-config-editor__number {
   width: 60px;
   padding: 6px 8px;
-  background: #1a2744;
-  border: 1px solid #2d3a5a;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: 'Consolas', 'Monaco', monospace;
   text-align: center;
@@ -105,7 +106,7 @@
 
 .animation-config-editor__number:focus {
   outline: none;
-  border-color: #4fc3f7;
+  border-color: var(--accent-primary);
 }
 
 /* Input group */
@@ -118,30 +119,30 @@
 .animation-config-editor__input {
   width: 80px;
   padding: 10px 12px;
-  background: #1a2744;
-  border: 1px solid #2d3a5a;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .animation-config-editor__input:focus {
   outline: none;
-  border-color: #4fc3f7;
-  box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.2);
 }
 
 /* Unit label */
 .animation-config-editor__unit {
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Hint text */
 .animation-config-editor__hint {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.4;
 }
 

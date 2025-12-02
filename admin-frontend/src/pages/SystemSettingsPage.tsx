@@ -159,13 +159,11 @@ export default function SystemSettingsPage() {
   return (
     <div className="system-settings-container">
       <header className="page-header">
-        <div className="header-left">
-          <Link to="/dashboard" className="back-link">← {t('common.back')}</Link>
-          <h1>{t('settings.system.title')}</h1>
-        </div>
-        <div className="user-info">
-          <span>{user?.username}</span>
-          <button onClick={logout}>{t('dashboard.logout')}</button>
+        <Link to="/dashboard" className="btn-back">← 返回首页</Link>
+        <h1>{t('settings.system.title')}</h1>
+        <div className="header-actions">
+          <span className="user-name">{user?.username}</span>
+          <button className="btn-secondary" onClick={logout}>{t('dashboard.logout')}</button>
         </div>
       </header>
 

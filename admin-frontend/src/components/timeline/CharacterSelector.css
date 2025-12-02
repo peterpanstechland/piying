@@ -1,17 +1,10 @@
-/**
- * CharacterSelector Component Styles
- * 
- * Implements visual design for:
- * - Multi-select character list with thumbnails (Requirements 7.1, 7.2)
- * - Default character indicator (Requirements 7.3)
- * - Drag-to-reorder functionality (Requirements 7.4)
- */
-
+/* 东方黑金科技风 - 角色选择器 */
 .character-selector {
-  background: var(--bg-secondary, #1e1e1e);
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
   border-radius: 8px;
   padding: 16px;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--text-primary);
 }
 
 .character-selector--disabled {
@@ -31,14 +24,14 @@
 }
 
 .character-selector--error {
-  color: var(--color-error, #ff6b6b);
+  color: var(--error);
 }
 
 .character-selector__spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid var(--border-color, #333);
-  border-top-color: var(--color-primary, #4a9eff);
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -59,20 +52,20 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--accent-gold-light);
 }
 
 .character-selector__count {
   font-size: 12px;
-  color: var(--text-secondary, #888);
-  background: var(--bg-tertiary, #2a2a2a);
+  color: var(--text-secondary);
+  background: var(--bg-hover);
   padding: 4px 8px;
   border-radius: 4px;
 }
 
 .character-selector__hint {
   font-size: 12px;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary);
   margin: 0 0 16px 0;
   line-height: 1.4;
 }
@@ -92,30 +85,30 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  background: var(--bg-tertiary, #2a2a2a);
-  border: 1px solid var(--border-color, #333);
+  background: var(--bg-hover);
+  border: 1px solid var(--divider);
   border-radius: 6px;
   transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .character-selector__item:hover {
-  background: var(--bg-hover, #333);
-  border-color: var(--border-hover, #444);
+  background: var(--bg-active);
+  border-color: var(--border);
 }
 
 .character-selector__item--selected {
-  background: var(--bg-selected, #1a3a5c);
-  border-color: var(--color-primary, #4a9eff);
+  background: rgba(217, 164, 65, 0.1);
+  border-color: var(--accent-primary);
 }
 
 .character-selector__item--selected:hover {
-  background: var(--bg-selected-hover, #1e4470);
+  background: rgba(217, 164, 65, 0.15);
 }
 
 .character-selector__item--default {
-  border-color: var(--color-warning, #ffc107);
-  box-shadow: 0 0 0 1px var(--color-warning, #ffc107) inset;
+  border-color: var(--warning);
+  box-shadow: 0 0 0 1px var(--warning) inset;
 }
 
 /* Drag states */
@@ -125,8 +118,8 @@
 }
 
 .character-selector__item--drag-over {
-  border-color: var(--color-success, #4caf50);
-  background: var(--bg-drag-over, #1a3a2c);
+  border-color: var(--success);
+  background: rgba(79, 227, 193, 0.1);
 }
 
 .character-selector__item.dragging {
@@ -136,7 +129,7 @@
 /* Drag Handle */
 .character-selector__drag-handle {
   cursor: grab;
-  color: var(--text-secondary, #888);
+  color: var(--text-muted);
   font-size: 14px;
   padding: 4px;
   user-select: none;
@@ -171,26 +164,26 @@
 .character-selector__checkmark {
   width: 18px;
   height: 18px;
-  background: var(--bg-input, #1a1a1a);
-  border: 2px solid var(--border-color, #444);
+  background: var(--bg-base);
+  border: 2px solid var(--border);
   border-radius: 4px;
   transition: all 0.2s;
 }
 
 .character-selector__checkbox:hover .character-selector__checkmark {
-  border-color: var(--color-primary, #4a9eff);
+  border-color: var(--accent-primary);
 }
 
 .character-selector__checkbox input:checked ~ .character-selector__checkmark {
-  background: var(--color-primary, #4a9eff);
-  border-color: var(--color-primary, #4a9eff);
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 
 .character-selector__checkbox input:checked ~ .character-selector__checkmark::after {
   content: '✓';
   display: block;
   text-align: center;
-  color: white;
+  color: var(--bg-base);
   font-size: 12px;
   line-height: 14px;
 }
@@ -206,7 +199,7 @@
   height: 48px;
   border-radius: 6px;
   overflow: hidden;
-  background: var(--bg-input, #1a1a1a);
+  background: var(--bg-base);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -236,7 +229,7 @@
 .character-selector__name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,13 +237,13 @@
 
 .character-selector__description {
   font-size: 12px;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Default Radio Button (Requirements 7.3) */
+/* Default Radio Button */
 .character-selector__default-radio {
   display: flex;
   align-items: center;
@@ -263,11 +256,10 @@
 }
 
 .character-selector__default-radio:hover {
-  background: var(--bg-hover, #333);
+  background: var(--bg-active);
 }
 
 .character-selector__default-radio input[type="radio"] {
-  /* Hide the native radio button but keep it accessible */
   position: absolute;
   opacity: 0;
   width: 0;
@@ -276,26 +268,26 @@
 
 .character-selector__default-indicator {
   font-size: 18px;
-  color: var(--text-secondary, #888);
+  color: var(--text-muted);
   transition: all 0.2s;
 }
 
 .character-selector__default-radio:hover .character-selector__default-indicator {
-  color: var(--color-warning, #ffc107);
+  color: var(--warning);
 }
 
 .character-selector__default-radio--active .character-selector__default-indicator {
-  color: var(--color-warning, #ffc107);
+  color: var(--warning);
 }
 
 .character-selector__default-label {
   font-size: 11px;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .character-selector__default-radio--active .character-selector__default-label {
-  color: var(--color-warning, #ffc107);
+  color: var(--warning);
   font-weight: 500;
 }
 
@@ -309,7 +301,7 @@
 
 /* Focus state for accessibility */
 .character-selector__default-radio input[type="radio"]:focus-visible + .character-selector__default-indicator {
-  outline: 2px solid var(--color-primary, #4a9eff);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -317,8 +309,8 @@
 /* Order Indicator */
 .character-selector__order {
   font-size: 11px;
-  color: var(--text-secondary, #888);
-  background: var(--bg-input, #1a1a1a);
+  color: var(--text-secondary);
+  background: var(--bg-base);
   padding: 2px 6px;
   border-radius: 4px;
   min-width: 24px;
@@ -329,21 +321,21 @@
 .character-selector__warning {
   margin-top: 12px;
   padding: 10px 12px;
-  background: var(--bg-warning, #3d2c00);
-  border: 1px solid var(--color-warning, #ffc107);
+  background: rgba(230, 160, 57, 0.15);
+  border: 1px solid var(--warning);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--color-warning, #ffc107);
+  color: var(--warning);
 }
 
 .character-selector__info-message {
   margin-top: 12px;
   padding: 10px 12px;
-  background: var(--bg-info, #1a3a5c);
-  border: 1px solid var(--color-primary, #4a9eff);
+  background: rgba(61, 163, 255, 0.1);
+  border: 1px solid var(--accent-blue);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--color-primary, #4a9eff);
+  color: var(--accent-blue);
 }
 
 /* Scrollbar styling */
@@ -352,15 +344,15 @@
 }
 
 .character-selector__list::-webkit-scrollbar-track {
-  background: var(--bg-tertiary, #2a2a2a);
+  background: var(--bg-hover);
   border-radius: 3px;
 }
 
 .character-selector__list::-webkit-scrollbar-thumb {
-  background: var(--border-color, #444);
+  background: var(--border);
   border-radius: 3px;
 }
 
 .character-selector__list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary, #666);
+  background: var(--accent-primary);
 }

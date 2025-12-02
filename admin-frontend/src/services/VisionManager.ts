@@ -8,9 +8,10 @@ import {
   PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
 
-// Configuration Constants
-const VISION_BASE_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm";
-const POSE_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+// Configuration Constants - Use local files with base path for admin panel
+const BASE_PATH = import.meta.env.BASE_URL || '/admin/';
+const VISION_BASE_URL = `${BASE_PATH}mediapipe/wasm`;
+const POSE_MODEL_URL = `${BASE_PATH}mediapipe/pose_landmarker_lite.task`;
 
 /**
  * Singleton manager for MediaPipe Vision tasks

@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from .api import sessions_router, videos_router, public_storylines_router
-from .api.admin import auth_router, users_router, characters_router, storylines_router, settings_router, dashboard_router, export_import_router
+from .api.admin import auth_router, users_router, characters_router, storylines_router, settings_router, dashboard_router, export_import_router, character_videos_router
 from .config import ConfigLoader
 from .database import init_db
 from .services.admin.auth_service import auth_service
@@ -144,6 +144,7 @@ app.include_router(storylines_router)
 app.include_router(settings_router)
 app.include_router(dashboard_router)
 app.include_router(export_import_router)
+app.include_router(character_videos_router)  # Character-specific video management
 
 @app.on_event("startup")
 async def startup_event():

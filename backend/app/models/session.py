@@ -55,6 +55,8 @@ class Session(BaseModel):
     """Complete session data"""
     id: str = Field(..., description="Unique session identifier (UUID)")
     scene_id: str = Field(..., description="Selected scene identifier")
+    character_id: Optional[str] = Field(default=None, description="Selected character ID for motion capture")
+    video_path: Optional[str] = Field(default=None, description="Resolved video path (character-specific or default)")
     status: SessionStatus = Field(default=SessionStatus.PENDING, description="Current session status")
     segments: List[Segment] = Field(default_factory=list, description="Recorded segments")
     output_path: Optional[str] = Field(default=None, description="Path to rendered video file")
@@ -78,11 +80,15 @@ class Session(BaseModel):
 class CreateSessionRequest(BaseModel):
     """Request body for creating a new session"""
     scene_id: str = Field(..., description="Scene identifier to use for this session")
+    character_id: Optional[str] = Field(default=None, description="Selected character ID for motion capture")
+    video_path: Optional[str] = Field(default=None, description="Resolved video path (character-specific or default)")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "scene_id": "sceneA"
+                "scene_id": "sceneA",
+                "character_id": "char-123",
+                "video_path": "storylines/abc/videos/char-123.mp4"
             }
         }
 

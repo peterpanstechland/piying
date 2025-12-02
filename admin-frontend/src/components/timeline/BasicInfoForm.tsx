@@ -115,7 +115,20 @@ export default function BasicInfoForm({
 
   // Handle save
   const handleSave = async () => {
-    if (!validateForm() || !onSave) return
+    console.log('BasicInfoForm handleSave called')
+    console.log('validateForm result:', validateForm())
+    console.log('onSave exists:', !!onSave)
+    console.log('Form data:', getFormData())
+    console.log('Errors:', errors)
+    
+    if (!validateForm()) {
+      console.log('Validation failed')
+      return
+    }
+    if (!onSave) {
+      console.log('No onSave handler')
+      return
+    }
     await onSave(getFormData())
   }
 
