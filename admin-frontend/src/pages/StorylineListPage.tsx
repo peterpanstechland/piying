@@ -68,11 +68,11 @@ export default function StorylineListPage() {
   }
 
   const handleCreate = () => {
-    navigate('/storylines/new')
+    navigate('/storylines/new/timeline')
   }
 
   const handleEdit = (id: string) => {
-    navigate(`/storylines/${id}/edit`)
+    navigate(`/storylines/${id}/timeline`)
   }
 
   // Drag and drop handlers
@@ -186,6 +186,9 @@ export default function StorylineListPage() {
     <div className="storyline-list-page">
       <div className="page-header">
         <div className="page-header-left">
+          <button className="btn-back" onClick={() => navigate('/dashboard')}>
+            ← 返回首页
+          </button>
           <h1>故事线管理</h1>
           {isSavingOrder && <span className="saving-indicator">保存中...</span>}
         </div>

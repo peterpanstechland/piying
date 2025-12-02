@@ -3,9 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  color: #1a1a2e;
+  background-color: #1a1a2e;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -22,4 +22,17 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+}
+
+/* Reset input colors for light backgrounds */
+input,
+textarea,
+select {
+  color: #1a1a2e;
+  background-color: white;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
 }

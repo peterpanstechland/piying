@@ -573,7 +573,7 @@
     - _Requirements: All_
 -
 
-- [ ] 22. Final Checkpoint - Ensure all tests pass
+- [x] 22. Final Checkpoint - Ensure all tests pass
 
 
 
