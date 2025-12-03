@@ -1,19 +1,36 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MotionCaptureRecorder } from '../services/motion-capture';
+import { CanvasRecorder } from '../services/canvas-recorder';
 import { CharacterRenderer } from '../pixi/CharacterRenderer';
 import type { PoseLandmarks } from '../pixi/types';
 import './RecordingPage.css';
 
+// 路径配置接口
+interface PathConfig {
+  offset_start?: number[];  // 起始位置 [x, y] 归一化 0-1
+  offset_end?: number[];    // 结束位置 [x, y] 归一化 0-1
+  path_waypoints?: number[][]; // 路径中间点
+  entry_type?: string;      // 进场动画类型
+  entry_duration?: number;  // 进场动画时长
+  entry_delay?: number;     // 进场动画延迟
+  exit_type?: string;       // 退场动画类型
+  exit_duration?: number;   // 退场动画时长
+  exit_delay?: number;      // 退场动画延迟
+}
+
 interface RecordingPageProps {
   segmentIndex: number;
   segmentDuration: number;
+  segmentStartTime?: number; // 片段在视频中的起始时间（秒）
   segmentGuidance?: string; // 动作引导文本
   characterId?: string; // 角色ID
   videoPath?: string; // 角色专属背景视频路径
+  playAudio?: boolean; // 是否播放背景视频音频
+  pathConfig?: PathConfig; // 路径配置
   videoElement?: HTMLVideoElement | null;
   recorder: MotionCaptureRecorder;
-  onRecordingComplete?: () => void;
+  onRecordingComplete?: (videoBlob?: Blob) => void; // 新增：返回录制的视频
   onPoseDetected?: (callback: (landmarks: PoseLandmarks) => void) => void;
 }
 
@@ -23,12 +40,51 @@ interface RecordingPageProps {
  * - 左下角：摄像头小窗口
  * - 顶部：动作引导和倒计时
  */
+// 计算路径上的位置（支持中间点）
+function calculatePathPosition(
+  progress: number,  // 0-1 的进度
+  startPos: number[],
+  endPos: number[],
+  waypoints?: number[][]
+): { x: number; y: number } {
+  // 如果没有中间点，直接线性插值
+  if (!waypoints || waypoints.length === 0) {
+    return {
+      x: startPos[0] + (endPos[0] - startPos[0]) * progress,
+      y: startPos[1] + (endPos[1] - startPos[1]) * progress,
+    };
+  }
+  
+  // 有中间点，分段插值
+  const allPoints = [startPos, ...waypoints, endPos];
+  const numSegments = allPoints.length - 1;
+  const segmentProgress = progress * numSegments;
+  const segmentIndex = Math.min(Math.floor(segmentProgress), numSegments - 1);
+  const localProgress = segmentProgress - segmentIndex;
+  
+  const p1 = allPoints[segmentIndex];
+  const p2 = allPoints[segmentIndex + 1];
+  
+  return {
+    x: p1[0] + (p2[0] - p1[0]) * localProgress,
+    y: p1[1] + (p2[1] - p1[1]) * localProgress,
+  };
+}
+
+// 缓动函数
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 export const RecordingPage = ({
   segmentIndex,
   segmentDuration,
+  segmentStartTime = 0,
   segmentGuidance,
   characterId,
   videoPath,
+  playAudio = false,
+  pathConfig,
   videoElement,
   recorder,
   onRecordingComplete,
@@ -40,8 +96,11 @@ export const RecordingPage = ({
   console.log('RecordingPage props:', {
     segmentIndex,
     segmentDuration,
+    segmentStartTime,
     characterId,
     videoPath,
+    playAudio,
+    pathConfig,
     hasVideoElement: !!videoElement,
   });
   
@@ -56,6 +115,8 @@ export const RecordingPage = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
   const poseDetectionCountRef = useRef(0);
+  const canvasRecorderRef = useRef<CanvasRecorder | null>(null);
+  const recordedVideoBlobRef = useRef<Blob | null>(null);
 
   // 初始化 CharacterRenderer
   useEffect(() => {
@@ -86,15 +147,25 @@ export const RecordingPage = ({
 
   // 开始录制
   useEffect(() => {
-    if (!recordingStartedRef.current && isCalibrated) {
+    if (!recordingStartedRef.current && isCalibrated && characterCanvasRef.current) {
       recordingStartedRef.current = true;
       
       try {
+        // 启动姿态数据录制
         recorder.startRecording(segmentIndex, segmentDuration, (elapsed, _total) => {
           setElapsedTime(elapsed);
         });
+        
+        // 启动 Canvas 视频录制
+        const canvasRecorder = new CanvasRecorder();
+        canvasRecorder.startRecording(characterCanvasRef.current, {
+          frameRate: 30,
+          videoBitsPerSecond: 8000000, // 8 Mbps for good quality
+        });
+        canvasRecorderRef.current = canvasRecorder;
+        
         setIsRecording(true);
-        console.log(`Started recording segment ${segmentIndex} for ${segmentDuration}s`);
+        console.log(`Started recording segment ${segmentIndex} for ${segmentDuration}s (with canvas video)`);
       } catch (error) {
         console.error('Failed to start recording:', error);
       }
@@ -104,6 +175,9 @@ export const RecordingPage = ({
       if (recorder.isRecordingActive()) {
         recorder.cancelRecording();
       }
+      if (canvasRecorderRef.current?.isRecordingActive()) {
+        canvasRecorderRef.current.cancelRecording();
+      }
     };
   }, [recorder, segmentIndex, segmentDuration, isCalibrated]);
 
@@ -112,13 +186,116 @@ export const RecordingPage = ({
     if (isRecording && elapsedTime >= segmentDuration) {
       setIsRecording(false);
       
+      // 停止 Canvas 录制并获取视频
+      const finishRecording = async () => {
+        let videoBlob: Blob | undefined;
+        
+        if (canvasRecorderRef.current?.isRecordingActive()) {
+          try {
+            videoBlob = await canvasRecorderRef.current.stopRecording();
+            recordedVideoBlobRef.current = videoBlob;
+            console.log(`Canvas recording completed: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB`);
+          } catch (error) {
+            console.error('Failed to stop canvas recording:', error);
+          }
+        }
+      
       if (onRecordingComplete) {
+          onRecordingComplete(videoBlob);
+        }
+      };
+      
         setTimeout(() => {
-          onRecordingComplete();
+        finishRecording();
         }, 500);
-      }
     }
   }, [elapsedTime, segmentDuration, isRecording, onRecordingComplete]);
+
+  // 路径动画 - 根据录制进度更新皮影位置
+  useEffect(() => {
+    if (!rendererRef.current || !pathConfig) return;
+    
+    const renderer = rendererRef.current;
+    const startPos = pathConfig.offset_start || [0.5, 0.5];
+    const endPos = pathConfig.offset_end || [0.5, 0.5];
+    const waypoints = pathConfig.path_waypoints;
+    
+    // 计算进场/退场/主体动画的时间分配
+    const entryDuration = pathConfig.entry_duration || 0;
+    const entryDelay = pathConfig.entry_delay || 0;
+    const exitDuration = pathConfig.exit_duration || 0;
+    const exitDelay = pathConfig.exit_delay || 0;
+    const entryType = pathConfig.entry_type || 'instant';
+    const exitType = pathConfig.exit_type || 'instant';
+    
+    // 进场阶段: 0 到 entryDelay + entryDuration
+    // 主体阶段: entryDelay + entryDuration 到 duration - exitDelay - exitDuration
+    // 退场阶段: duration - exitDelay - exitDuration 到 duration
+    
+    const entryEnd = entryDelay + entryDuration;
+    const exitStart = segmentDuration - exitDelay - exitDuration;
+    
+    // 计算当前所在阶段和对应的位置/透明度
+    let position = { x: 0.5, y: 0.5 };
+    let opacity = 1;
+    
+    if (isCalibrated) {
+      if (elapsedTime < entryEnd && entryType !== 'instant') {
+        // 进场阶段
+        const entryProgress = entryDuration > 0 
+          ? Math.max(0, (elapsedTime - entryDelay) / entryDuration)
+          : 1;
+        const easedProgress = easeInOutCubic(Math.min(1, entryProgress));
+        
+        // 从画面外进入到起始位置
+        if (entryType === 'fade') {
+          opacity = easedProgress;
+          position = { x: startPos[0], y: startPos[1] };
+        } else if (entryType === 'slide_left') {
+          position = { x: -0.2 + (startPos[0] + 0.2) * easedProgress, y: startPos[1] };
+        } else if (entryType === 'slide_right') {
+          position = { x: 1.2 - (1.2 - startPos[0]) * easedProgress, y: startPos[1] };
+        } else {
+          position = { x: startPos[0], y: startPos[1] };
+        }
+      } else if (elapsedTime >= exitStart && exitType !== 'instant') {
+        // 退场阶段
+        const exitProgress = exitDuration > 0
+          ? (elapsedTime - exitStart) / exitDuration
+          : 1;
+        const easedProgress = easeInOutCubic(Math.min(1, exitProgress));
+        
+        // 从结束位置退出到画面外
+        if (exitType === 'fade') {
+          opacity = 1 - easedProgress;
+          position = { x: endPos[0], y: endPos[1] };
+        } else if (exitType === 'slide_left') {
+          position = { x: endPos[0] - (endPos[0] + 0.2) * easedProgress, y: endPos[1] };
+        } else if (exitType === 'slide_right') {
+          position = { x: endPos[0] + (1.2 - endPos[0]) * easedProgress, y: endPos[1] };
+        } else {
+          position = { x: endPos[0], y: endPos[1] };
+        }
+      } else {
+        // 主体阶段 - 从起始位置移动到结束位置
+        const mainDuration = exitStart - entryEnd;
+        const mainProgress = mainDuration > 0
+          ? (elapsedTime - entryEnd) / mainDuration
+          : 0;
+        
+        position = calculatePathPosition(
+          Math.min(1, Math.max(0, mainProgress)),
+          startPos,
+          endPos,
+          waypoints
+        );
+      }
+      
+      // 应用位置和透明度
+      renderer.setPosition(position.x, position.y);
+      renderer.setOpacity(opacity);
+    }
+  }, [elapsedTime, isCalibrated, pathConfig, segmentDuration]);
 
   // 处理姿态检测和自动校准
   useEffect(() => {
@@ -177,7 +354,7 @@ export const RecordingPage = ({
 
   // 加载角色专属背景视频
   useEffect(() => {
-    console.log('RecordingPage videoPath:', videoPath);
+    console.log('RecordingPage videoPath:', videoPath, 'startTime:', segmentStartTime);
     
     if (!backgroundVideoRef.current) {
       console.warn('Background video ref not ready');
@@ -191,15 +368,16 @@ export const RecordingPage = ({
 
     const video = backgroundVideoRef.current;
     
-    console.log('Loading background video from:', videoPath);
+    console.log('Loading background video from:', videoPath, 'starting at:', segmentStartTime);
     video.src = videoPath;
     video.load();
 
     const handleCanPlay = () => {
-      console.log('Background video can play, starting playback');
-      video.play().catch(err => {
-        console.error('Background video play error:', err);
-      });
+      console.log('Background video can play, seeking to:', segmentStartTime);
+      // 设置视频起始时间
+      video.currentTime = segmentStartTime;
+      // 暂停，等待校准完成后再播放
+      video.pause();
     };
     
     const handleError = (e: Event) => {
@@ -227,7 +405,24 @@ export const RecordingPage = ({
       video.pause();
       video.src = '';
     };
-  }, [videoPath]);
+  }, [videoPath, segmentStartTime]);
+
+  // 当录制开始时播放背景视频，录制结束时暂停
+  useEffect(() => {
+    if (!backgroundVideoRef.current) return;
+    
+    const video = backgroundVideoRef.current;
+    
+    if (isRecording) {
+      // 确保从正确的时间点开始
+      video.currentTime = segmentStartTime;
+      video.play().catch(err => {
+        console.error('Background video play error:', err);
+      });
+    } else {
+      video.pause();
+    }
+  }, [isRecording, segmentStartTime]);
 
   const progress = Math.min(elapsedTime / segmentDuration, 1);
   const remainingTime = Math.max(segmentDuration - elapsedTime, 0);
@@ -239,9 +434,7 @@ export const RecordingPage = ({
         <video
           ref={backgroundVideoRef}
           className="background-video"
-          autoPlay
-          loop
-          muted
+          muted={!playAudio}
           playsInline
         />
       )}

@@ -429,18 +429,23 @@ async def get_character_video_segments(
             for seg in sorted(storyline_character.segments, key=lambda x: x.index):
                 segments.append({
                     "index": seg.index,
+                    "start_time": seg.start_time or 0.0,  # 片段在视频中的起始时间
                     "duration": seg.duration,
                     "path_type": seg.path_type or "static",
-                    "offset_start": [int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
-                    "offset_end": [int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                    "offset_start": [float(seg.offset_start_x or 0), float(seg.offset_start_y or 0)],
+                    "offset_end": [float(seg.offset_end_x or 0), float(seg.offset_end_y or 0)],
+                    "path_waypoints": [],  # Character segments don't have waypoints yet
                     "entry_type": seg.entry_type or "instant",
                     "entry_duration": seg.entry_duration or 1.0,
                     "entry_delay": seg.entry_delay or 0.0,
                     "exit_type": seg.exit_type or "instant",
                     "exit_duration": seg.exit_duration or 1.0,
                     "exit_delay": seg.exit_delay or 0.0,
+                    "guidance_text": getattr(seg, 'guidance_text', None),
+                    "guidance_text_en": getattr(seg, 'guidance_text_en', None),
+                    "play_audio": getattr(seg, 'play_audio', False),
                 })
-            logger.info(f"[CharacterSegments] Character-specific segments loaded: {segments}")
+            logger.info(f"[CharacterSegments] Character-specific segments loaded: {len(segments)} segments")
     except Exception as e:
         logger.warning(f"[CharacterSegments] Failed to load character-specific segments: {e}")
     
@@ -448,20 +453,34 @@ async def get_character_video_segments(
     if not segments and storyline.segments:
         logger.info(f"[CharacterSegments] No character-specific segments, using base storyline segments: {len(storyline.segments)} segments")
         for seg in sorted(storyline.segments, key=lambda x: x.index):
+            # Parse waypoints if available
+            waypoints = []
+            if seg.path_waypoints:
+                try:
+                    import json
+                    waypoints = json.loads(seg.path_waypoints) if isinstance(seg.path_waypoints, str) else seg.path_waypoints
+                except (json.JSONDecodeError, TypeError):
+                    waypoints = []
+            
             segments.append({
                 "index": seg.index,
+                "start_time": seg.start_time or 0.0,  # 片段在视频中的起始时间
                 "duration": seg.duration,
                 "path_type": seg.path_type or "static",
-                "offset_start": [int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
-                "offset_end": [int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                "offset_start": [float(seg.offset_start_x or 0), float(seg.offset_start_y or 0)],
+                "offset_end": [float(seg.offset_end_x or 0), float(seg.offset_end_y or 0)],
+                "path_waypoints": waypoints,
                 "entry_type": seg.entry_type or "instant",
                 "entry_duration": seg.entry_duration or 1.0,
                 "entry_delay": seg.entry_delay or 0.0,
                 "exit_type": seg.exit_type or "instant",
                 "exit_duration": seg.exit_duration or 1.0,
                 "exit_delay": seg.exit_delay or 0.0,
+                "guidance_text": seg.guidance_text,
+                "guidance_text_en": seg.guidance_text_en,
+                "play_audio": getattr(seg, 'play_audio', False),
             })
-        logger.info(f"[CharacterSegments] Base storyline segments loaded: {segments}")
+        logger.info(f"[CharacterSegments] Base storyline segments loaded: {len(segments)} segments")
     
     result = {
         "storyline_id": storyline_id,

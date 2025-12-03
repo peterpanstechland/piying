@@ -182,7 +182,7 @@ export class CharacterRenderer {
       canvas,
       width,
       height,
-      backgroundColor: 0x1a1a2e,
+      backgroundColor: 0x00ff00, // 绿幕背景，用于 chromakey 去除
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
@@ -476,6 +476,54 @@ export class CharacterRenderer {
     this.referencePose = null
     this.useReferencePose = false
     this.isFlying = false // 重置飞行状态
+  }
+
+  /**
+   * Set the container position (normalized 0-1 coordinates)
+   * Used for path-based movement during recording
+   * @param x - X position (0 = left edge, 1 = right edge)
+   * @param y - Y position (0 = top edge, 1 = bottom edge)
+   */
+  setPosition(x: number, y: number): void {
+    if (!this.container || !this.app) return
+    
+    const screenWidth = this.app.screen.width
+    const screenHeight = this.app.screen.height
+    
+    this.container.x = x * screenWidth
+    this.container.y = y * screenHeight
+  }
+
+  /**
+   * Get current container position (normalized 0-1 coordinates)
+   */
+  getPosition(): { x: number; y: number } {
+    if (!this.container || !this.app) return { x: 0.5, y: 0.5 }
+    
+    return {
+      x: this.container.x / this.app.screen.width,
+      y: this.container.y / this.app.screen.height,
+    }
+  }
+
+  /**
+   * Set container opacity (for entry/exit fade animations)
+   * @param alpha - Opacity value (0-1)
+   */
+  setOpacity(alpha: number): void {
+    if (!this.container) return
+    this.container.alpha = Math.max(0, Math.min(1, alpha))
+  }
+
+  /**
+   * Set container scale (for entry/exit scale animations)
+   * @param scale - Scale value
+   */
+  setScale(scale: number): void {
+    if (!this.container) return
+    // Preserve the flip state (negative scale means flipped)
+    const flipSign = this.container.scale.x < 0 ? -1 : 1
+    this.container.scale.set(scale * flipSign, scale)
   }
 
   // Default rotation bindings for parts (MediaPipe Pose landmarks)

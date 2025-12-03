@@ -757,11 +757,20 @@ class AdminApiClient {
       path_type: string
       offset_start: number[]
       offset_end: number[]
+      // Individual coordinate fields for compatibility
+      offset_start_x?: number
+      offset_start_y?: number
+      offset_end_x?: number
+      offset_end_y?: number
+      // Path data
+      path_waypoints?: number[][] | null
+      path_draw_type?: string
       entry_animation: { type: string; duration: number; delay: number }
       exit_animation: { type: string; duration: number; delay: number }
       guidance_text: string
       guidance_text_en: string
       guidance_image: string | null
+      play_audio?: boolean
     }>
   }> {
     const response = await this.client.get(
@@ -778,13 +787,16 @@ class AdminApiClient {
       start_time: number
       duration: number
       path_type?: string
-      offset_start?: number[]
-      offset_end?: number[]
+      offset_start?: [number, number]
+      offset_end?: [number, number]
+      path_waypoints?: [number, number][]
+      path_draw_type?: string
       entry_animation?: { type: string; duration: number; delay: number }
       exit_animation?: { type: string; duration: number; delay: number }
       guidance_text?: string
       guidance_text_en?: string
       guidance_image?: string | null
+      play_audio?: boolean
     }>
   ): Promise<{ message: string }> {
     const response = await this.client.put(

@@ -1,15 +1,23 @@
 """
 Video rendering service for shadow puppet overlay
+
+This module supports three rendering modes:
+1. Video overlay (preferred): Uses pre-recorded canvas video from frontend, overlaid with FFmpeg
+2. Spritesheet-based rendering (PuppetRenderer): Uses actual character sprites with pose-driven animation
+3. Skeleton fallback: Draws simple skeleton lines when no character spritesheet is available
 """
 import cv2
 import numpy as np
 import logging
 import time
+import subprocess
+import shutil
 from pathlib import Path
 from typing import Optional, List, Tuple
 from ..models import Session, Segment, PoseFrame
 from ..config import SceneConfig
 from ..utils.logger import log_render_performance, log_error_with_context
+from .puppet_renderer import PuppetRenderer, PuppetRendererCache
 
 logger = logging.getLogger(__name__)
 
@@ -180,15 +188,17 @@ class VideoRenderer:
         # Middle phase - fully visible
         return 1.0
     
-    def __init__(self, scene_config: SceneConfig, output_dir: str = None):
+    def __init__(self, scene_config: SceneConfig, output_dir: str = None, character_id: str = None):
         """
         Initialize VideoRenderer
         
         Args:
             scene_config: Scene configuration with base video and segment settings
             output_dir: Directory for output videos (default: project_root/data/outputs)
+            character_id: Optional character ID for spritesheet-based rendering
         """
         self.scene_config = scene_config
+        self.character_id = character_id
         
         # Get project root directory
         self.project_root = Path(__file__).parent.parent.parent.parent
@@ -205,10 +215,43 @@ class VideoRenderer:
         self.frame_width = 0
         self.frame_height = 0
         self.fps = 30
+        
+        # Puppet renderer for spritesheet-based rendering
+        self.puppet_renderer: Optional[PuppetRenderer] = None
+        self.use_puppet_renderer = False
+        
+        # Try to load puppet renderer if character_id is provided
+        if character_id:
+            self._init_puppet_renderer(character_id)
+    
+    def _init_puppet_renderer(self, character_id: str) -> None:
+        """
+        Initialize puppet renderer for character spritesheet rendering.
+        
+        Args:
+            character_id: Character UUID
+        """
+        try:
+            data_dir = self.project_root / "backend" / "data"
+            self.puppet_renderer = PuppetRendererCache.get_renderer(character_id, data_dir)
+            
+            if self.puppet_renderer:
+                self.use_puppet_renderer = True
+                logger.info(f"Puppet renderer loaded for character {character_id}")
+            else:
+                logger.warning(f"Failed to load puppet renderer for character {character_id}, falling back to skeleton")
+        except Exception as e:
+            logger.warning(f"Error initializing puppet renderer: {e}, falling back to skeleton")
+            self.puppet_renderer = None
+            self.use_puppet_renderer = False
     
     def render_video(self, session: Session) -> str:
         """
         Render final video with shadow puppet overlay
+        
+        Rendering priority:
+        1. If all segments have video_path, use FFmpeg overlay (fastest, exact match with frontend)
+        2. Otherwise, use frame-by-frame rendering with PuppetRenderer or skeleton fallback
         
         Args:
             session: Session with all segment data
@@ -225,6 +268,23 @@ class VideoRenderer:
             f"Starting video rendering for session {session.id}",
             extra={"context": {"session_id": session.id, "scene_id": session.scene_id, "character_id": session.character_id}}
         )
+        
+        # Check if all segments have pre-recorded video files
+        all_segments_have_video = all(
+            segment.video_path and Path(segment.video_path).exists()
+            for segment in session.segments
+        ) if session.segments else False
+        
+        if all_segments_have_video:
+            logger.info("All segments have video files, using FFmpeg overlay rendering")
+            try:
+                return self._render_with_ffmpeg_overlay(session, start_time)
+            except Exception as e:
+                logger.warning(f"FFmpeg overlay rendering failed: {e}, falling back to frame-by-frame rendering")
+        
+        # Initialize puppet renderer if session has character_id and we haven't loaded it yet
+        if session.character_id and not self.use_puppet_renderer:
+            self._init_puppet_renderer(session.character_id)
         
         # Determine which video to use as base
         # If session has character_id, try to load character-specific video
@@ -379,7 +439,12 @@ class VideoRenderer:
                         offset = character_paths[segment_index].get_offset(segment_time)
                         
                         # Draw shadow puppet with alpha
-                        frame = self._draw_puppet(frame, pose_frame.landmarks, offset, alpha)
+                        # Use spritesheet-based rendering if puppet renderer is available
+                        if self.use_puppet_renderer and self.puppet_renderer:
+                            frame = self._draw_puppet_sprite(frame, pose_frame.landmarks, offset, alpha)
+                        else:
+                            # Fallback to skeleton drawing
+                            frame = self._draw_puppet_skeleton(frame, pose_frame.landmarks, offset, alpha)
             
             # Write frame to output
             out.write(frame)
@@ -482,7 +547,7 @@ class VideoRenderer:
         
         return None, 0.0
     
-    def _draw_puppet(
+    def _draw_puppet_sprite(
         self,
         frame: np.ndarray,
         landmarks: List[List[float]],
@@ -490,7 +555,46 @@ class VideoRenderer:
         alpha: float = 1.0
     ) -> np.ndarray:
         """
-        Draw shadow puppet skeleton on frame with alpha blending
+        Draw shadow puppet using spritesheet-based rendering.
+        
+        Args:
+            frame: Video frame to draw on
+            landmarks: Pose landmarks as list of [x, y, z, visibility]
+            offset: Position offset (x, y) for character placement
+            alpha: Opacity value from 0.0 (transparent) to 1.0 (opaque)
+            
+        Returns:
+            Frame with puppet drawn
+        """
+        if not self.puppet_renderer:
+            return frame
+        
+        # Calculate target height based on frame height
+        target_height = int(self.frame_height * 0.6)  # 60% of frame height
+        
+        try:
+            frame = self.puppet_renderer.render(
+                frame,
+                landmarks,
+                offset=offset,
+                alpha=alpha,
+                target_height=target_height
+            )
+        except Exception as e:
+            logger.warning(f"Puppet sprite rendering failed: {e}, falling back to skeleton")
+            frame = self._draw_puppet_skeleton(frame, landmarks, offset, alpha)
+        
+        return frame
+    
+    def _draw_puppet_skeleton(
+        self,
+        frame: np.ndarray,
+        landmarks: List[List[float]],
+        offset: Tuple[int, int],
+        alpha: float = 1.0
+    ) -> np.ndarray:
+        """
+        Draw shadow puppet skeleton on frame with alpha blending (fallback method).
         
         Args:
             frame: Video frame to draw on
@@ -570,3 +674,209 @@ class VideoRenderer:
         cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
         
         return frame
+    
+    def _render_with_ffmpeg_overlay(self, session: Session, start_time: float) -> str:
+        """
+        Render video using FFmpeg to overlay pre-recorded canvas videos.
+        
+        This method is much faster and produces exact match with frontend rendering
+        since it uses the actual recorded canvas output.
+        
+        The overlay is positioned at the correct time offset (segment.start_time)
+        and the full background video is preserved.
+        
+        Args:
+            session: Session with segment data containing video_path
+            start_time: Start time for performance measurement
+            
+        Returns:
+            Path to rendered video file
+        """
+        # Check if FFmpeg is available
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            raise RuntimeError("FFmpeg not found in PATH")
+        
+        # Determine base video path
+        base_video_path = self._get_base_video_path(session)
+        
+        # Prepare output path
+        output_path = self.output_dir / f"final_{session.id}.mp4"
+        
+        # Get segment timing info from scene config
+        segment_configs = self.scene_config.segments if self.scene_config else []
+        
+        # Build filter complex for all segments
+        # Each segment overlay is enabled only during its time range
+        if len(session.segments) == 1:
+            segment = session.segments[0]
+            overlay_video = Path(segment.video_path)
+            
+            # Get start_time from scene config (segment index matches)
+            seg_start_time = 0.0
+            if segment_configs and len(segment_configs) > segment.index:
+                seg_start_time = getattr(segment_configs[segment.index], 'start_time', 0.0) or 0.0
+            
+            logger.info(f"Single segment overlay at start_time={seg_start_time}")
+            
+            # FFmpeg command to overlay with chromakey at specific time
+            # Using setpts to delay the overlay video and enable to limit its duration
+            # The overlay is enabled only during the segment's time window
+            filter_complex = (
+                f"[1:v]chromakey=0x00ff00:0.1:0.2,setpts=PTS+{seg_start_time}/TB[fg];"
+                f"[0:v][fg]overlay=0:0:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
+            )
+            
+            cmd = [
+                ffmpeg_path,
+                "-y",  # Overwrite output
+                "-i", str(base_video_path),  # Base video (full length)
+                "-i", str(overlay_video),  # Overlay video (with green background)
+                "-filter_complex", filter_complex,
+                "-map", "[out]",
+                "-map", "0:a?",  # Keep audio from base video if exists
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "23",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                str(output_path)
+            ]
+            
+            logger.info(f"Running FFmpeg overlay: {' '.join(cmd)}")
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"FFmpeg failed: {result.stderr}")
+                raise RuntimeError(f"FFmpeg overlay failed: {result.stderr}")
+        else:
+            # Multiple segments - overlay each at its correct time position
+            temp_dir = self.output_dir / "temp" / session.id
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Build complex filter for multiple overlays
+            # Each segment gets its own overlay at the correct time
+            inputs = ["-i", str(base_video_path)]
+            filter_parts = []
+            current_stream = "[0:v]"
+            
+            sorted_segments = sorted(session.segments, key=lambda s: s.index)
+            
+            for i, segment in enumerate(sorted_segments):
+                overlay_video = Path(segment.video_path)
+                inputs.extend(["-i", str(overlay_video)])
+                
+                # Get start_time from scene config
+                seg_start_time = 0.0
+                if segment_configs and len(segment_configs) > segment.index:
+                    seg_start_time = getattr(segment_configs[segment.index], 'start_time', 0.0) or 0.0
+                
+                input_idx = i + 1  # Input index (0 is base video)
+                
+                # Apply chromakey and time offset to this segment
+                filter_parts.append(
+                    f"[{input_idx}:v]chromakey=0x00ff00:0.1:0.2,setpts=PTS+{seg_start_time}/TB[fg{i}]"
+                )
+                
+                # Overlay at the correct time
+                output_stream = f"[tmp{i}]" if i < len(sorted_segments) - 1 else "[out]"
+                filter_parts.append(
+                    f"{current_stream}[fg{i}]overlay=0:0:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
+                )
+                current_stream = f"[tmp{i}]"
+            
+            filter_complex = ";".join(filter_parts)
+            
+            cmd = [
+                ffmpeg_path,
+                "-y",
+                *inputs,
+                "-filter_complex", filter_complex,
+                "-map", "[out]",
+                "-map", "0:a?",
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "23",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                str(output_path)
+            ]
+            
+            logger.info(f"Running FFmpeg multi-segment overlay")
+            logger.debug(f"FFmpeg command: {' '.join(cmd)}")
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"FFmpeg failed: {result.stderr}")
+                raise RuntimeError(f"FFmpeg overlay failed: {result.stderr}")
+            
+            # Cleanup temp files
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp dir: {e}")
+        
+        # Log performance
+        end_time = time.time()
+        duration_seconds = end_time - start_time
+        output_file_size_mb = output_path.stat().st_size / (1024 * 1024) if output_path.exists() else 0
+        
+        log_render_performance(
+            logger,
+            session.id,
+            duration_seconds,
+            output_file_size_mb,
+            0,  # frame_count not applicable for FFmpeg
+            scene_id=session.scene_id,
+            resolution="FFmpeg",
+            fps=0
+        )
+        
+        logger.info(f"FFmpeg overlay rendering completed: {output_path}")
+        return str(output_path)
+    
+    def _get_base_video_path(self, session: Session) -> Path:
+        """Get the base video path for a session."""
+        base_video_path = None
+        
+        if session.character_id:
+            try:
+                from ..services.admin.character_video_service import character_video_service
+                from ..database import async_session_maker
+                import asyncio
+                
+                async def get_char_video():
+                    async with async_session_maker() as db:
+                        return await character_video_service.get_character_video_path(
+                            db, session.scene_id, session.character_id
+                        )
+                
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                char_video_path = loop.run_until_complete(get_char_video())
+                loop.close()
+                
+                if char_video_path:
+                    base_video_path = self.project_root / "backend" / "data" / char_video_path
+            except Exception as e:
+                logger.warning(f"Failed to load character-specific video path: {e}")
+        
+        if base_video_path is None or not base_video_path.exists():
+            base_video_path = self.project_root / self.scene_config.base_video_path
+        
+        if not base_video_path.exists():
+            raise ValueError(f"Base video not found: {base_video_path}")
+        
+        return base_video_path

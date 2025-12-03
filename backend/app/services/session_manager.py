@@ -80,13 +80,14 @@ class SessionManager:
         """
         return self.storage_manager.load_session(session_id)
     
-    def update_segment(self, session_id: str, segment: Segment) -> None:
+    def update_segment(self, session_id: str, segment: Segment, video_path: str = None) -> None:
         """
         Update or add a segment to a session
         
         Args:
             session_id: Session identifier
             segment: Segment data to add/update
+            video_path: Optional path to recorded canvas video file
             
         Raises:
             ValueError: If session not found
@@ -94,6 +95,10 @@ class SessionManager:
         session = self.get_session(session_id)
         if session is None:
             raise ValueError(f"Session {session_id} not found")
+        
+        # Add video path to segment if provided
+        if video_path:
+            segment.video_path = video_path
         
         # Find existing segment with same index or append
         existing_index = None

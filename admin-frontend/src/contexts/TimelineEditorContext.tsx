@@ -35,6 +35,8 @@ export interface TimelineSegment {
   guidanceImage: string | null
   // Movement path
   path?: SegmentPath
+  // Audio playback during recording
+  playAudio?: boolean
 }
 
 export interface Transition {

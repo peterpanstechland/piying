@@ -617,14 +617,30 @@ class CharacterVideoService:
         
         segments = []
         for seg in sorted(assoc.segments, key=lambda x: x.index):
+            # Parse waypoints from JSON string
+            waypoints = None
+            if seg.path_waypoints:
+                try:
+                    import json
+                    waypoints = json.loads(seg.path_waypoints)
+                except:
+                    waypoints = []
+            
             segments.append({
                 "id": str(seg.id),
                 "index": seg.index,
                 "start_time": seg.start_time,
                 "duration": seg.duration,
                 "path_type": seg.path_type,
+                # Return both formats for compatibility
                 "offset_start": [seg.offset_start_x, seg.offset_start_y],
                 "offset_end": [seg.offset_end_x, seg.offset_end_y],
+                "offset_start_x": seg.offset_start_x,
+                "offset_start_y": seg.offset_start_y,
+                "offset_end_x": seg.offset_end_x,
+                "offset_end_y": seg.offset_end_y,
+                "path_waypoints": waypoints,
+                "path_draw_type": seg.path_draw_type or "linear",
                 "entry_animation": {
                     "type": seg.entry_type or "instant",
                     "duration": seg.entry_duration or 1.0,
@@ -638,6 +654,7 @@ class CharacterVideoService:
                 "guidance_text": seg.guidance_text or "",
                 "guidance_text_en": seg.guidance_text_en or "",
                 "guidance_image": seg.guidance_image,
+                "play_audio": seg.play_audio or False,
             })
         
         return segments
@@ -687,7 +704,23 @@ class CharacterVideoService:
         )
         
         # Add new segments
+        import json
+        import logging
+        logger = logging.getLogger(__name__)
+        
         for seg in segments:
+            # Convert waypoints to JSON string
+            waypoints_json = None
+            if hasattr(seg, 'path_waypoints') and seg.path_waypoints:
+                waypoints_json = json.dumps(seg.path_waypoints)
+            
+            # Debug logging
+            logger.info(f"Saving segment {seg.index}:")
+            logger.info(f"  offset_start: {seg.offset_start}")
+            logger.info(f"  offset_end: {seg.offset_end}")
+            logger.info(f"  path_waypoints: {getattr(seg, 'path_waypoints', None)}")
+            logger.info(f"  path_draw_type: {getattr(seg, 'path_draw_type', 'linear')}")
+            
             new_segment = CharacterVideoSegmentDB(
                 storyline_character_id=assoc.id,
                 index=seg.index,
@@ -698,6 +731,8 @@ class CharacterVideoService:
                 offset_start_y=seg.offset_start[1],
                 offset_end_x=seg.offset_end[0],
                 offset_end_y=seg.offset_end[1],
+                path_waypoints=waypoints_json,
+                path_draw_type=getattr(seg, 'path_draw_type', 'linear') or 'linear',
                 entry_type=seg.entry_animation.type.value if hasattr(seg.entry_animation.type, 'value') else seg.entry_animation.type,
                 entry_duration=seg.entry_animation.duration,
                 entry_delay=seg.entry_animation.delay,
@@ -707,6 +742,7 @@ class CharacterVideoService:
                 guidance_text=seg.guidance_text or "",
                 guidance_text_en=seg.guidance_text_en or "",
                 guidance_image=seg.guidance_image,
+                play_audio=getattr(seg, 'play_audio', False),
             )
             db.add(new_segment)
         

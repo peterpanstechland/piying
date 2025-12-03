@@ -214,19 +214,33 @@ export class APIClient {
    * @param segmentIndex - Segment index
    * @param data - Segment data with frames
    * @param onProgress - Optional callback for upload progress (0-100)
+   * @param videoBlob - Optional recorded video blob from canvas
    */
   async uploadSegment(
     sessionId: string,
     segmentIndex: number,
     data: SegmentData,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    videoBlob?: Blob
   ): Promise<void> {
     try {
       await this.retryRequest(async () => {
+        // Always use FormData (backend expects multipart/form-data)
+        const formData = new FormData();
+        formData.append('segment_data', JSON.stringify(data));
+        
+        // Add video file if available
+        if (videoBlob) {
+          formData.append('video', videoBlob, `segment_${segmentIndex}.webm`);
+        }
+        
         const response = await this.client.post(
           `/api/sessions/${sessionId}/segments/${segmentIndex}`,
-          data,
+          formData,
           {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
             onUploadProgress: (progressEvent) => {
               if (onProgress && progressEvent.total) {
                 const percentCompleted = Math.round(
@@ -245,8 +259,8 @@ export class APIClient {
       this.uploadCache.delete(cacheKey);
       this.saveCacheToStorage();
     } catch (error) {
-      // Cache the upload for later retry if it's a network error
-      if (this.isNetworkError(error)) {
+      // Cache the upload for later retry if it's a network error (only for JSON data)
+      if (this.isNetworkError(error) && !videoBlob) {
         this.cacheUpload(sessionId, segmentIndex, data);
         throw new Error('Network error: Upload cached for retry');
       }

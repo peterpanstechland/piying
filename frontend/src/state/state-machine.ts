@@ -34,6 +34,30 @@ export interface CharacterOption {
   display_order: number;
 }
 
+export interface SegmentConfig {
+  index?: number;
+  start_time?: number;  // 片段在视频中的起始时间（秒），默认 0
+  duration: number;
+  path_type?: string;
+  offset_start?: number[];  // 起始位置 [x, y] 归一化 0-1
+  offset_end?: number[];    // 结束位置 [x, y] 归一化 0-1
+  path_waypoints?: number[][]; // 路径中间点
+  // 进场动画配置
+  entry_type?: string;
+  entry_duration?: number;
+  entry_delay?: number;
+  // 退场动画配置
+  exit_type?: string;
+  exit_duration?: number;
+  exit_delay?: number;
+  // 引导内容
+  guidance_text?: string;
+  guidance_text_en?: string;
+  guidance_image?: string | null;
+  // 录制时是否播放音频
+  play_audio?: boolean;
+}
+
 export interface StateContext {
   sessionId?: string;
   sceneId?: string;
@@ -42,6 +66,7 @@ export interface StateContext {
   videoDuration?: number;  // Video duration in seconds for auto-reset timing
   apiBaseUrl?: string;  // API base URL for reconstructing video URLs
   availableCharacters?: CharacterOption[];
+  segments?: SegmentConfig[];  // Segment configurations from backend
   currentSegment: number;
   totalSegments: number;
   recordedSegments: SegmentData[];

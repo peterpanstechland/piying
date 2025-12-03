@@ -341,3 +341,14 @@
 .path-editor-panel__help strong {
   color: #ffd700;
 }
+
+/* Save status indicator */
+.path-editor-panel__save-status {
+  display: inline-block;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #888;
+  margin-left: auto;
+}

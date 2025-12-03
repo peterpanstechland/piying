@@ -27,13 +27,17 @@ interface StorylineSegment {
   guidance_text?: string
   guidance_text_en?: string
   guidance_image?: string | null
-  // Path data
+  // Path data - individual fields
   offset_start_x?: number
   offset_start_y?: number
   offset_end_x?: number
   offset_end_y?: number
-  path_waypoints?: Array<[number, number]> | string
-  path_draw_type?: 'linear' | 'bezier' | 'freehand'
+  // Path data - array format (from backend)
+  offset_start?: number[]
+  offset_end?: number[]
+  path_waypoints?: Array<[number, number]> | string | number[][]
+  path_draw_type?: 'linear' | 'bezier' | 'freehand' | string
+  play_audio?: boolean
 }
 
 interface StorylineData {
@@ -123,29 +127,50 @@ export default function VideoEditorPage() {
     if (!segments) return []
     
     return segments.map((seg, index) => {
-      // Parse waypoints if stored as JSON string
+      // Parse waypoints if stored as JSON string or array
       let waypoints: Array<{ x: number; y: number }> = []
       if (seg.path_waypoints) {
         try {
           const parsed = typeof seg.path_waypoints === 'string' 
             ? JSON.parse(seg.path_waypoints) 
             : seg.path_waypoints
-          waypoints = parsed.map((wp: [number, number]) => ({ x: wp[0], y: wp[1] }))
+          if (Array.isArray(parsed)) {
+            waypoints = parsed.map((wp: [number, number]) => ({ x: wp[0], y: wp[1] }))
+          }
         } catch {
           waypoints = []
         }
       }
       
+      // Support both formats: offset_start_x/y (individual) or offset_start (array)
+      const segWithArrays = seg as typeof seg & { offset_start?: number[]; offset_end?: number[] }
+      
+      // Get start coordinates - prefer individual fields, fallback to array
+      let startX = seg.offset_start_x
+      let startY = seg.offset_start_y
+      if (startX === undefined && segWithArrays.offset_start) {
+        startX = segWithArrays.offset_start[0]
+        startY = segWithArrays.offset_start[1]
+      }
+      
+      // Get end coordinates - prefer individual fields, fallback to array
+      let endX = seg.offset_end_x
+      let endY = seg.offset_end_y
+      if (endX === undefined && segWithArrays.offset_end) {
+        endX = segWithArrays.offset_end[0]
+        endY = segWithArrays.offset_end[1]
+      }
+      
       // Build path object if coordinates exist
-      const hasPath = seg.offset_start_x !== undefined || seg.offset_end_x !== undefined
+      const hasPath = startX !== undefined || endX !== undefined
       const path = hasPath ? {
         startPoint: { 
-          x: seg.offset_start_x ?? 0.1, 
-          y: seg.offset_start_y ?? 0.5 
+          x: startX ?? 0.1, 
+          y: startY ?? 0.5 
         },
         endPoint: { 
-          x: seg.offset_end_x ?? 0.9, 
-          y: seg.offset_end_y ?? 0.5 
+          x: endX ?? 0.9, 
+          y: endY ?? 0.5 
         },
         waypoints,
         pathType: (seg.path_draw_type || 'linear') as 'linear' | 'bezier' | 'freehand',
@@ -161,6 +186,7 @@ export default function VideoEditorPage() {
         guidanceText: seg.guidance_text || '',
         guidanceTextEn: seg.guidance_text_en || '',
         guidanceImage: seg.guidance_image || null,
+        playAudio: (seg as any).play_audio || false,
         path,
       }
     })
@@ -194,6 +220,7 @@ export default function VideoEditorPage() {
         guidanceText: s.guidance_text || '',
         guidanceTextEn: s.guidance_text_en || '',
         guidanceImage: s.guidance_image || null,
+        playAudio: (s as any).play_audio || false,
       })))
       setPrevSegmentsJson(initialJson)
       
@@ -214,6 +241,14 @@ export default function VideoEditorPage() {
       guidanceText: s.guidanceText,
       guidanceTextEn: s.guidanceTextEn,
       guidanceImage: s.guidanceImage,
+      playAudio: s.playAudio || false,
+      // Include path in comparison to detect path changes
+      path: s.path ? {
+        startPoint: s.path.startPoint,
+        endPoint: s.path.endPoint,
+        waypoints: s.path.waypoints,
+        pathType: s.path.pathType,
+      } : null,
     })))
 
     if (segmentsJson === prevSegmentsJson) return
@@ -226,13 +261,13 @@ export default function VideoEditorPage() {
         start_time: seg.startTime,
         duration: seg.duration,
         path_type: seg.path?.pathType || 'static',
-        offset_start: seg.path 
+        offset_start: (seg.path 
           ? [seg.path.startPoint.x, seg.path.startPoint.y] 
-          : [0.1, 0.5],
-        offset_end: seg.path 
+          : [0.1, 0.5]) as [number, number],
+        offset_end: (seg.path 
           ? [seg.path.endPoint.x, seg.path.endPoint.y] 
-          : [0.9, 0.5],
-        path_waypoints: seg.path?.waypoints.map(wp => [wp.x, wp.y]) || [],
+          : [0.9, 0.5]) as [number, number],
+        path_waypoints: (seg.path?.waypoints.map(wp => [wp.x, wp.y]) || []) as [number, number][],
         path_draw_type: seg.path?.pathType || 'linear',
         entry_animation: {
           type: String(seg.entryAnimation?.type || 'instant'),
@@ -247,6 +282,7 @@ export default function VideoEditorPage() {
         guidance_text: seg.guidanceText || '',
         guidance_text_en: seg.guidanceTextEn || '',
         guidance_image: seg.guidanceImage || null,
+        play_audio: seg.playAudio || false,
       }))
 
       if (isCharacterVideo && characterId) {
@@ -411,6 +447,7 @@ export default function VideoEditorPage() {
           onSegmentDelete={handleSegmentDelete}
           onGuidanceImageUpload={isCharacterVideo ? undefined : handleGuidanceImageUpload}
           onGuidanceFrameCapture={isCharacterVideo ? undefined : handleGuidanceFrameCapture}
+          saving={saving}
         />
       </main>
     </div>

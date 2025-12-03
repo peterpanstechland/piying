@@ -20,6 +20,10 @@ interface PathEditorPanelProps {
   onToolChange: (tool: PathTool) => void
   /** Whether editing is enabled */
   enabled?: boolean
+  /** Whether changes are being saved */
+  saving?: boolean
+  /** Whether there are unsaved changes */
+  hasUnsavedChanges?: boolean
 }
 
 const DEFAULT_PATH: SegmentPath = {
@@ -35,6 +39,8 @@ export default function PathEditorPanel({
   tool,
   onToolChange,
   enabled = true,
+  saving = false,
+  hasUnsavedChanges = false,
 }: PathEditorPanelProps) {
   const activePath = path || DEFAULT_PATH
 
@@ -182,6 +188,10 @@ export default function PathEditorPanel({
         >
           🗑️ 重置路径
         </button>
+        {/* Save status indicator */}
+        <span className="path-editor-panel__save-status">
+          {saving ? '💾 保存中...' : hasUnsavedChanges ? '⚠️ 有未保存更改' : '✅ 已自动保存'}
+        </span>
       </div>
 
       {/* Help text */}

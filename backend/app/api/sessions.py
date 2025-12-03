@@ -2,14 +2,18 @@
 Session management API endpoints
 """
 import logging
+import json
+import aiofiles
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from typing import Optional
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from ..models import (
     CreateSessionRequest,
     CreateSessionResponse,
     SessionStatusResponse,
     Segment,
+    PoseFrame,
     UploadSegmentResponse,
     SessionStatus,
 )
@@ -224,14 +228,20 @@ async def get_session_status(session_id: str):
 
 
 @router.post("/{session_id}/segments/{segment_index}", response_model=UploadSegmentResponse)
-async def upload_segment(session_id: str, segment_index: int, segment: Segment):
+async def upload_segment(
+    session_id: str, 
+    segment_index: int, 
+    segment_data: str = Form(...),
+    video: Optional[UploadFile] = File(None)
+):
     """
-    Upload segment data for a session
+    Upload segment data for a session (multipart form)
     
     Args:
         session_id: Session identifier
         segment_index: Segment index (must match segment.index)
-        segment: Segment data with frames
+        segment_data: Segment data as JSON string
+        video: Optional recorded video file from frontend canvas
         
     Returns:
         Upload success response
@@ -247,6 +257,24 @@ async def upload_segment(session_id: str, segment_index: int, segment: Segment):
             detail=f"Session {session_id} not found"
         )
     
+    # Parse segment data from form
+    try:
+        data = json.loads(segment_data)
+        segment = Segment(
+            index=data["index"],
+            duration=data["duration"],
+            frames=[PoseFrame(
+                timestamp=f["timestamp"],
+                landmarks=f["landmarks"]
+            ) for f in data.get("frames", [])]
+        )
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        logger.error(f"Failed to parse segment_data: {e}, data type: {type(segment_data)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid segment data: {e}"
+        )
+    
     # Verify segment index matches URL parameter
     if segment.index != segment_index:
         raise HTTPException(
@@ -254,9 +282,29 @@ async def upload_segment(session_id: str, segment_index: int, segment: Segment):
             detail=f"Segment index mismatch: URL has {segment_index}, body has {segment.index}"
         )
     
-    # Update segment
+    # Save video file if provided
+    video_path = None
+    if video is not None:
+        try:
+            # Create session videos directory
+            project_root = Path(__file__).parent.parent.parent.parent
+            videos_dir = project_root / "data" / "session_videos" / session_id
+            videos_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Save video file
+            video_path = videos_dir / f"segment_{segment_index}.webm"
+            async with aiofiles.open(video_path, 'wb') as f:
+                content = await video.read()
+                await f.write(content)
+            
+            logger.info(f"Saved segment video: {video_path} ({len(content) / 1024 / 1024:.2f} MB)")
+        except Exception as e:
+            logger.error(f"Failed to save segment video: {e}")
+            # Continue without video - we still have pose data
+    
+    # Update segment with video path
     try:
-        session_manager.update_segment(session_id, segment)
+        session_manager.update_segment(session_id, segment, video_path=str(video_path) if video_path else None)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -265,7 +313,7 @@ async def upload_segment(session_id: str, segment_index: int, segment: Segment):
     
     return UploadSegmentResponse(
         success=True,
-        message="Segment uploaded successfully"
+        message="Segment uploaded successfully" + (" with video" if video_path else "")
     )
 
 
@@ -363,8 +411,8 @@ async def _render_video_background(session_id: str):
             session_manager.update_status(session_id, SessionStatus.FAILED)
             return
         
-        # Initialize renderer
-        renderer = VideoRenderer(scene_config)
+        # Initialize renderer with character_id for spritesheet-based rendering
+        renderer = VideoRenderer(scene_config, character_id=session.character_id)
         
         # Render video
         output_path = renderer.render_video(session)

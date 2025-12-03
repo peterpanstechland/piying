@@ -16,6 +16,8 @@ interface PropertyPanelProps {
   onPathToolChange?: (tool: PathTool) => void
   /** Callback when segment path changes */
   onPathChange?: (segmentId: string, path: SegmentPath) => void
+  /** Whether changes are being saved */
+  saving?: boolean
 }
 
 /**
@@ -29,6 +31,7 @@ export default function PropertyPanel({
   pathTool = 'select',
   onPathToolChange,
   onPathChange,
+  saving = false,
 }: PropertyPanelProps) {
   const [localPathTool, setLocalPathTool] = useState<PathTool>('select')
   
@@ -180,6 +183,7 @@ export default function PropertyPanel({
               tool={currentPathTool}
               onToolChange={handlePathToolChange}
               enabled={true}
+              saving={saving}
             />
           </div>
 
@@ -199,6 +203,19 @@ export default function PropertyPanel({
               onImageUpload={handleGuidanceImageUpload}
               onFrameCapture={handleGuidanceFrameCapture}
             />
+          </div>
+
+          {/* Recording Audio */}
+          <div className="property-panel__section">
+            <h4 className="property-panel__section-title">录制设置 / Recording Settings</h4>
+            <label className="property-panel__checkbox">
+              <input
+                type="checkbox"
+                checked={selectedSegment.playAudio || false}
+                onChange={(e) => handleSegmentUpdate({ playAudio: e.target.checked })}
+              />
+              <span>录制时播放音频 / Play audio during recording</span>
+            </label>
           </div>
         </div>
       </div>

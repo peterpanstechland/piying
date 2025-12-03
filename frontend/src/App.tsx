@@ -3,6 +3,11 @@ import { StateMachine, AppState } from './state/state-machine';
 import { CameraDetectionService, DetectionResult, PoseLandmark } from './services/camera-detection';
 import { MotionCaptureRecorder, SegmentData } from './services/motion-capture';
 import { APIClient } from './services/api-client';
+
+// Extended segment data with optional video blob
+interface RecordedSegment extends SegmentData {
+  videoBlob?: Blob;
+}
 import { 
   IdlePage, 
   SceneSelectionPage, 
@@ -128,7 +133,7 @@ function App() {
   const personDetectedTimeRef = useRef<number | null>(null);
   const recorderRef = useRef<MotionCaptureRecorder>(new MotionCaptureRecorder());
   const apiClientRef = useRef<APIClient>(new APIClient());
-  const recordedSegmentsRef = useRef<SegmentData[]>([]);
+  const recordedSegmentsRef = useRef<RecordedSegment[]>([]);
   const poseCallbackRef = useRef<((landmarks: PoseLandmark[]) => void) | null>(null);
 
   // Setup global error handling
@@ -545,11 +550,23 @@ function App() {
   // Countdown removed - recording state is now set in RecordingPage
 
   // Handle recording complete - stop recording and transition to review
-  const handleRecordingComplete = () => {
+  const handleRecordingComplete = (videoBlob?: Blob) => {
     if (recorderRef.current.isRecordingActive()) {
       const segmentData = recorderRef.current.stopRecording();
-      recordedSegmentsRef.current.push(segmentData);
-      console.log('Recording complete:', segmentData);
+      
+      // Store segment data with video blob
+      const recordedSegment: RecordedSegment = {
+        ...segmentData,
+        videoBlob,
+      };
+      recordedSegmentsRef.current.push(recordedSegment);
+      
+      console.log('Recording complete:', {
+        index: segmentData.index,
+        frames: segmentData.frames.length,
+        hasVideo: !!videoBlob,
+        videoSize: videoBlob ? `${(videoBlob.size / 1024 / 1024).toFixed(2)} MB` : 'N/A',
+      });
       
       // Stop recording state in camera service
       if (cameraServiceRef.current) {
@@ -606,15 +623,19 @@ function App() {
         }))
       };
 
-      // Upload the segment with progress tracking
-      console.log(`Uploading segment ${lastSegment.index} for session ${context.sessionId}`);
+      // Upload the segment with progress tracking (including video blob if available)
+      console.log(`Uploading segment ${lastSegment.index} for session ${context.sessionId}`, {
+        hasVideo: !!lastSegment.videoBlob,
+        videoSize: lastSegment.videoBlob ? `${(lastSegment.videoBlob.size / 1024 / 1024).toFixed(2)} MB` : 'N/A',
+      });
       await apiClientRef.current.uploadSegment(
         context.sessionId,
         lastSegment.index,
         apiSegmentData,
         (progress) => {
           setUploadProgress(progress);
-        }
+        },
+        lastSegment.videoBlob // Pass video blob to upload
       );
 
       console.log('Segment uploaded successfully');
@@ -826,9 +847,22 @@ function App() {
           <RecordingPage
             segmentIndex={currentSegmentIndex}
             segmentDuration={segmentDuration}
+            segmentStartTime={currentSegmentConfig?.start_time || 0}
             segmentGuidance={segmentGuidance}
             characterId={context?.characterId}
             videoPath={recordingVideoPath}
+            playAudio={currentSegmentConfig?.play_audio || false}
+            pathConfig={currentSegmentConfig ? {
+              offset_start: currentSegmentConfig.offset_start,
+              offset_end: currentSegmentConfig.offset_end,
+              path_waypoints: currentSegmentConfig.path_waypoints,
+              entry_type: currentSegmentConfig.entry_type,
+              entry_duration: currentSegmentConfig.entry_duration,
+              entry_delay: currentSegmentConfig.entry_delay,
+              exit_type: currentSegmentConfig.exit_type,
+              exit_duration: currentSegmentConfig.exit_duration,
+              exit_delay: currentSegmentConfig.exit_delay,
+            } : undefined}
             videoElement={videoElement}
             recorder={recorderRef.current}
             onRecordingComplete={handleRecordingComplete}

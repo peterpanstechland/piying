@@ -35,6 +35,7 @@ class Segment(BaseModel):
     index: int = Field(..., ge=0, description="Segment index (0-based)")
     duration: float = Field(..., gt=0, description="Duration in seconds")
     frames: List[PoseFrame] = Field(default_factory=list, description="Captured pose frames")
+    video_path: Optional[str] = Field(default=None, description="Path to recorded canvas video file")
 
     class Config:
         json_schema_extra = {
@@ -46,7 +47,8 @@ class Segment(BaseModel):
                         "timestamp": 0.033,
                         "landmarks": [[0.5, 0.3, -0.1, 0.99]]
                     }
-                ]
+                ],
+                "video_path": "session_videos/abc123/segment_0.webm"
             }
         }
 

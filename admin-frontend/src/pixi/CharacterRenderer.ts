@@ -155,10 +155,8 @@ export class CharacterRenderer {
   private assemblyData: Map<string, { x: number, y: number, width: number, height: number }> = new Map()
   private globalScale = 1
 
-  // Reference pose for calculating relative transforms (reserved for future use)
-  // @ts-expect-error Reserved for future relative pose calculation
+  // Reference pose for calculating relative transforms
   private referencePose: PoseLandmarks | null = null
-  // @ts-expect-error Reserved for future relative pose calculation  
   private useReferencePose = false
 
   /**
@@ -739,7 +737,7 @@ export class CharacterRenderer {
         sprite.rotation = finalRotation
         
         if (shouldLogFrame) {
-          console.log(`✓ ${partName}: MP=${(mediaPipeAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° rot=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(finalRotation * 180 / Math.PI).toFixed(1)}°${limits ? ' (limited)' : ''}`)
+          console.log(`✓ ${partName}: MP=${(mediaPipeAngle * 180 / Math.PI).toFixed(1)}° final=${(finalRotation * 180 / Math.PI).toFixed(1)}°${limits ? ' (limited)' : ''}`)
         }
       }
     }
@@ -761,9 +759,6 @@ export class CharacterRenderer {
   // Store initial child offsets from parent (calculated on first update)
   private childOffsets: Map<string, { x: number; y: number }> = new Map()
   
-  // Store reference ankle heights for foot position calculation
-  private referenceAnkleHeights: Map<string, number> = new Map()
-  
   // Flying state management
   private isFlying: boolean = false
 
@@ -773,7 +768,7 @@ export class CharacterRenderer {
    * - Standing → Jump detected → Flying (stays flying)
    * - Flying → Squat detected → Standing
    */
-  private updateFootPositions(landmarks: PoseLandmarks, shouldLog: boolean): void {
+  private updateFootPositions(landmarks: PoseLandmarks, _shouldLog: boolean): void {
     if (!this.referencePose) return
     
     const leftAnkle = landmarks[27]

@@ -707,6 +707,7 @@ class StorylineService:
                 guidance_text=segment_data.guidance_text,
                 guidance_text_en=segment_data.guidance_text_en,
                 guidance_image=segment_data.guidance_image,
+                play_audio=segment_data.play_audio,
             )
             db.add(segment)
         

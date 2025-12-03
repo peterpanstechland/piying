@@ -27,6 +27,8 @@ interface TimelineEditorProps {
   onGuidanceImageUpload?: (segmentId: string, file: File) => Promise<void>
   onGuidanceFrameCapture?: (segmentId: string, time: number) => Promise<void>
   onTimeUpdate?: (time: number) => void
+  /** Whether changes are being saved */
+  saving?: boolean
 }
 
 /**
@@ -42,6 +44,7 @@ function TimelineEditorInner({
   onGuidanceImageUpload,
   onGuidanceFrameCapture,
   onTimeUpdate,
+  saving = false,
 }: Omit<TimelineEditorProps, 'initialSegments' | 'initialTransitions'>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -227,6 +230,7 @@ function TimelineEditorInner({
             pathTool={pathTool}
             onPathToolChange={setPathTool}
             onPathChange={handlePathChange}
+            saving={saving}
           />
         </div>
       )}
@@ -268,6 +272,7 @@ export default function TimelineEditor({
   onGuidanceImageUpload,
   onGuidanceFrameCapture,
   onTimeUpdate,
+  saving = false,
 }: TimelineEditorProps) {
   return (
     <TimelineEditorProvider 
@@ -284,6 +289,7 @@ export default function TimelineEditor({
         onGuidanceImageUpload={onGuidanceImageUpload}
         onGuidanceFrameCapture={onGuidanceFrameCapture}
         onTimeUpdate={onTimeUpdate}
+        saving={saving}
       />
     </TimelineEditorProvider>
   )

@@ -5,7 +5,7 @@ Defines Segment and Storyline models for managing interactive scenarios.
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional, Tuple
-from sqlalchemy import String, DateTime, Float, Integer, Text, ForeignKey
+from sqlalchemy import String, DateTime, Float, Integer, Text, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pydantic import BaseModel, Field, field_validator
 
@@ -63,6 +63,9 @@ class SegmentDB(Base):
     guidance_text: Mapped[str] = mapped_column(Text, default="")
     guidance_text_en: Mapped[str] = mapped_column(Text, default="")
     guidance_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Audio playback during recording
+    play_audio: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Timeline fields (Requirements 5.1, 5.2, 5.3, 5.4)
     start_time: Mapped[float] = mapped_column(Float, default=0.0)
@@ -148,10 +151,15 @@ class CharacterVideoSegmentDB(Base):
     start_time: Mapped[float] = mapped_column(Float, default=0.0)
     duration: Mapped[float] = mapped_column(Float, nullable=False)
     path_type: Mapped[str] = mapped_column(String(50), default="static")
-    offset_start_x: Mapped[int] = mapped_column(Integer, default=0)
-    offset_start_y: Mapped[int] = mapped_column(Integer, default=0)
-    offset_end_x: Mapped[int] = mapped_column(Integer, default=0)
-    offset_end_y: Mapped[int] = mapped_column(Integer, default=0)
+    # Position coordinates (normalized 0-1)
+    offset_start_x: Mapped[float] = mapped_column(Float, default=0.1)
+    offset_start_y: Mapped[float] = mapped_column(Float, default=0.5)
+    offset_end_x: Mapped[float] = mapped_column(Float, default=0.9)
+    offset_end_y: Mapped[float] = mapped_column(Float, default=0.5)
+    # Waypoints stored as JSON string: [[x1,y1], [x2,y2], ...]
+    path_waypoints: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
+    # Path draw type: 'linear', 'bezier', 'freehand'
+    path_draw_type: Mapped[str] = mapped_column(String(20), default="linear")
     
     # Entry animation configuration
     entry_type: Mapped[str] = mapped_column(String(20), default=AnimationType.INSTANT.value)
@@ -167,6 +175,9 @@ class CharacterVideoSegmentDB(Base):
     guidance_text: Mapped[str] = mapped_column(Text, default="")
     guidance_text_en: Mapped[str] = mapped_column(Text, default="")
     guidance_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Audio playback during recording
+    play_audio: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Relationship back to storyline_character
     storyline_character: Mapped["StorylineCharacterDB"] = relationship("StorylineCharacterDB", back_populates="segments")
@@ -509,6 +520,7 @@ class TimelineSegment(BaseModel):
     guidance_text: str = Field(default="", description="Chinese guidance text")
     guidance_text_en: str = Field(default="", description="English guidance text")
     guidance_image: Optional[str] = Field(default=None, description="Path to guidance image")
+    play_audio: bool = Field(default=False, description="Whether to play audio during recording")
 
     @field_validator('path_type')
     @classmethod
