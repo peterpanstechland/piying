@@ -336,3 +336,121 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+
+/* 自定义部件区域 */
+.custom-part-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--bg-panel);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.btn-add-custom {
+  background: none;
+  border: 1px dashed var(--accent-primary);
+  color: var(--accent-primary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-custom:hover {
+  background: rgba(217, 164, 65, 0.1);
+}
+
+.custom-part-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-part-fields {
+  display: flex;
+  gap: 8px;
+}
+
+.custom-part-fields input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.custom-part-fields input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.custom-part-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.custom-parts-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.custom-parts-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.custom-part-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(217, 164, 65, 0.15);
+  color: var(--accent-primary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.custom-part-tag small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.custom-part-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.btn-small:hover {
+  background: var(--bg-active);
+}
+
+.btn-small.btn-primary {
+  background: var(--accent-primary);
+  color: var(--bg-base);
+  border-color: var(--accent-primary);
+}
+
+.btn-small.btn-primary:hover {
+  background: var(--accent-primary-hover);
+}

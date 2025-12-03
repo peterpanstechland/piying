@@ -679,7 +679,13 @@ class StorylineService:
         )
         
         # Add new segments with timeline fields
+        import json
         for segment_data in reindexed_segments:
+            # Serialize waypoints to JSON string if present
+            waypoints_json = None
+            if segment_data.path_waypoints:
+                waypoints_json = json.dumps(segment_data.path_waypoints)
+            
             segment = SegmentDB(
                 storyline_id=storyline_id,
                 index=segment_data.index,
@@ -690,6 +696,8 @@ class StorylineService:
                 offset_start_y=segment_data.offset_start[1],
                 offset_end_x=segment_data.offset_end[0],
                 offset_end_y=segment_data.offset_end[1],
+                path_waypoints=waypoints_json,
+                path_draw_type=segment_data.path_draw_type,
                 entry_type=segment_data.entry_animation.type.value,
                 entry_duration=segment_data.entry_animation.duration,
                 entry_delay=segment_data.entry_animation.delay,
@@ -986,11 +994,23 @@ class StorylineService:
         segments = []
         for s in sorted(storyline.segments, key=lambda x: x.index):
             segments.append(Segment(
+                id=str(s.id),
                 index=s.index,
+                start_time=s.start_time or 0.0,
                 duration=s.duration,
                 path_type=s.path_type,
                 offset_start=[s.offset_start_x, s.offset_start_y],
                 offset_end=[s.offset_end_x, s.offset_end_y],
+                entry_animation={
+                    "type": s.entry_type or "instant",
+                    "duration": s.entry_duration or 1.0,
+                    "delay": s.entry_delay or 0.0,
+                },
+                exit_animation={
+                    "type": s.exit_type or "instant",
+                    "duration": s.exit_duration or 1.0,
+                    "delay": s.exit_delay or 0.0,
+                },
                 guidance_text=s.guidance_text,
                 guidance_text_en=s.guidance_text_en,
                 guidance_image=s.guidance_image,

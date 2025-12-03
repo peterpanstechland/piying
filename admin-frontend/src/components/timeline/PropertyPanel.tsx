@@ -1,13 +1,21 @@
-import { useTimelineEditor, TimelineSegment, Transition } from '../../contexts/TimelineEditorContext'
+import { useState } from 'react'
+import { useTimelineEditor, TimelineSegment, Transition, SegmentPath } from '../../contexts/TimelineEditorContext'
 import AnimationConfigEditor from './AnimationConfigEditor'
 import TransitionEditor from './TransitionEditor'
 import GuidanceEditor from './GuidanceEditor'
+import PathEditorPanel, { PathTool } from './PathEditorPanel'
 import './PropertyPanel.css'
 
 interface PropertyPanelProps {
   storylineId?: string
   onGuidanceImageUpload?: (segmentId: string, file: File) => Promise<void>
   onGuidanceFrameCapture?: (segmentId: string, time: number) => Promise<void>
+  /** Current path editing tool */
+  pathTool?: PathTool
+  /** Callback when path tool changes */
+  onPathToolChange?: (tool: PathTool) => void
+  /** Callback when segment path changes */
+  onPathChange?: (segmentId: string, path: SegmentPath) => void
 }
 
 /**
@@ -18,7 +26,12 @@ export default function PropertyPanel({
   storylineId,
   onGuidanceImageUpload,
   onGuidanceFrameCapture,
+  pathTool = 'select',
+  onPathToolChange,
+  onPathChange,
 }: PropertyPanelProps) {
+  const [localPathTool, setLocalPathTool] = useState<PathTool>('select')
+  
   const {
     selectedSegmentId,
     selectedTransitionId,
@@ -28,11 +41,28 @@ export default function PropertyPanel({
     updateTransition,
     playhead,
   } = useTimelineEditor()
+  
+  const currentPathTool = onPathToolChange ? pathTool : localPathTool
+  const handlePathToolChange = onPathToolChange || setLocalPathTool
 
   // Find selected segment
   const selectedSegment = selectedSegmentId
     ? segments.find(s => s.id === selectedSegmentId)
     : null
+
+  // Get segment path or return default
+  const getSegmentPath = (segment: TimelineSegment): SegmentPath => {
+    if (segment.path) {
+      return segment.path
+    }
+    // Default path
+    return {
+      startPoint: { x: 0.1, y: 0.5 },
+      endPoint: { x: 0.9, y: 0.5 },
+      waypoints: [],
+      pathType: 'linear',
+    }
+  }
 
   // Find selected transition
   const selectedTransition = selectedTransitionId
@@ -105,13 +135,13 @@ export default function PropertyPanel({
               <div className="property-panel__info-item">
                 <span className="property-panel__info-label">开始时间</span>
                 <span className="property-panel__info-value">
-                  {selectedSegment.startTime.toFixed(2)}s
+                  {(selectedSegment.startTime ?? 0).toFixed(2)}s
                 </span>
               </div>
               <div className="property-panel__info-item">
                 <span className="property-panel__info-label">持续时间</span>
                 <span className="property-panel__info-value">
-                  {selectedSegment.duration.toFixed(2)}s
+                  {(selectedSegment.duration ?? 0).toFixed(2)}s
                 </span>
               </div>
             </div>
@@ -134,6 +164,22 @@ export default function PropertyPanel({
               config={selectedSegment.exitAnimation}
               isEntry={false}
               onChange={(config) => handleSegmentUpdate({ exitAnimation: config })}
+            />
+          </div>
+
+          {/* Movement Path */}
+          <div className="property-panel__section">
+            <h4 className="property-panel__section-title">移动路径 / Movement Path</h4>
+            <PathEditorPanel
+              path={getSegmentPath(selectedSegment)}
+              onPathChange={(path) => {
+                if (onPathChange && selectedSegmentId) {
+                  onPathChange(selectedSegmentId, path)
+                }
+              }}
+              tool={currentPathTool}
+              onToolChange={handlePathToolChange}
+              enabled={true}
             />
           </div>
 

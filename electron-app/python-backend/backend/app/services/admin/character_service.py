@@ -24,7 +24,9 @@ from ...models.admin.character import (
     SkeletonBinding,
     CharacterResponse,
     CharacterListResponse,
-    REQUIRED_PARTS,
+    BASE_REQUIRED_PARTS,
+    LOWER_BODY_SKIRT,
+    LOWER_BODY_THIGHS,
 )
 
 
@@ -89,10 +91,35 @@ class CharacterService:
         """
         Validate that all required parts are present.
         
+        Required parts:
+        - All BASE_REQUIRED_PARTS (head, body, arms, hands, feet)
+        - Lower body: EITHER skirt OR (left-thigh AND right-thigh)
+        
         Returns:
             Tuple of (is_valid, missing_parts)
         """
-        missing = [part for part in REQUIRED_PARTS if part not in part_names]
+        missing = []
+        
+        # Check base required parts
+        for part in BASE_REQUIRED_PARTS:
+            if part not in part_names:
+                missing.append(part)
+        
+        # Check lower body: need skirt OR both thighs
+        has_skirt = LOWER_BODY_SKIRT[0] in part_names  # "skirt"
+        has_left_thigh = LOWER_BODY_THIGHS[0] in part_names  # "left-thigh"
+        has_right_thigh = LOWER_BODY_THIGHS[1] in part_names  # "right-thigh"
+        has_both_thighs = has_left_thigh and has_right_thigh
+        
+        if not has_skirt and not has_both_thighs:
+            # Missing lower body
+            if has_left_thigh and not has_right_thigh:
+                missing.append("right-thigh")
+            elif has_right_thigh and not has_left_thigh:
+                missing.append("left-thigh")
+            else:
+                missing.append("skirt 或 left-thigh+right-thigh")
+        
         return len(missing) == 0, missing
 
     def get_character_dir(self, character_id: str) -> str:

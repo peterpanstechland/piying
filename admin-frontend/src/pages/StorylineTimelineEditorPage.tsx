@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { adminApi } from '../services/api'
-import TimelineEditor from '../components/timeline/TimelineEditor'
 import BasicInfoForm, { BasicInfoFormData } from '../components/timeline/BasicInfoForm'
 import '../components/timeline/BasicInfoForm.css'
 import CharacterSelector from '../components/timeline/CharacterSelector'
 import CoverImageManager from '../components/timeline/CoverImageManager'
 import CharacterVideoPanel from '../components/timeline/CharacterVideoPanel'
-import { TimelineSegment, Transition } from '../contexts/TimelineEditorContext'
+import { TimelineSegment } from '../contexts/TimelineEditorContext'
 import './StorylineTimelineEditorPage.css'
 
 interface StorylineExtended {
@@ -94,7 +93,11 @@ export default function StorylineTimelineEditorPage() {
   const [characterDisplayOrder, setCharacterDisplayOrder] = useState<string[]>([])
   
   // Video playhead time for cover capture
-  const [currentVideoTime, setCurrentVideoTime] = useState(0)
+  const [currentVideoTime] = useState(0)
+  
+  // Tab navigation state
+  type TabType = 'basic' | 'video' | 'characters' | 'character-videos' | 'cover'
+  const [activeTab, setActiveTab] = useState<TabType>('basic')
 
   // Load storyline and characters data
   const loadData = useCallback(async () => {
@@ -244,100 +247,6 @@ export default function StorylineTimelineEditorPage() {
       }
     }
   }
-
-  // Handle segment changes
-  const handleSegmentsChange = useCallback(async (segments: TimelineSegment[]) => {
-    if (!id || isNew) return
-    
-    try {
-      // Convert to API format
-      const apiSegments = segments.map((seg, index) => ({
-        index,
-        start_time: seg.startTime,
-        duration: seg.duration,
-        entry_animation: seg.entryAnimation,
-        exit_animation: seg.exitAnimation,
-        guidance_text: seg.guidanceText || '',
-        guidance_text_en: seg.guidanceTextEn || '',
-        guidance_image: seg.guidanceImage || null,
-      }))
-      
-      await adminApi.updateTimelineSegments(id, apiSegments)
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save segments'
-      setError(errorMessage)
-    }
-  }, [id, isNew])
-
-  // Handle transition changes
-  const handleTransitionsChange = useCallback(async (transitions: Transition[]) => {
-    if (!id || isNew) return
-    
-    try {
-      const apiTransitions = transitions.map(t => ({
-        id: t.id,
-        from_segment_index: t.fromSegmentIndex,
-        to_segment_index: t.toSegmentIndex,
-        type: t.type,
-        duration: t.duration,
-      }))
-      
-      await adminApi.updateTransitions(id, apiTransitions)
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save transitions'
-      setError(errorMessage)
-    }
-  }, [id, isNew])
-
-  // Handle segment deletion
-  const handleSegmentDelete = useCallback(async (segmentId: string) => {
-    if (!id || isNew || !storyline) return
-    
-    const segment = storyline.segments.find(s => s.id === segmentId)
-    if (!segment) return
-    
-    try {
-      await adminApi.deleteSegment(id, segment.index)
-      loadData()
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete segment'
-      setError(errorMessage)
-    }
-  }, [id, isNew, storyline, loadData])
-
-  // Handle guidance image upload
-  const handleGuidanceImageUpload = useCallback(async (segmentId: string, file: File) => {
-    if (!id || isNew || !storyline) return
-    
-    const segment = storyline.segments.find(s => s.id === segmentId)
-    if (!segment) return
-    
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      await adminApi.uploadGuidanceImage(id, segment.index, formData)
-      loadData()
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to upload guidance image'
-      setError(errorMessage)
-    }
-  }, [id, isNew, storyline, loadData])
-
-  // Handle guidance frame capture
-  const handleGuidanceFrameCapture = useCallback(async (segmentId: string, time: number) => {
-    if (!id || isNew || !storyline) return
-    
-    const segment = storyline.segments.find(s => s.id === segmentId)
-    if (!segment) return
-    
-    try {
-      await adminApi.captureGuidanceFromVideo(id, segment.index, time)
-      loadData()
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to capture guidance frame'
-      setError(errorMessage)
-    }
-  }, [id, isNew, storyline, loadData])
 
   // Handle character selection change
   const handleCharacterSelectionChange = useCallback(async (characterIds: string[]) => {
@@ -510,38 +419,6 @@ export default function StorylineTimelineEditorPage() {
     return adminApi.getVideoUrl(id)
   }
 
-  // Convert API segments to timeline format
-  const getTimelineSegments = (): TimelineSegment[] => {
-    if (!storyline?.segments) return []
-    return storyline.segments.map(seg => {
-      // Handle both camelCase and snake_case from API
-      const apiSeg = seg as unknown as Record<string, unknown>
-      return {
-        id: seg.id || `segment-${seg.index}`,
-        index: seg.index,
-        startTime: (apiSeg.start_time as number) ?? seg.startTime ?? 0,
-        duration: seg.duration || 10,
-        entryAnimation: (apiSeg.entry_animation as typeof seg.entryAnimation) ?? seg.entryAnimation ?? { type: 'instant', duration: 1, delay: 0 },
-        exitAnimation: (apiSeg.exit_animation as typeof seg.exitAnimation) ?? seg.exitAnimation ?? { type: 'instant', duration: 1, delay: 0 },
-        guidanceText: (apiSeg.guidance_text as string) ?? seg.guidanceText ?? '',
-        guidanceTextEn: (apiSeg.guidance_text_en as string) ?? seg.guidanceTextEn ?? '',
-        guidanceImage: (apiSeg.guidance_image as string | null) ?? seg.guidanceImage ?? null,
-      }
-    })
-  }
-
-  // Convert API transitions to timeline format
-  const getTimelineTransitions = (): Transition[] => {
-    if (!storyline?.transitions) return []
-    return storyline.transitions.map(t => ({
-      id: t.id,
-      fromSegmentIndex: t.from_segment_index,
-      toSegmentIndex: t.to_segment_index,
-      type: t.type as Transition['type'],
-      duration: t.duration,
-    }))
-  }
-
   if (loading) {
     return (
       <div className="storyline-timeline-page">
@@ -645,77 +522,187 @@ export default function StorylineTimelineEditorPage() {
         </div>
       )}
 
-      <div className="storyline-timeline-page__content">
-        {/* Left Sidebar - Basic Info, Video Upload, Characters, Cover */}
-        <div className="storyline-timeline-page__sidebar">
-          {/* Basic Info Form (Requirements 1.1, 8.1, 8.2) */}
-          <BasicInfoForm
-            initialData={basicInfo}
-            onChange={handleBasicInfoChange}
-            onSave={handleSaveBasicInfo}
-            saving={saving}
-            disabled={saving}
-          />
+      {/* Tab Navigation */}
+      <div className="storyline-timeline-page__tabs">
+        <button
+          className={`tab-btn ${activeTab === 'basic' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('basic')}
+        >
+          基本信息
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'video' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('video')}
+          disabled={isNew}
+        >
+          背景视频
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'characters' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('characters')}
+          disabled={isNew}
+        >
+          角色配置
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'character-videos' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('character-videos')}
+          disabled={isNew || !storyline?.base_video_path || selectedCharacterIds.length === 0}
+        >
+          角色专属视频
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'cover' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('cover')}
+          disabled={isNew || !storyline?.base_video_path}
+        >
+          封面图片
+        </button>
+      </div>
 
-          {/* Video Upload Section (Requirements 2.1, 2.2, 2.4) */}
-          {!isNew && id && (
-            <div className="sidebar-section">
-              <h3 className="sidebar-section__title">背景视频</h3>
-              <div className="video-upload-section">
-                {storyline?.base_video_path ? (
-                  <div className="video-info">
-                    <span className="video-status success">✓ 已上传视频</span>
-                    <span className="video-duration">
-                      时长: {Math.floor((storyline.video_duration || 0) / 60)}分
-                      {Math.floor((storyline.video_duration || 0) % 60)}秒
-                    </span>
-                    {storyline.video_width && storyline.video_height && (
-                      <span className="video-resolution">
-                        分辨率: {storyline.video_width}×{storyline.video_height}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="video-info">
-                    <span className="video-status warning">⚠ 未上传视频</span>
-                    <p className="video-hint">上传视频后可使用时间轴编辑器</p>
-                  </div>
-                )}
-                
-                <div className="video-upload">
-                  <input
-                    ref={videoInputRef}
-                    type="file"
-                    accept=".mp4,video/mp4"
-                    onChange={handleVideoUpload}
-                    disabled={videoUploading}
-                    id="video-upload"
-                    className="file-input"
-                  />
-                  <label htmlFor="video-upload" className="btn-secondary">
-                    {videoUploading ? '上传中...' : storyline?.base_video_path ? '更换视频' : '上传视频'}
-                  </label>
-                  <span className="file-format-hint">支持 MP4 格式 (H.264)</span>
-                </div>
+      <div className="storyline-timeline-page__content storyline-timeline-page__content--tabbed">
+        {/* Tab Content */}
+        <div className="storyline-timeline-page__tab-content">
+          {/* Basic Info Tab */}
+          {activeTab === 'basic' && (
+            <div className="tab-panel">
+              <BasicInfoForm
+                initialData={basicInfo}
+                onChange={handleBasicInfoChange}
+                onSave={handleSaveBasicInfo}
+                saving={saving}
+                disabled={saving}
+              />
+            </div>
+          )}
 
-                {videoUploading && (
-                  <div className="upload-progress">
-                    <div className="progress-bar">
-                      <div
-                        className="progress-fill"
-                        style={{ width: `${videoProgress}%` }}
+          {/* Video Tab */}
+          {activeTab === 'video' && !isNew && id && (
+            <div className="tab-panel">
+              <div className="video-section-horizontal">
+                <h3 className="section-title">默认背景视频</h3>
+                <div className="video-card">
+                  {storyline?.base_video_path ? (
+                    <>
+                      <div className="video-card__thumbnail">
+                        <video
+                          src={getVideoUrl() || undefined}
+                          muted
+                          preload="metadata"
+                          onLoadedMetadata={(e) => {
+                            const video = e.target as HTMLVideoElement
+                            video.currentTime = 1
+                          }}
+                        />
+                      </div>
+                      <div className="video-card__info">
+                        <span className="video-card__duration">
+                          时长: {Math.floor((storyline.video_duration || 0) / 60)}分
+                          {Math.floor((storyline.video_duration || 0) % 60)}秒
+                        </span>
+                        {storyline.video_width && storyline.video_height && (
+                          <span className="video-card__resolution">
+                            {storyline.video_width}×{storyline.video_height}
+                          </span>
+                        )}
+                      </div>
+                      <div className="video-card__actions">
+                        <input
+                          ref={videoInputRef}
+                          type="file"
+                          accept=".mp4,video/mp4"
+                          onChange={handleVideoUpload}
+                          disabled={videoUploading}
+                          id="video-upload"
+                          className="file-input"
+                        />
+                        <label htmlFor="video-upload" className="btn-secondary">
+                          {videoUploading ? '上传中...' : '更换视频'}
+                        </label>
+                        <button
+                          className="btn-primary"
+                          onClick={() => navigate(`/storylines/${id}/video-editor`)}
+                        >
+                          ✏️ 编辑视频
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="video-card__empty">
+                      <span className="video-card__empty-icon">🎬</span>
+                      <p>未上传视频</p>
+                      <input
+                        ref={videoInputRef}
+                        type="file"
+                        accept=".mp4,video/mp4"
+                        onChange={handleVideoUpload}
+                        disabled={videoUploading}
+                        id="video-upload"
+                        className="file-input"
                       />
+                      <label htmlFor="video-upload" className="btn-primary">
+                        {videoUploading ? '上传中...' : '上传视频'}
+                      </label>
+                      <span className="file-format-hint">支持 MP4 格式 (H.264)</span>
                     </div>
-                    <span className="progress-text">{videoProgress}%</span>
-                  </div>
-                )}
+                  )}
+                  {videoUploading && (
+                    <div className="upload-progress">
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${videoProgress}%` }} />
+                      </div>
+                      <span className="progress-text">{videoProgress}%</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Cover Image Manager */}
-          {!isNew && id && storyline?.base_video_path && (
-            <div className="sidebar-section">
+          {/* Characters Tab */}
+          {activeTab === 'characters' && !isNew && id && (
+            <div className="tab-panel">
+              <div className="characters-section">
+                <h3 className="section-title">可选角色</h3>
+                <CharacterSelector
+                  allCharacters={characters}
+                  selectedCharacterIds={selectedCharacterIds}
+                  defaultCharacterId={defaultCharacterId}
+                  onSelectionChange={handleCharacterSelectionChange}
+                  onDefaultChange={handleDefaultCharacterChange}
+                  onReorder={handleCharacterReorder}
+                />
+                <div className="section-actions">
+                  <button
+                    className="btn-primary"
+                    onClick={handleSaveCharacters}
+                    disabled={saving || selectedCharacterIds.length === 0}
+                  >
+                    保存角色配置
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Character Videos Tab */}
+          {activeTab === 'character-videos' && !isNew && id && storyline?.base_video_path && selectedCharacterIds.length > 0 && (
+            <div className="tab-panel">
+              <div className="character-videos-section">
+                <h3 className="section-title">角色专属视频</h3>
+                <p className="section-hint">为每个角色上传专属背景视频，未配置时使用默认背景视频</p>
+                <CharacterVideoPanel
+                  storylineId={id}
+                  baseVideoDuration={storyline.video_duration || 0}
+                  onVideoChange={loadData}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Cover Tab */}
+          {activeTab === 'cover' && !isNew && id && storyline?.base_video_path && (
+            <div className="tab-panel">
               <CoverImageManager
                 storylineId={id}
                 currentCover={storyline?.cover_image || null}
@@ -725,69 +712,6 @@ export default function StorylineTimelineEditorPage() {
                 onFrameCapture={handleCoverFrameCapture}
                 onDelete={handleCoverDelete}
               />
-            </div>
-          )}
-
-          {/* Character Selector */}
-          {!isNew && id && (
-            <div className="sidebar-section">
-              <h3 className="sidebar-section__title">可选角色</h3>
-              <CharacterSelector
-                allCharacters={characters}
-                selectedCharacterIds={selectedCharacterIds}
-                defaultCharacterId={defaultCharacterId}
-                onSelectionChange={handleCharacterSelectionChange}
-                onDefaultChange={handleDefaultCharacterChange}
-                onReorder={handleCharacterReorder}
-              />
-              <div className="sidebar-section__actions">
-                <button
-                  className="btn-primary btn-sm"
-                  onClick={handleSaveCharacters}
-                  disabled={saving || selectedCharacterIds.length === 0}
-                >
-                  保存角色配置
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Character Video Panel (Requirements 4.1) */}
-          {!isNew && id && storyline?.base_video_path && selectedCharacterIds.length > 0 && (
-            <div className="sidebar-section">
-              <CharacterVideoPanel
-                storylineId={id}
-                baseVideoDuration={storyline.video_duration || 0}
-                onVideoChange={loadData}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Main Content - Timeline Editor */}
-        <div className="storyline-timeline-page__main">
-          {!isNew && id && storyline?.base_video_path ? (
-            <TimelineEditor
-              videoUrl={getVideoUrl()}
-              storylineId={id}
-              initialSegments={getTimelineSegments()}
-              initialTransitions={getTimelineTransitions()}
-              onSegmentsChange={handleSegmentsChange}
-              onTransitionsChange={handleTransitionsChange}
-              onSegmentDelete={handleSegmentDelete}
-              onGuidanceImageUpload={handleGuidanceImageUpload}
-              onGuidanceFrameCapture={handleGuidanceFrameCapture}
-              onTimeUpdate={setCurrentVideoTime}
-            />
-          ) : (
-            <div className="timeline-placeholder">
-              <div className="timeline-placeholder__icon">🎬</div>
-              <h3>时间轴编辑器</h3>
-              <p>
-                {isNew 
-                  ? '请先保存基本信息创建故事线'
-                  : '请先上传背景视频后使用时间轴编辑器'}
-              </p>
             </div>
           )}
         </div>

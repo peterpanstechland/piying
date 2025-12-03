@@ -20,6 +20,9 @@ import {
   Texture,
   Assets,
   Rectangle,
+  Graphics,
+  Text,
+  TextStyle,
 } from 'pixi.js'
 import type {
   CharacterConfig,
@@ -54,24 +57,30 @@ const BONE_HIERARCHY: Record<string, string | null> = {
   'right-arm': 'body',
   'left-hand': 'left-arm',   // hand follows arm
   'right-hand': 'right-arm',
-  'upper-leg': 'body',
-  'left-foot': 'upper-leg',
-  'right-foot': 'upper-leg',
+  // 裙子（一体式下身）
+  'skirt': 'body',
+  // 左右大腿（分体式下身）
+  'left-thigh': 'body',
+  'right-thigh': 'body',
+  // 脚跟随下身部件
+  'left-foot': null,  // 动态确定：skirt 或 left-thigh
+  'right-foot': null, // 动态确定：skirt 或 right-thigh
 }
 
 // Export to prevent unused variable error
 export { BONE_HIERARCHY }
 
 // 默认关节锚点 (0-1)，当 spritesheet.json 中没有配置时使用
-// 根据嫦娥素材调整：手臂垂直绘制，手水平绘制
 const DEFAULT_JOINT_PIVOTS: Record<string, { x: number; y: number }> = {
   'head': { x: 0.5, y: 0.9 },       // 脖子处（头部底部）
   'body': { x: 0.5, y: 0.5 },       // 身体中心
-  'left-arm': { x: 0.5, y: 0.1 },   // 左肩（素材顶部，垂直绘制）
-  'right-arm': { x: 0.5, y: 0.1 },  // 右肩（素材顶部，垂直绘制）
-  'left-hand': { x: 0.9, y: 0.5 },  // 左手腕（水平绘制，连接点在右侧）
-  'right-hand': { x: 0.1, y: 0.5 }, // 右手腕（水平绘制，连接点在左侧）
-  'upper-leg': { x: 0.5, y: 0.1 },  // 腿根部
+  'left-arm': { x: 0.5, y: 0.1 },   // 左肩
+  'right-arm': { x: 0.5, y: 0.1 },  // 右肩
+  'left-hand': { x: 0.9, y: 0.5 },  // 左手腕
+  'right-hand': { x: 0.1, y: 0.5 }, // 右手腕
+  'skirt': { x: 0.5, y: 0.1 },      // 裙子顶部
+  'left-thigh': { x: 0.5, y: 0.1 }, // 左大腿顶部
+  'right-thigh': { x: 0.5, y: 0.1 },// 右大腿顶部
   'left-foot': { x: 0.5, y: 0.1 },  // 脚踝
   'right-foot': { x: 0.5, y: 0.1 }, // 脚踝
 }
@@ -80,24 +89,52 @@ const DEFAULT_JOINT_PIVOTS: Record<string, { x: number; y: number }> = {
 // 这个值表示素材的"自然朝向"与"水平向右"之间的角度差
 // 
 // MediaPipe 角度计算：atan2(dy, dx)，水平向右为 0 度
-// 如果素材是垂直向下绘制的，需要偏移 -Math.PI/2 (或 3*Math.PI/2)
-// 如果素材是水平向右绘制的，偏移为 0
-// 如果素材是水平向左绘制的，偏移为 Math.PI
+// 
+// 嫦娥素材特殊性：
+// 1. 左臂/左手是【水平向左】画的（指向 180度/PI）
+// 2. 右臂/右手是【水平向右】画的（指向 0度）
+// 3. 但我们希望默认状态（Rotation=0）是【垂直向下】（90度/PI/2）
 //
-// 嫦娥素材分析：
-// - 手臂：垂直向下绘制 -> 偏移 Math.PI/2
-// - 手：水平绘制
+// 修正逻辑（基于 updatePose 中的公式：finalRotation = absoluteAngle - rotationOffset）：
+// - 左臂：素材指向 PI，目标是让 0 度输入时显示为垂直向下（PI/2）
+//   需要 offset = PI，这样当 absoluteAngle = PI/2 时，finalRotation = PI/2 - PI = -PI/2（向下）
+// - 右臂：素材指向 0，目标是让 0 度输入时显示为垂直向下（PI/2）
+//   需要 offset = -PI/2，这样当 absoluteAngle = PI/2 时，finalRotation = PI/2 - (-PI/2) = PI（需要调整）
+//
+// 实际测试后的修正值：
 const DEFAULT_ROTATION_OFFSETS: Record<string, number> = {
   'head': 0,                    // 头部不旋转
   'body': 0,                    // 身体不旋转
-  'left-arm': Math.PI / 2,      // 垂直向下绘制
-  'right-arm': Math.PI / 2,     // 垂直向下绘制
-  'left-hand': Math.PI / 2,     // 需要根据实际素材调整
-  'right-hand': Math.PI / 2,    // 需要根据实际素材调整
-  'upper-leg': Math.PI / 2,
-  'left-foot': Math.PI / 2,
-  'right-foot': Math.PI / 2,
+  // 手臂和手的默认偏移设为 0，让配置文件中的值生效
+  // 如果配置文件没有设置，则不做额外偏移
+  'left-arm': 0,
+  'right-arm': 0,
+  'left-hand': 0,
+  'right-hand': 0,
+  // 裙子（一体式下身）- 通常不旋转
+  'skirt': 0,
+  // 左右大腿（分体式下身）
+  'left-thigh': 0,
+  'right-thigh': 0,
+  'left-foot': 0,
+  'right-foot': 0,
 }
+
+// 默认初始姿势偏移量（弧度）
+// 这个值表示素材默认姿势与"自然垂下"姿势之间的角度差
+// 
+// 注意：现在通过"默认姿势编辑器"让用户自己设置每个角色的偏移量
+// 这里只保留空的默认值，具体值由用户在编辑器中配置并保存到角色配置中
+//
+// 在 PixiJS 中（Y轴向下）：
+// - 负值 = 逆时针旋转 = 通常是手臂向下
+// - 正值 = 顺时针旋转 = 通常是手臂向上
+const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
+  // 所有部件默认为 0，由用户通过编辑器设置具体值
+}
+
+// 角色朝向类型
+export type CharacterFacing = 'left' | 'right'
 
 export class CharacterRenderer {
   private app: Application | null = null
@@ -109,6 +146,10 @@ export class CharacterRenderer {
   private baseTexture: Texture | null = null
   private initialized = false
   private showStaticPose = true  // Whether to show static pose when no detection
+  
+  // 角色默认朝向（素材绘制时的朝向）
+  // 'left' = 角色面向左（如嫦娥），'right' = 角色面向右
+  private defaultFacing: CharacterFacing = 'left'
 
   // Store assembly data for position calculations
   private assemblyData: Map<string, { x: number, y: number, width: number, height: number }> = new Map()
@@ -124,12 +165,22 @@ export class CharacterRenderer {
    * Initialize the PixiJS application
    */
   async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
-    if (this.initialized) {
+    console.log('CharacterRenderer.init called, initialized:', this.initialized)
+    
+    // 如果已经初始化过，先销毁
+    if (this.initialized || this.app) {
+      console.log('Destroying previous instance...')
       await this.destroy()
+      console.log('Previous instance destroyed')
     }
 
-    this.app = new Application()
-    await this.app.init({
+    console.log('Creating new PixiJS Application...')
+    
+    // 创建新的 Application 实例
+    const app = new Application()
+    
+    console.log('Calling app.init...')
+    await app.init({
       canvas,
       width,
       height,
@@ -138,15 +189,25 @@ export class CharacterRenderer {
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
     })
+    console.log('app.init completed, stage:', app.stage)
 
+    // 确保 app.stage 存在
+    if (!app.stage) {
+      app.destroy()
+      throw new Error('PixiJS Application stage not initialized')
+    }
+
+    // 初始化成功后再赋值给实例变量
+    this.app = app
     this.container = new Container()
     this.container.x = width / 2
     this.container.y = height / 2
-    // 【关键修复 3】开启 Z轴排序，防止层级错乱
+    // 开启 Z轴排序，防止层级错乱
     this.container.sortableChildren = true
     this.app.stage.addChild(this.container)
 
     this.initialized = true
+    console.log('CharacterRenderer.init completed successfully')
   }
 
   /**
@@ -173,6 +234,11 @@ export class CharacterRenderer {
 
     if (!this.config) {
       throw new Error('Failed to load character config')
+    }
+
+    // 设置角色默认朝向
+    if (this.config.defaultFacing) {
+      this.defaultFacing = this.config.defaultFacing as CharacterFacing
     }
 
     // Load spritesheet JSON
@@ -202,8 +268,7 @@ export class CharacterRenderer {
 
       const sprite = new Sprite(texture)
 
-      // 优先使用 JSON 中配置的 jointPivot（关节锚点），否则用默认值
-      // jointPivot 用于旋转动画，pivot 用于组装位置
+      // 使用 JSON 中配置的 jointPivot（关节锚点），否则用默认值
       const jointPivot = frameData.jointPivot
       const defaultPivot = DEFAULT_JOINT_PIVOTS[partName]
       const pivotX = jointPivot?.x ?? defaultPivot?.x ?? frameData.pivot?.x ?? 0.5
@@ -215,7 +280,18 @@ export class CharacterRenderer {
       partContainer.addChild(sprite)
       
       // 【关键修复 3】应用 Z-Index
-      partContainer.zIndex = frameData.zIndex || 0
+      let zIndex = frameData.zIndex || 0
+      
+      // 确保层级顺序正确：脚应该在裙子/大腿后面
+      if (partName === 'left-foot' || partName === 'right-foot') {
+        // 脚的 z-index 应该比裙子/大腿低
+        zIndex = Math.min(zIndex, -10)
+      } else if (partName === 'skirt' || partName === 'left-thigh' || partName === 'right-thigh') {
+        // 裙子/大腿的 z-index 应该比脚高
+        zIndex = Math.max(zIndex, -5)
+      }
+      
+      partContainer.zIndex = zIndex
       
       // Store assembly data for later calculations
       if (frameData.assembly) {
@@ -296,7 +372,7 @@ export class CharacterRenderer {
     
     const scaleX = (canvasWidth - padding * 2) / contentWidth
     const scaleY = (canvasHeight - padding * 2) / contentHeight
-    this.globalScale = Math.min(scaleX, scaleY, 1) // Don't scale up, only down
+    this.globalScale = Math.min(scaleX, scaleY, 1.5) // Allow scaling up to 1.5x for better visibility
 
     // Calculate center offset
     const centerX = hasAssemblyData ? (minX + maxX) / 2 : 0
@@ -371,7 +447,9 @@ export class CharacterRenderer {
       // Set sprite scale (sprite is at origin of its container)
       sprite.scale.set(globalPos.scaleX, globalPos.scaleY)
       sprite.position.set(0, 0)  // Sprite at container origin
-      sprite.rotation = 0
+      // 应用初始姿势偏移量（使用 getRestPoseOffset 以支持默认值）
+      const restOffset = this.getRestPoseOffset(partName)
+      sprite.rotation = restOffset
 
       // Use global position directly (flat structure)
       container.position.set(globalPos.x, globalPos.y)
@@ -380,6 +458,9 @@ export class CharacterRenderer {
       // Save initial position for child-parent calculations
       this.initialPositions.set(partName, { x: globalPos.x, y: globalPos.y })
     }
+
+    // 更新子部件位置（手跟随手臂）
+    this.updateChildPositions(false)
   }
 
   /**
@@ -396,20 +477,25 @@ export class CharacterRenderer {
   clearReferencePose(): void {
     this.referencePose = null
     this.useReferencePose = false
+    this.isFlying = false // 重置飞行状态
   }
 
   // Default rotation bindings for parts (MediaPipe Pose landmarks)
   // Maps part name to [startLandmark, endLandmark] for rotation calculation
   // 0: nose, 11: left_shoulder, 12: right_shoulder, 13: left_elbow, 14: right_elbow
-  // 15: left_wrist, 16: right_wrist, 23: left_hip, 24: right_hip
+  // 15: left_wrist, 16: right_wrist, 23: left_hip, 24: right_hip, 25: left_knee, 26: right_knee
   private static DEFAULT_ROTATION_BINDINGS: Record<string, [number, number] | null> = {
-    'head': null,              // head doesn't rotate for now
-    'body': null,              // body doesn't rotate
+    'head': [0, 0],            // 头部使用特殊处理（鼻子到肩膀中点）
+    'body': [11, 23],          // 身体：左肩到左髋
     'left-arm': [11, 13],      // left shoulder to left elbow
     'right-arm': [12, 14],     // right shoulder to right elbow
     'left-hand': [13, 15],     // left elbow to left wrist
     'right-hand': [14, 16],    // right elbow to right wrist
-    'upper-leg': [23, 25],     // left hip to left knee (use left leg as reference)
+    // 裙子（一体式下身）- 不旋转
+    'skirt': null,
+    // 左右大腿（分体式下身）
+    'left-thigh': [23, 25],    // left hip to left knee
+    'right-thigh': [24, 26],   // right hip to right knee
     'left-foot': null,         // feet don't rotate
     'right-foot': null,        // feet don't rotate
   }
@@ -423,7 +509,11 @@ export class CharacterRenderer {
     'right-arm': null,
     'left-hand': null,
     'right-hand': null,
-    'upper-leg': [-Math.PI / 6, Math.PI / 6],  // ±30 degrees for legs
+    // 裙子不旋转
+    'skirt': null,
+    // 左右大腿有旋转限制
+    'left-thigh': [-Math.PI / 4, Math.PI / 4],   // ±45 degrees
+    'right-thigh': [-Math.PI / 4, Math.PI / 4],  // ±45 degrees
     'left-foot': null,
     'right-foot': null,
   }
@@ -449,13 +539,17 @@ export class CharacterRenderer {
     // Debug: log every 120 frames (about once per 2 seconds)
     const shouldLog = this.frameCount % 120 === 0
 
+    if (shouldLog) {
+      console.log('[updatePose] Called, frame:', this.frameCount, 'hasLandmarks:', !!landmarks)
+    }
+
     if (!this.config || !this.app || !this.spritesheetData || !this.container) {
       if (shouldLog) {
-        console.warn('updatePose early return - missing:', {
-          config: !this.config,
-          app: !this.app,
-          spritesheetData: !this.spritesheetData,
-          container: !this.container
+        console.warn('[updatePose] Early return - missing:', {
+          config: !!this.config,
+          app: !!this.app,
+          spritesheetData: !!this.spritesheetData,
+          container: !!this.container
         })
       }
       return
@@ -464,11 +558,18 @@ export class CharacterRenderer {
     // If no landmarks, show/hide based on showStaticPose setting
     if (!landmarks) {
       this.container.visible = this.showStaticPose
+      if (shouldLog) {
+        console.log('[updatePose] No landmarks, showStaticPose:', this.showStaticPose)
+      }
       return
     }
 
     // Always show container when we have pose data
     this.container.visible = true
+    
+    if (shouldLog) {
+      console.log('[updatePose] Processing pose with', landmarks.length, 'landmarks')
+    }
 
     // Get shoulder landmarks for body reference
     const leftShoulder = landmarks[11]
@@ -505,6 +606,12 @@ export class CharacterRenderer {
       console.log('hasValidBindings:', hasValidBindings)
     }
 
+    // Calculate body center for arm rotation reference
+    const bodyCenter = {
+      x: (leftShoulder.x + rightShoulder.x) / 2,
+      y: (leftShoulder.y + rightShoulder.y) / 2
+    }
+
     // Step 1: Calculate absolute angles for all parts first
     for (const [partName] of this.parts) {
       const rotationBinding = this.getRotationBinding(partName, hasValidBindings)
@@ -525,14 +632,51 @@ export class CharacterRenderer {
         if (startLm && endLm && 
             (startLm.visibility ?? 1) > 0.3 && 
             (endLm.visibility ?? 1) > 0.3) {
-          const dx = (1 - endLm.x) - (1 - startLm.x)
-          const dy = endLm.y - startLm.y
-          const absoluteAngle = Math.atan2(dy, dx)
+          let dx: number, dy: number
           
-          this.absoluteAngles.set(partName, absoluteAngle)
+          // 头部特殊处理：从肩膀中点到鼻子
+          if (partName === 'head') {
+            const nose = landmarks[0]
+            if (nose && (nose.visibility ?? 1) > 0.3) {
+              dx = nose.x - bodyCenter.x
+              dy = nose.y - bodyCenter.y
+            } else {
+              continue
+            }
+          } else {
+            // 计算从起点到终点的向量
+            dx = endLm.x - startLm.x
+            dy = endLm.y - startLm.y
+          }
           
-          if (shouldLogFrame) {
-            console.log(`  -> Angle: ${(absoluteAngle * 180 / Math.PI).toFixed(1)}°`)
+          // 计算当前角度
+          const currentAngle = Math.atan2(dy, dx)
+          
+          // 如果有参考姿势，计算相对角度
+          let mediaPipeAngle = currentAngle
+          if (this.useReferencePose && this.referencePose) {
+            const refStartLm = this.referencePose[startIdx]
+            const refEndLm = this.referencePose[endIdx]
+            
+            if (refStartLm && refEndLm) {
+              const refDx = refEndLm.x - refStartLm.x
+              const refDy = refEndLm.y - refStartLm.y
+              const referenceAngle = Math.atan2(refDy, refDx)
+              
+              // 计算相对于参考姿势的角度变化
+              // 注意：这里不取反，在应用时再取反
+              mediaPipeAngle = currentAngle - referenceAngle
+              
+              if (shouldLogFrame) {
+                console.log(`  ${partName}: current=${(currentAngle * 180 / Math.PI).toFixed(1)}° ref=${(referenceAngle * 180 / Math.PI).toFixed(1)}° delta=${(mediaPipeAngle * 180 / Math.PI).toFixed(1)}°`)
+              }
+            }
+          }
+          
+          this.absoluteAngles.set(partName, mediaPipeAngle)
+          
+          if (shouldLogFrame && !this.useReferencePose) {
+            console.log(`  -> MediaPipe Angle: ${(mediaPipeAngle * 180 / Math.PI).toFixed(1)}°`)
           }
         }
       }
@@ -543,13 +687,46 @@ export class CharacterRenderer {
     }
 
     // Step 2: Apply rotations to SPRITES
-    // We rotate sprites directly because container positions are set up for hierarchy
+    // 旋转公式: sprite.rotation = mediaPipeAngle - restPoseOffset + rotationOffset
+    // - mediaPipeAngle: MediaPipe 检测到的当前角度
+    // - restPoseOffset: 默认姿势下该部件的角度（作为基准）
+    // - rotationOffset: 素材本身的朝向偏移（补偿素材绘制方向）
     for (const [partName, sprite] of this.parts) {
-      const absoluteAngle = this.absoluteAngles.get(partName)
+      const mediaPipeAngle = this.absoluteAngles.get(partName)
       
-      if (absoluteAngle !== undefined) {
-        const rotationOffset = this.getRotationOffset(partName)
-        let finalRotation = absoluteAngle - rotationOffset
+      if (mediaPipeAngle !== undefined) {
+        let finalRotation: number
+        
+        if (this.useReferencePose) {
+          // 使用参考姿势时，mediaPipeAngle 已经是相对角度
+          const rotationOffset = this.getRotationOffset(partName)
+          
+          // 根据角色朝向和部件类型应用不同的角度处理
+          const facingLeft = this.defaultFacing === 'left'
+          
+          if (partName.startsWith('left-')) {
+            // 左侧部件：手臂、手、大腿等
+            finalRotation = facingLeft ? -mediaPipeAngle : mediaPipeAngle
+            finalRotation += rotationOffset
+          } else if (partName.startsWith('right-')) {
+            // 右侧部件：手臂、手、大腿等
+            finalRotation = facingLeft ? mediaPipeAngle : -mediaPipeAngle
+            finalRotation += rotationOffset
+          } else if (partName === 'head' || partName === 'body') {
+            // 头部和身体：根据朝向决定
+            finalRotation = facingLeft ? mediaPipeAngle : -mediaPipeAngle
+            finalRotation += rotationOffset
+          } else {
+            // 其他部件（裙子、脚等）
+            finalRotation = facingLeft ? -mediaPipeAngle : mediaPipeAngle
+            finalRotation += rotationOffset
+          }
+        } else {
+          // 不使用参考姿势时，使用原来的公式
+          const restPoseOffset = this.getRestPoseOffset(partName)
+          const rotationOffset = this.getRotationOffset(partName)
+          finalRotation = mediaPipeAngle - restPoseOffset + rotationOffset
+        }
         
         // Apply rotation limits if defined
         const limits = CharacterRenderer.ROTATION_LIMITS[partName]
@@ -562,14 +739,17 @@ export class CharacterRenderer {
         sprite.rotation = finalRotation
         
         if (shouldLogFrame) {
-          console.log(`✓ ROTATION ${partName}: ${(finalRotation * 180 / Math.PI).toFixed(1)}°${limits ? ' (limited)' : ''}`)
+          console.log(`✓ ${partName}: MP=${(mediaPipeAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° rot=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(finalRotation * 180 / Math.PI).toFixed(1)}°${limits ? ' (limited)' : ''}`)
         }
       }
     }
 
-    // Step 3: Update hand positions to follow arm rotation
-    // Hands should be positioned at the end of the arm (wrist position)
-    // Step 3: Update child positions to follow parent rotation
+    // Step 3: Update foot positions based on ankle height (for leg lifting)
+    if (this.useReferencePose && this.referencePose) {
+      this.updateFootPositions(landmarks, shouldLogFrame)
+    }
+    
+    // Step 4: Update child positions to follow parent rotation
     this.updateChildPositions(shouldLogFrame)
     
     if (shouldLogFrame) {
@@ -580,15 +760,138 @@ export class CharacterRenderer {
   // Store initial hand offsets from arm (calculated in resetPose)
   // Store initial child offsets from parent (calculated on first update)
   private childOffsets: Map<string, { x: number; y: number }> = new Map()
+  
+  // Store reference ankle heights for foot position calculation
+  private referenceAnkleHeights: Map<string, number> = new Map()
+  
+  // Flying state management
+  private isFlying: boolean = false
+
+  /**
+   * Update foot positions based on ankle height changes
+   * State machine:
+   * - Standing → Jump detected → Flying (stays flying)
+   * - Flying → Squat detected → Standing
+   */
+  private updateFootPositions(landmarks: PoseLandmarks, shouldLog: boolean): void {
+    if (!this.referencePose) return
+    
+    const leftAnkle = landmarks[27]
+    const rightAnkle = landmarks[28]
+    const leftHip = landmarks[23]
+    const rightHip = landmarks[24]
+    const refLeftAnkle = this.referencePose[27]
+    const refRightAnkle = this.referencePose[28]
+    const refLeftHip = this.referencePose[23]
+    const refRightHip = this.referencePose[24]
+    
+    if (!leftAnkle || !rightAnkle || !refLeftAnkle || !refRightAnkle) return
+    if (!leftHip || !rightHip || !refLeftHip || !refRightHip) return
+    if ((leftAnkle.visibility ?? 0) < 0.3 || (rightAnkle.visibility ?? 0) < 0.3) return
+    
+    // 计算两脚的高度变化（向上为正）
+    const leftHeightChange = refLeftAnkle.y - leftAnkle.y
+    const rightHeightChange = refRightAnkle.y - rightAnkle.y
+    
+    // 计算髋部高度变化（用于检测下蹲）
+    const leftHipChange = refLeftHip.y - leftHip.y
+    const rightHipChange = refRightHip.y - rightHip.y
+    const avgHipChange = (leftHipChange + rightHipChange) / 2
+    
+    // 阈值
+    const jumpThreshold = 0.08 // 8% 的屏幕高度 - 跳跃检测
+    const squatThreshold = -0.05 // -5% 的屏幕高度 - 下蹲检测（髋部下降）
+    const liftThreshold = 0.05 // 5% 的屏幕高度 - 单脚抬起
+    
+    const leftLifted = leftHeightChange > liftThreshold
+    const rightLifted = rightHeightChange > liftThreshold
+    const bothLifted = leftLifted && rightLifted
+    const isJumping = bothLifted && (leftHeightChange + rightHeightChange) / 2 > jumpThreshold
+    const isSquatting = avgHipChange < squatThreshold
+    
+    const leftFootContainer = this.partContainers.get('left-foot')
+    const rightFootContainer = this.partContainers.get('right-foot')
+    
+    if (!leftFootContainer || !rightFootContainer) return
+    if (!this.initialPositions.has('left-foot') || !this.initialPositions.has('right-foot')) return
+    
+    const leftInitialPos = this.initialPositions.get('left-foot')!
+    const rightInitialPos = this.initialPositions.get('right-foot')!
+    
+    // 状态转换
+    if (isJumping && !this.isFlying) {
+      this.isFlying = true
+      if (this.frameCount % 60 === 0) {
+        console.log('🚀 Entering flying state')
+      }
+    } else if (isSquatting && this.isFlying) {
+      this.isFlying = false
+      if (this.frameCount % 60 === 0) {
+        console.log('🧍 Exiting flying state (squat detected)')
+      }
+    }
+    
+    // 根据状态应用动作
+    if (this.isFlying) {
+      // 飞行状态：双脚向后抬起
+      const flyingOffset = 80 // 固定的飞行高度
+      leftFootContainer.y = leftInitialPos.y - flyingOffset
+      rightFootContainer.y = rightInitialPos.y - flyingOffset
+      
+      if (this.frameCount % 60 === 0) {
+        console.log(`✈️ Flying mode active`)
+      }
+    } else if (leftLifted || rightLifted) {
+      // 走路状态：单脚抬起
+      if (leftLifted && !rightLifted) {
+        const yOffset = leftHeightChange * 2000
+        leftFootContainer.y = leftInitialPos.y - yOffset
+        rightFootContainer.y = rightInitialPos.y
+      } else if (rightLifted && !leftLifted) {
+        const yOffset = rightHeightChange * 2000
+        rightFootContainer.y = rightInitialPos.y - yOffset
+        leftFootContainer.y = leftInitialPos.y
+      } else {
+        // 双脚都抬起但未达到跳跃阈值
+        leftFootContainer.y = leftInitialPos.y
+        rightFootContainer.y = rightInitialPos.y
+      }
+    } else {
+      // 站立状态：恢复初始位置
+      leftFootContainer.y = leftInitialPos.y
+      rightFootContainer.y = rightInitialPos.y
+    }
+  }
 
   // Child-Parent pairs for position following
   // Format: [childName, parentName]
+  // Note: 脚的父级会根据实际存在的部件动态确定（skirt 或 left-thigh/right-thigh）
   private static readonly CHILD_PARENT_PAIRS: [string, string][] = [
+    // 头跟随身体
+    ['head', 'body'],
+    // 手臂跟随身体
+    ['left-arm', 'body'],
+    ['right-arm', 'body'],
+    // 手跟随手臂（手腕连接）
     ['left-hand', 'left-arm'],
     ['right-hand', 'right-arm'],
-    ['left-foot', 'upper-leg'],
-    ['right-foot', 'upper-leg'],
+    // 裙子跟随身体
+    ['skirt', 'body'],
+    // 脚的父级在 updateChildPositions 中动态处理
   ]
+
+  // 动态获取脚的父级部件
+  private getFootParent(footName: 'left-foot' | 'right-foot'): string | null {
+    // 优先检查分体式大腿
+    if (footName === 'left-foot') {
+      if (this.parts.has('left-thigh')) return 'left-thigh'
+      if (this.parts.has('skirt')) return 'skirt'
+    } else {
+      if (this.parts.has('right-thigh')) return 'right-thigh'
+      if (this.parts.has('skirt')) return 'skirt'
+    }
+    return null
+  }
 
   // Store initial positions for all parts (set in resetPose)
   private initialPositions: Map<string, { x: number; y: number }> = new Map()
@@ -607,14 +910,37 @@ export class CharacterRenderer {
    */
   private updateChildPositions(shouldLog: boolean): void {
     if (!this.config?.skeleton) {
-      if (shouldLog) console.log('No skeleton data')
+      if (shouldLog) console.log('No skeleton data, config:', this.config)
       return
     }
 
     const joints = this.config.skeleton.joints
     const bones = this.config.skeleton.bones
     
-    for (const [childName, parentName] of CharacterRenderer.CHILD_PARENT_PAIRS) {
+    if (shouldLog) {
+      console.log('updateChildPositions - skeleton data:', {
+        jointsCount: joints?.length,
+        bonesCount: bones?.length,
+        bones: bones
+      })
+    }
+    
+    // 构建完整的子-父对列表，包括动态确定的脚部父级
+    const allChildParentPairs: [string, string][] = [
+      ...CharacterRenderer.CHILD_PARENT_PAIRS,
+    ]
+    
+    // 动态添加脚部的父级关系
+    const leftFootParent = this.getFootParent('left-foot')
+    const rightFootParent = this.getFootParent('right-foot')
+    if (leftFootParent && this.parts.has('left-foot')) {
+      allChildParentPairs.push(['left-foot', leftFootParent])
+    }
+    if (rightFootParent && this.parts.has('right-foot')) {
+      allChildParentPairs.push(['right-foot', rightFootParent])
+    }
+    
+    for (const [childName, parentName] of allChildParentPairs) {
       const childContainer = this.partContainers.get(childName)
       const parentContainer = this.partContainers.get(parentName)
       const parentSprite = this.parts.get(parentName)
@@ -645,9 +971,18 @@ export class CharacterRenderer {
 
       if (!parentJointId || !childJointId) {
         if (shouldLog) {
-          console.log(`${childName}: no bone connection to ${parentName}`)
+          console.log(`${childName}: no bone connection to ${parentName}`, {
+            bonesChecked: bones.map(b => `${b.from} -> ${b.to}`)
+          })
         }
         continue
+      }
+      
+      if (shouldLog) {
+        console.log(`${childName} -> ${parentName}: found bone connection`, {
+          parentJointId,
+          childJointId
+        })
       }
 
       // Find the actual joint objects
@@ -666,9 +1001,10 @@ export class CharacterRenderer {
       const childAssembly = this.assemblyData.get(childName)
       if (!parentAssembly || !childAssembly) continue
 
-      // Get initial positions (pivot positions from resetPose)
-      const parentInitial = this.initialPositions.get(parentName)
-      if (!parentInitial) continue
+      // Use parent container's CURRENT position (not initial position)
+      // This ensures child follows parent even when parent has moved
+      const parentCurrentX = parentContainer.position.x
+      const parentCurrentY = parentContainer.position.y
 
       // Get parent's current rotation
       const parentRotation = parentSprite.rotation
@@ -690,26 +1026,52 @@ export class CharacterRenderer {
       const rotatedParentJointY = parentJointFromPivotX * sin + parentJointFromPivotY * cos
 
       // Parent joint's world position after rotation
-      // parentInitial is the pivot position
-      const parentJointWorldX = parentInitial.x + rotatedParentJointX
-      const parentJointWorldY = parentInitial.y + rotatedParentJointY
+      // Use current container position instead of initial position
+      const parentJointWorldX = parentCurrentX + rotatedParentJointX
+      const parentJointWorldY = parentCurrentY + rotatedParentJointY
 
       // Get child's pivot point
       const childFrameData = this.spritesheetData?.frames[childName] as FrameDataWithAssembly | undefined
       const childPivotX = childFrameData?.jointPivot?.x ?? DEFAULT_JOINT_PIVOTS[childName]?.x ?? 0.5
       const childPivotY = childFrameData?.jointPivot?.y ?? DEFAULT_JOINT_PIVOTS[childName]?.y ?? 0.5
 
-      // Child joint position relative to child's PIVOT
+      // Child joint position relative to child's PIVOT (before rotation)
       const childJointFromPivotX = (childJoint.position.x - childPivotX) * childAssembly.width * this.globalScale
       const childJointFromPivotY = (childJoint.position.y - childPivotY) * childAssembly.height * this.globalScale
 
+      // Get child's current rotation to rotate the joint offset
+      const childSprite = this.parts.get(childName)
+      const childRotation = childSprite?.rotation ?? 0
+      
+      // Rotate child joint offset by child's rotation
+      const childCos = Math.cos(childRotation)
+      const childSin = Math.sin(childRotation)
+      const rotatedChildJointX = childJointFromPivotX * childCos - childJointFromPivotY * childSin
+      const rotatedChildJointY = childJointFromPivotX * childSin + childJointFromPivotY * childCos
+
       // Child's new pivot position: move child so its joint aligns with parent's joint
-      // childNewPivot + childJointFromPivot = parentJointWorld
-      // childNewPivot = parentJointWorld - childJointFromPivot
-      const newChildX = parentJointWorldX - childJointFromPivotX
-      const newChildY = parentJointWorldY - childJointFromPivotY
+      // childNewPivot + rotatedChildJoint = parentJointWorld
+      // childNewPivot = parentJointWorld - rotatedChildJoint
+      const newChildX = parentJointWorldX - rotatedChildJointX
+      const newChildY = parentJointWorldY - rotatedChildJointY
 
       childContainer.position.set(newChildX, newChildY)
+
+      // 让子部件（手）继承父部件（手臂）的旋转变化
+      // 这样手会自然地跟随手臂摆动
+      if (childSprite && (childName === 'left-hand' || childName === 'right-hand')) {
+        // 获取手臂的 rest pose offset（静止时的角度）
+        const parentRestOffset = this.getRestPoseOffset(parentName)
+        // 计算手臂相对于静止姿势的旋转变化量
+        const parentRotationDelta = parentRotation - parentRestOffset
+        
+        // 获取手的当前 rest pose offset
+        const childRestOffset = this.getRestPoseOffset(childName)
+        
+        // 手的新旋转 = 手的静止角度 + 手臂的旋转变化量
+        // 手完全跟随手臂旋转，不需要额外的继承系数
+        childSprite.rotation = childRestOffset + parentRotationDelta
+      }
 
       if (shouldLog) {
         console.log(`${childName}: parentJoint=${parentJoint.name}(${parentJoint.position.x.toFixed(2)},${parentJoint.position.y.toFixed(2)}), childJoint=${childJoint.name}, parentRot=${(parentRotation * 180 / Math.PI).toFixed(1)}°, newPos=(${newChildX.toFixed(1)}, ${newChildY.toFixed(1)})`)
@@ -731,9 +1093,19 @@ export class CharacterRenderer {
     if (hasValidBindings && this.config) {
       const binding = this.config.bindings[partName]
       if (binding?.landmarks && binding.landmarks.length >= 2) {
-        return [binding.landmarks[0], binding.landmarks[1]]
+        const start = binding.landmarks[0]
+        const end = binding.landmarks[1]
+        // 如果起点和终点相同，使用默认绑定
+        if (start !== end) {
+          return [start, end]
+        }
       } else if (binding?.rotationLandmark != null && binding?.landmarks?.length >= 1) {
-        return [binding.landmarks[0], binding.rotationLandmark]
+        const start = binding.landmarks[0]
+        const end = binding.rotationLandmark
+        // 如果起点和终点相同，使用默认绑定
+        if (start !== end) {
+          return [start, end]
+        }
       }
     }
     // Always fall back to default bindings
@@ -743,23 +1115,34 @@ export class CharacterRenderer {
   /**
    * 根据素材实际绘制方向获取旋转偏移量
    * 
+   * 根据素材实际绘制方向获取旋转偏移量
+   * 
    * 优先从 spritesheet.json 的 rotationOffset 字段读取，
    * 如果没有配置则使用默认值。
    * 
-   * 素材朝向说明：
-   * - 如果素材是垂直向下画的 -> 偏移 Math.PI / 2 (1.5708)
-   * - 如果素材是水平向右画的 -> 偏移 0
-   * - 如果素材是水平向左画的 -> 偏移 Math.PI (3.1416)
+   * 嫦娥素材特殊性：
+   * 1. 左臂/左手是【水平向左】画的（默认状态手臂是抬起的）
+   * 2. 右臂/右手是【水平向右】画的（默认状态手臂是抬起的）
+   * 3. 但我们希望默认状态（Rotation=0）是【垂直向下】
+   * 
+   * 这导致了 90度（π/2）的偏差：
+   * - 当系统想要手臂"自然下垂"时（发送 0 度指令），皮影手臂实际上是平举的
+   * - 当系统想要手臂"前后摆动"时，皮影手臂在平举位置上下拍动
+   * 
+   * 修正方案：
+   * - 左臂/左手：偏移 Math.PI（素材指向左，即 180度）
+   * - 右臂/右手：偏移 -Math.PI/2（素材指向右，需要转 90 度到垂直）
    */
   private getRotationOffset(partName: string): number {
-    // 优先从 spritesheet.json 读取配置
+    // 1. 优先从 spritesheet.json 读取配置（如果在编辑器里手动调过，以此为准）
     if (this.spritesheetData) {
       const frameData = this.spritesheetData.frames[partName] as FrameDataWithAssembly
       if (frameData?.rotationOffset !== undefined) {
         return frameData.rotationOffset
       }
     }
-    // 使用默认值
+    
+    // 2. 使用默认值（已针对嫦娥素材调整）
     return DEFAULT_ROTATION_OFFSETS[partName] ?? Math.PI / 2
   }
 
@@ -850,25 +1233,465 @@ export class CharacterRenderer {
   }
 
   /**
+   * 获取部件的初始姿势偏移量（弧度）
+   * 这个偏移量表示素材默认姿势与"自然垂下"姿势之间的角度差
+   * 优先使用配置中的值，否则使用默认值
+   */
+  getRestPoseOffset(partName: string): number {
+    // 优先使用配置中的值
+    const configOffset = this.config?.restPoseOffsets?.[partName]
+    if (configOffset !== undefined) {
+      return configOffset
+    }
+    // 使用默认值
+    return DEFAULT_REST_POSE_OFFSETS[partName] ?? 0
+  }
+
+  /**
+   * Set rotation for a specific part (in radians)
+   * Used for manual control and preset animations
+   * @param rotation 相对于"自然垂下"姿势的角度，会自动加上 restPoseOffset
+   * @param absolute 如果为 true，则直接设置绝对角度（不加偏移）
+   */
+  setPartRotation(partName: string, rotation: number, absolute: boolean = false): void {
+    const sprite = this.parts.get(partName)
+    if (sprite) {
+      const offset = absolute ? 0 : this.getRestPoseOffset(partName)
+      sprite.rotation = rotation + offset
+      // Update child positions after rotation change
+      this.updateChildPositions(false)
+    }
+  }
+
+  /**
+   * Get current rotation of a part (relative to rest pose)
+   * @param absolute 如果为 true，返回绝对角度（不减偏移）
+   */
+  getPartRotation(partName: string, absolute: boolean = false): number {
+    const sprite = this.parts.get(partName)
+    if (!sprite) return 0
+    const offset = absolute ? 0 : this.getRestPoseOffset(partName)
+    return sprite.rotation - offset
+  }
+
+  /**
+   * Get all part names
+   */
+  getPartNames(): string[] {
+    return Array.from(this.parts.keys())
+  }
+
+  /**
+   * Apply a preset pose (set multiple part rotations at once)
+   * @param pose Record of part name to rotation angle (in radians), relative to rest pose
+   */
+  applyPresetPose(pose: Record<string, number>): void {
+    for (const [partName, rotation] of Object.entries(pose)) {
+      const sprite = this.parts.get(partName)
+      if (sprite) {
+        const offset = this.getRestPoseOffset(partName)
+        sprite.rotation = rotation + offset
+      }
+    }
+    // Update child positions after all rotations are set
+    this.updateChildPositions(false)
+  }
+
+  /**
+   * Reset all parts to default pose (rest pose with offsets applied)
+   */
+  resetToDefaultPose(): void {
+    for (const [partName, sprite] of this.parts) {
+      const offset = this.getRestPoseOffset(partName)
+      sprite.rotation = offset
+    }
+    this.updateChildPositions(false)
+  }
+
+  /**
+   * Animate to a preset pose over time
+   * @param pose Target pose (relative to rest pose)
+   * @param duration Animation duration in milliseconds
+   * @param onComplete Callback when animation completes
+   */
+  animateToPose(
+    pose: Record<string, number>,
+    duration: number = 500,
+    onComplete?: () => void
+  ): void {
+    if (!this.app) return
+
+    // 获取当前姿势（相对值）和目标姿势的绝对值
+    const startPose: Record<string, number> = {}
+    const targetPose: Record<string, number> = {}
+    
+    // 对于面向右的角色，需要调整姿势
+    const adjustedPose = this.adjustPoseForFacing(pose)
+    
+    for (const partName of Object.keys(adjustedPose)) {
+      // 当前的相对角度
+      startPose[partName] = this.getPartRotation(partName)
+      // 目标的相对角度（已经根据朝向调整过）
+      targetPose[partName] = adjustedPose[partName]
+    }
+
+    const startTime = Date.now()
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3)
+      
+      for (const [partName, targetRotation] of Object.entries(targetPose)) {
+        const startRotation = startPose[partName] ?? 0
+        // 插值计算相对角度
+        const currentRelativeRotation = startRotation + (targetRotation - startRotation) * eased
+        // 加上偏移量得到绝对角度
+        const offset = this.getRestPoseOffset(partName)
+        const sprite = this.parts.get(partName)
+        if (sprite) {
+          sprite.rotation = currentRelativeRotation + offset
+        }
+      }
+      
+      this.updateChildPositions(false)
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        onComplete?.()
+      }
+    }
+    
+    requestAnimationFrame(animate)
+  }
+
+  /**
+   * Get the main container for mouse interaction
+   */
+  getContainer(): Container | null {
+    return this.container
+  }
+
+  /**
+   * 瞬间转身 - 通过翻转容器的 scale.x 实现镜像
+   * 皮影戏中人物转身就是翻转皮影片
+   */
+  turnAround(): void {
+    if (!this.container) return
+    this.container.scale.x *= -1
+  }
+
+  /**
+   * 动画转身 - 模拟皮影戏的"变薄再变宽"效果
+   * 真实的皮影戏在转身时，皮影会贴着幕布有一个由宽变窄，再由窄变宽的过程
+   * 
+   * @param duration 动画时长（毫秒），默认 300ms
+   * @param onComplete 动画完成回调
+   */
+  turnAroundAnimated(duration: number = 300, onComplete?: () => void): void {
+    if (!this.container) return
+
+    const targetScaleX = this.container.scale.x > 0 ? -1 : 1
+    const startScaleX = this.container.scale.x
+    const startTime = Date.now()
+
+    const animate = () => {
+      if (!this.container) return
+
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+
+      // 使用 ease-in-out 缓动，模拟皮影的物理特性
+      // 先快速收缩到 0，再展开到目标值
+      if (progress < 0.5) {
+        // 前半段：从当前值收缩到 0
+        const halfProgress = progress * 2  // 0 -> 1
+        const eased = 1 - Math.pow(1 - halfProgress, 2)  // ease-out
+        this.container.scale.x = startScaleX * (1 - eased)
+      } else {
+        // 后半段：从 0 展开到目标值
+        const halfProgress = (progress - 0.5) * 2  // 0 -> 1
+        const eased = Math.pow(halfProgress, 2)  // ease-in
+        this.container.scale.x = targetScaleX * eased
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        this.container.scale.x = targetScaleX
+        onComplete?.()
+      }
+    }
+
+    requestAnimationFrame(animate)
+  }
+
+  /**
+   * 检查角色当前是否已翻转（面向左侧）
+   */
+  isFlipped(): boolean {
+    return (this.container?.scale.x ?? 1) < 0
+  }
+
+  /**
+   * 获取角色默认朝向
+   */
+  getDefaultFacing(): CharacterFacing {
+    return this.defaultFacing
+  }
+
+  /**
+   * 设置角色默认朝向
+   * @param facing 'left' 或 'right'
+   */
+  setDefaultFacing(facing: CharacterFacing): void {
+    this.defaultFacing = facing
+  }
+
+  /**
+   * 根据角色朝向调整旋转方向
+   * 预设动画是为"面向左"的角色设计的
+   * 对于面向右的角色，需要取反旋转值
+   * 
+   * @param rotation 预设动画的旋转值（为面向左设计）
+   * @returns 调整后的实际旋转值
+   */
+  adjustRotationForFacing(rotation: number): number {
+    // 预设动画是为面向左的角色设计的
+    // 面向右的角色需要取反旋转方向
+    if (this.defaultFacing === 'right') {
+      return -rotation
+    }
+    return rotation
+  }
+
+  /**
+   * 根据角色朝向调整整个姿势
+   * 对于面向右的角色：
+   * 1. 旋转方向取反
+   * 2. 左右对称部件的值交换（走路时保持手脚交叉协调）
+   * 
+   * @param pose 原始姿势（为面向左设计）
+   * @returns 调整后的姿势
+   */
+  private adjustPoseForFacing(pose: Record<string, number>): Record<string, number> {
+    if (this.defaultFacing === 'left') {
+      // 面向左的角色，直接使用原始姿势
+      return pose
+    }
+
+    // 面向右的角色，需要：
+    // 1. 交换左右部件的值
+    // 2. 取反旋转方向
+    const adjusted: Record<string, number> = {}
+    
+    // 左右对称部件的映射
+    const leftRightPairs: Record<string, string> = {
+      'left-arm': 'right-arm',
+      'right-arm': 'left-arm',
+      'left-hand': 'right-hand',
+      'right-hand': 'left-hand',
+      'left-thigh': 'right-thigh',
+      'right-thigh': 'left-thigh',
+      'left-foot': 'right-foot',
+      'right-foot': 'left-foot',
+    }
+
+    for (const [partName, rotation] of Object.entries(pose)) {
+      // 检查是否是左右对称部件
+      const mirrorPart = leftRightPairs[partName]
+      
+      if (mirrorPart && pose[mirrorPart] !== undefined) {
+        // 交换左右部件的值，并取反旋转方向
+        adjusted[partName] = -pose[mirrorPart]
+      } else {
+        // 非对称部件（如 body, head），只取反旋转方向
+        adjusted[partName] = -rotation
+      }
+    }
+
+    return adjusted
+  }
+
+  /**
+   * 设置角色朝向
+   * @param faceLeft true 表示面向左侧（翻转），false 表示面向右侧（正常）
+   * @param animated 是否使用动画
+   * @param duration 动画时长
+   */
+  setFacing(faceLeft: boolean, animated: boolean = false, duration: number = 300): void {
+    if (!this.container) return
+    
+    const currentlyFlipped = this.container.scale.x < 0
+    const needsFlip = faceLeft !== currentlyFlipped
+
+    if (!needsFlip) return
+
+    if (animated) {
+      this.turnAroundAnimated(duration)
+    } else {
+      this.turnAround()
+    }
+  }
+
+  /**
+   * Get sprite for a specific part (for hit testing)
+   */
+  getPartSprite(partName: string): Sprite | undefined {
+    return this.parts.get(partName)
+  }
+
+  // Debug overlay container
+  private debugContainer: Container | null = null
+
+  /**
+   * 显示/隐藏关节点和旋转点（用于调试）
+   */
+  setShowJoints(show: boolean): void {
+    if (!this.container || !this.config?.skeleton) return
+
+    if (!show) {
+      // 隐藏调试信息
+      if (this.debugContainer) {
+        this.debugContainer.visible = false
+      }
+      return
+    }
+
+    // 创建或显示调试容器
+    if (!this.debugContainer) {
+      this.debugContainer = new Container()
+      this.debugContainer.zIndex = 9999
+      this.container.addChild(this.debugContainer)
+    } else {
+      // 清除旧的调试图形
+      this.debugContainer.removeChildren()
+    }
+    this.debugContainer.visible = true
+
+    // 绘制关节点和旋转点
+    this.drawDebugPoints()
+  }
+
+  /**
+   * 绘制调试点（关节点和旋转点）
+   */
+  private drawDebugPoints(): void {
+    if (!this.debugContainer || !this.config?.skeleton || !this.spritesheetData) return
+
+    const joints = this.config.skeleton.joints
+    const labelStyle = new TextStyle({
+      fontSize: 10,
+      fill: 0xffffff,
+      stroke: { color: 0x000000, width: 2 },
+    })
+
+    // 绘制每个部件的关节点和旋转点
+    for (const [partName, sprite] of this.parts) {
+      const container = this.partContainers.get(partName)
+      if (!container) continue
+
+      const assembly = this.assemblyData.get(partName)
+      if (!assembly) continue
+
+      const frameData = this.spritesheetData.frames[partName] as FrameDataWithAssembly
+
+      // 获取旋转点（jointPivot）
+      const jointPivot = frameData?.jointPivot
+      const defaultPivot = DEFAULT_JOINT_PIVOTS[partName]
+      const pivotX = jointPivot?.x ?? defaultPivot?.x ?? 0.5
+      const pivotY = jointPivot?.y ?? defaultPivot?.y ?? 0.5
+
+      // 绘制旋转点（蓝色方块）
+      const pivotGraphic = new Graphics()
+      pivotGraphic.rect(-4, -4, 8, 8)
+      pivotGraphic.fill({ color: 0x4444ff })
+      pivotGraphic.stroke({ color: 0xffffff, width: 1 })
+      
+      // 旋转点位置 = 容器位置（因为 sprite.anchor 就是旋转点）
+      pivotGraphic.x = container.x
+      pivotGraphic.y = container.y
+      this.debugContainer.addChild(pivotGraphic)
+
+      // 添加旋转点标签
+      const pivotLabel = new Text({
+        text: `${partName}\npivot(${pivotX.toFixed(2)},${pivotY.toFixed(2)})`,
+        style: labelStyle,
+      })
+      pivotLabel.x = container.x + 10
+      pivotLabel.y = container.y - 10
+      pivotLabel.scale.set(0.8)
+      this.debugContainer.addChild(pivotLabel)
+
+      // 绘制该部件的关节点（绿色圆点）
+      const partJoints = joints.filter(j => j.part === partName)
+      for (const joint of partJoints) {
+        const jointGraphic = new Graphics()
+        jointGraphic.circle(0, 0, 5)
+        jointGraphic.fill({ color: joint.connectedTo ? 0x00ff00 : 0x888888 })
+        jointGraphic.stroke({ color: 0xffffff, width: 1 })
+
+        // 关节点位置需要考虑部件的旋转
+        const jointLocalX = (joint.position.x - pivotX) * assembly.width * this.globalScale
+        const jointLocalY = (joint.position.y - pivotY) * assembly.height * this.globalScale
+        
+        // 旋转变换
+        const cos = Math.cos(sprite.rotation)
+        const sin = Math.sin(sprite.rotation)
+        const rotatedX = jointLocalX * cos - jointLocalY * sin
+        const rotatedY = jointLocalX * sin + jointLocalY * cos
+
+        jointGraphic.x = container.x + rotatedX
+        jointGraphic.y = container.y + rotatedY
+        this.debugContainer.addChild(jointGraphic)
+      }
+    }
+  }
+
+  /**
+   * 更新调试点位置（在部件旋转后调用）
+   */
+  updateDebugPoints(): void {
+    if (this.debugContainer?.visible) {
+      this.debugContainer.removeChildren()
+      this.drawDebugPoints()
+    }
+  }
+
+  /**
    * Destroy the renderer
    */
   async destroy(): Promise<void> {
+    // 先标记为未初始化，防止其他方法继续操作
+    this.initialized = false
+
     this.clearParts()
 
     if (this.container) {
-      this.container.destroy()
+      try {
+        this.container.destroy({ children: true })
+      } catch (e) {
+        console.warn('Container destroy error:', e)
+      }
       this.container = null
     }
 
     if (this.app) {
-      this.app.destroy()
+      try {
+        // PixiJS 8 的 destroy 方法签名变了
+        this.app.destroy(true, { children: true, texture: false, textureSource: false })
+      } catch (e) {
+        console.warn('App destroy error:', e)
+      }
       this.app = null
     }
 
     this.config = null
     this.spritesheetData = null
     this.baseTexture = null
-    this.initialized = false
   }
 }
 

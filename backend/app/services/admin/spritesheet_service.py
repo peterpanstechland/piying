@@ -173,6 +173,8 @@ class SpritesheetService:
                     'joint_pivot_y': part.get('joint_pivot_y'),
                     # Rotation offset (旋转偏移量，根据素材朝向)
                     'rotation_offset': part.get('rotation_offset'),
+                    # Rest pose offset (默认姿势角度偏移)
+                    'rest_pose_offset': part.get('rest_pose_offset'),
                 }
             except Exception as e:
                 print(f"Failed to load part {part['name']}: {e}")
@@ -211,6 +213,9 @@ class SpritesheetService:
             # Rotation offset based on sprite orientation (旋转偏移量)
             if info.get('rotation_offset') is not None:
                 frame_data['rotationOffset'] = info.get('rotation_offset')
+            # Rest pose offset (默认姿势角度偏移)
+            if info.get('rest_pose_offset') is not None:
+                frame_data['restPoseOffset'] = info.get('rest_pose_offset')
 
         # Generate JSON metadata
         json_data = {
@@ -290,6 +295,13 @@ class SpritesheetService:
             p['name'] for p in sorted(parts_data, key=lambda x: x.get('z_index', 0))
         ]
 
+        # Build rest pose offsets (angle difference between sprite default pose and "natural hanging" pose)
+        rest_pose_offsets = {}
+        for part in parts_data:
+            offset = part.get('rest_pose_offset')
+            if offset is not None:
+                rest_pose_offsets[part['name']] = offset
+
         return {
             'id': character_id,
             'name': name,
@@ -300,7 +312,9 @@ class SpritesheetService:
                 'bones': bones
             },
             'bindings': bindings,
-            'renderOrder': render_order
+            'renderOrder': render_order,
+            'restPoseOffsets': rest_pose_offsets,
+            'defaultFacing': 'left'  # 默认值，会被 API 端点覆盖
         }
 
 

@@ -230,3 +230,41 @@
     justify-content: center;
   }
 }
+
+
+/* Video section for frame selection */
+.cover-image-manager__video-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+
+.cover-image-manager__video-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cover-image-manager__video-wrapper {
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+}
+
+.cover-image-manager__video {
+  width: 100%;
+  max-height: 300px;
+  display: block;
+}
+
+.cover-image-manager__video-time {
+  font-size: 12px;
+  color: var(--accent-primary);
+  font-family: 'Consolas', 'Monaco', monospace;
+  text-align: center;
+  padding: 4px 0;
+}

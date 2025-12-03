@@ -9,6 +9,7 @@
  * - Delete character videos (4.5)
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { adminApi } from '../../services/api'
 import './CharacterVideoPanel.css'
 
@@ -38,9 +39,12 @@ interface CharacterVideoPanelProps {
  */
 export default function CharacterVideoPanel({
   storylineId,
-  baseVideoDuration,
+  baseVideoDuration: _baseVideoDuration,
   onVideoChange,
 }: CharacterVideoPanelProps) {
+  // baseVideoDuration reserved for future duration validation display
+  void _baseVideoDuration
+  const navigate = useNavigate()
   const [characters, setCharacters] = useState<CharacterVideoStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -149,26 +153,7 @@ export default function CharacterVideoPanel({
     if (seconds === null) return '--:--'
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-
-  // Format date for display
-  const formatDate = (dateStr: string | null): string => {
-    if (!dateStr) return '--'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  // Get character thumbnail URL
-  const getCharacterThumbnailUrl = (thumbnail: string | null): string | null => {
-    if (!thumbnail) return null
-    return `/api/admin/${thumbnail}`
+    return `${mins}分${secs}秒`
   }
 
   if (loading) {
@@ -181,43 +166,19 @@ export default function CharacterVideoPanel({
   }
 
   if (characters.length === 0) {
-    return (
-      <div className="character-video-panel character-video-panel--empty">
-        <div className="character-video-panel__empty-icon">🎬</div>
-        <p className="character-video-panel__empty-text">暂无可配置角色</p>
-        <p className="character-video-panel__empty-hint">
-          请先在"可选角色"中添加角色
-        </p>
-      </div>
-    )
+    return null
   }
 
   return (
     <div className="character-video-panel">
-      <div className="character-video-panel__header">
-        <h3 className="character-video-panel__title">
-          角色专属视频
-          <span className="character-video-panel__title-en">Character Videos</span>
-        </h3>
-        <span className="character-video-panel__count">
-          {characters.filter(c => c.has_video).length}/{characters.length} 已配置
-        </span>
-      </div>
-
-      <p className="character-video-panel__hint">
-        为每个角色上传专属背景视频，视频时长需与基础视频一致（±1秒）
-      </p>
-      <p className="character-video-panel__hint character-video-panel__hint--en">
-        Upload character-specific videos. Duration must match base video (±1s tolerance).
-      </p>
-
-      {/* Base video duration reference */}
-      <div className="character-video-panel__base-info">
-        <span className="character-video-panel__base-label">基础视频时长:</span>
-        <span className="character-video-panel__base-value">
-          {formatDuration(baseVideoDuration)}
-        </span>
-      </div>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".mp4,video/mp4"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
 
       {/* Error message */}
       {error && (
@@ -233,158 +194,81 @@ export default function CharacterVideoPanel({
         </div>
       )}
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".mp4,video/mp4"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
-      />
-
-      {/* Character list */}
-      <div className="character-video-panel__list">
+      {/* Character cards - horizontal layout */}
+      <div className="character-video-panel__grid">
         {characters.map((character) => {
           const isUploading = uploadingCharacterId === character.character_id
           const isDeleting = deletingCharacterId === character.character_id
-          const thumbnailUrl = getCharacterThumbnailUrl(character.character_thumbnail)
 
           return (
-            <div
-              key={character.character_id}
-              className={`character-video-panel__item ${character.has_video ? 'character-video-panel__item--has-video' : ''} ${isUploading ? 'character-video-panel__item--uploading' : ''}`}
+            <div 
+              key={character.character_id} 
+              className={`character-video-card ${character.has_video ? 'character-video-card--has-video' : ''}`}
             >
-              {/* Character info */}
-              <div className="character-video-panel__character-info">
-                <div className="character-video-panel__thumbnail">
-                  {thumbnailUrl ? (
-                    <img
-                      src={thumbnailUrl}
-                      alt={character.character_name}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none'
-                      }}
-                    />
-                  ) : (
-                    <div className="character-video-panel__thumbnail-placeholder">
-                      🎭
-                    </div>
-                  )}
-                </div>
-                <div className="character-video-panel__name-container">
-                  <span className="character-video-panel__name">
-                    {character.character_name}
-                  </span>
-                  <span className={`character-video-panel__status ${character.has_video ? 'character-video-panel__status--uploaded' : 'character-video-panel__status--missing'}`}>
-                    {character.has_video ? '✓ 已上传' : '○ 未配置'}
-                  </span>
-                </div>
+              <div className="character-video-card__header">
+                <span className="character-video-card__name">{character.character_name}</span>
+                <span className={`character-video-card__status ${character.has_video ? 'character-video-card__status--uploaded' : ''}`}>
+                  {character.has_video ? '✓ 已上传' : '○ 未配置'}
+                </span>
               </div>
 
-              {/* Video info (Requirements 4.4) */}
               {character.has_video && (
-                <div className="character-video-panel__video-info">
-                  <div className="character-video-panel__video-thumbnail">
-                    {character.video_thumbnail ? (
-                      <img
-                        src={`/api/admin/${character.video_thumbnail}`}
-                        alt="Video thumbnail"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none'
-                        }}
-                      />
-                    ) : (
-                      <div className="character-video-panel__video-thumbnail-placeholder">
-                        🎥
-                      </div>
-                    )}
-                  </div>
-                  <div className="character-video-panel__video-meta">
-                    <span className="character-video-panel__video-duration">
-                      ⏱ {formatDuration(character.video_duration)}
-                    </span>
-                    <span className="character-video-panel__video-date">
-                      📅 {formatDate(character.uploaded_at)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Upload progress */}
-              {isUploading && (
-                <div className="character-video-panel__progress">
-                  <div className="character-video-panel__progress-bar">
-                    <div
-                      className="character-video-panel__progress-fill"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <span className="character-video-panel__progress-text">
-                    {uploadProgress}%
+                <div className="character-video-card__info">
+                  <span className="character-video-card__duration">
+                    时长: {formatDuration(character.video_duration)}
                   </span>
                 </div>
               )}
 
-              {/* Actions */}
-              <div className="character-video-panel__actions">
-                <button
-                  className="character-video-panel__btn character-video-panel__btn--upload"
-                  onClick={() => handleUploadClick(character.character_id)}
-                  disabled={isUploading || isDeleting}
-                  title={character.has_video ? '更换视频' : '上传视频'}
-                >
-                  {isUploading ? (
-                    <>
-                      <span className="character-video-panel__btn-icon">⏳</span>
-                      上传中
-                    </>
-                  ) : (
-                    <>
-                      <span className="character-video-panel__btn-icon">📤</span>
-                      {character.has_video ? '更换' : '上传'}
-                    </>
-                  )}
-                </button>
-
-                {character.has_video && (
+              <div className="character-video-card__actions">
+                {character.has_video ? (
+                  <>
+                    <button
+                      className="btn-primary btn-sm"
+                      onClick={() => navigate(`/storylines/${storylineId}/characters/${character.character_id}/video-editor`)}
+                    >
+                      ✏️ 编辑视频
+                    </button>
+                    <button
+                      className="btn-secondary btn-sm"
+                      onClick={() => handleUploadClick(character.character_id)}
+                      disabled={isUploading || isDeleting}
+                    >
+                      更换
+                    </button>
+                    <button
+                      className="btn-danger btn-sm"
+                      onClick={() => handleDelete(character.character_id, character.character_name)}
+                      disabled={isUploading || isDeleting}
+                    >
+                      {isDeleting ? '...' : '删除'}
+                    </button>
+                  </>
+                ) : (
                   <button
-                    className="character-video-panel__btn character-video-panel__btn--delete"
-                    onClick={() => handleDelete(character.character_id, character.character_name)}
-                    disabled={isUploading || isDeleting}
-                    title="删除视频"
+                    className="btn-primary btn-sm"
+                    onClick={() => handleUploadClick(character.character_id)}
+                    disabled={isUploading}
                   >
-                    {isDeleting ? (
-                      <>
-                        <span className="character-video-panel__btn-icon">⏳</span>
-                        删除中
-                      </>
-                    ) : (
-                      <>
-                        <span className="character-video-panel__btn-icon">🗑️</span>
-                        删除
-                      </>
-                    )}
+                    {isUploading ? '上传中...' : '上传'}
                   </button>
                 )}
               </div>
+
+              {isUploading && (
+                <div className="character-video-card__progress">
+                  <div className="progress-bar">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <span className="progress-text">{uploadProgress}%</span>
+                </div>
+              )}
             </div>
           )
         })}
-      </div>
-
-      {/* Summary */}
-      <div className="character-video-panel__summary">
-        <p className="character-video-panel__summary-text">
-          {characters.filter(c => c.has_video).length === characters.length ? (
-            <span className="character-video-panel__summary--complete">
-              ✓ 所有角色已配置专属视频
-            </span>
-          ) : (
-            <span className="character-video-panel__summary--incomplete">
-              未配置专属视频的角色将使用默认背景视频
-            </span>
-          )}
-        </p>
       </div>
     </div>
   )

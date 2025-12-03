@@ -42,7 +42,9 @@ const PART_LABELS: Record<string, string> = {
   'right-hand': '右手',
   'left-foot': '左脚',
   'right-foot': '右脚',
-  'upper-leg': '大腿'
+  'skirt': '裙子',
+  'left-thigh': '左大腿',
+  'right-thigh': '右大腿'
 }
 
 export default function PivotEditor({ characterId, parts, onSave, saving }: Props) {

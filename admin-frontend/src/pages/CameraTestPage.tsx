@@ -63,6 +63,11 @@ export default function CameraTestPage() {
   const [showStaticPose, setShowStaticPose] = useState(true)
   const [characterLoaded, setCharacterLoaded] = useState(false)
   const [mirrorMode, setMirrorMode] = useState(true)
+  const [isCalibrating, setIsCalibrating] = useState(false)
+  const [isCalibrated, setIsCalibrated] = useState(false)
+  const [autoCalibrated, setAutoCalibrated] = useState(false)
+  const [calibrationProgress, setCalibrationProgress] = useState(0)
+  const poseDetectionCountRef = useRef(0) // 连续检测到姿态的帧数
 
 
   // Load available cameras
@@ -254,16 +259,41 @@ export default function CameraTestPage() {
             setCurrentPose(landmarks)
             currentPoseRef.current = landmarks
             
+            // 自动校准：连续检测到姿态30帧后自动校准（只执行一次）
+            if (!isCalibrated) {
+              poseDetectionCountRef.current++
+              // 每5帧更新一次进度显示，避免过于频繁的状态更新
+              if (poseDetectionCountRef.current % 5 === 0) {
+                setCalibrationProgress(poseDetectionCountRef.current)
+              }
+              
+              if (poseDetectionCountRef.current === 30) {
+                if (rendererRef.current) {
+                  rendererRef.current.setReferencePose(landmarks)
+                  setAutoCalibrated(true)
+                  setIsCalibrated(true)
+                  setCalibrationProgress(30)
+                  console.log('✓ Auto-calibrated after 30 frames')
+                }
+              }
+            }
+            
             // Update character with pose
             if (rendererRef.current) {
               rendererRef.current.updatePose(landmarks)
+            } else {
+              console.warn('[CameraTest] No renderer available for updatePose')
             }
           } else {
             setPoseDetected(false)
             setCurrentPose(null)
             currentPoseRef.current = null
+            poseDetectionCountRef.current = 0 // 重置计数
+            if (calibrationProgress > 0) {
+              setCalibrationProgress(0)
+            }
             
-            // Update character with null pose
+            // 检测丢失时显示默认站立姿势
             if (rendererRef.current) {
               rendererRef.current.updatePose(null)
             }
@@ -384,6 +414,44 @@ export default function CameraTestPage() {
   // Reset character pose
   const handleResetPose = () => {
     rendererRef.current?.resetPose()
+  }
+
+  // Calibrate pose - capture current pose as reference
+  const handleCalibrate = () => {
+    if (!currentPoseRef.current) {
+      alert('请先检测到人体姿态')
+      return
+    }
+    
+    setIsCalibrating(true)
+    
+    // Wait 3 seconds for user to get into position
+    let countdown = 3
+    const countdownInterval = setInterval(() => {
+      countdown--
+      if (countdown === 0) {
+        clearInterval(countdownInterval)
+        
+        // Capture reference pose
+        if (currentPoseRef.current && rendererRef.current) {
+          rendererRef.current.setReferencePose(currentPoseRef.current)
+          setIsCalibrated(true)
+          setIsCalibrating(false)
+          console.log('Calibration complete!')
+        }
+      } else {
+        console.log(`Calibrating in ${countdown}...`)
+      }
+    }, 1000)
+  }
+
+  // Clear calibration
+  const handleClearCalibration = () => {
+    rendererRef.current?.clearReferencePose()
+    setIsCalibrated(false)
+    setAutoCalibrated(false)
+    setCalibrationProgress(0)
+    poseDetectionCountRef.current = 0
   }
 
   // Initial load
@@ -611,6 +679,36 @@ export default function CameraTestPage() {
               <button className="btn-secondary btn-small" onClick={handleResetPose}>
                 🔄 重置姿势
               </button>
+              {!isCalibrated ? (
+                <>
+                  <button 
+                    className="btn-primary btn-small" 
+                    onClick={handleCalibrate}
+                    disabled={isCalibrating || !poseDetected}
+                    style={{ marginTop: '8px' }}
+                  >
+                    {isCalibrating ? '校准中...' : '📐 手动校准'}
+                  </button>
+                  <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+                    {poseDetected 
+                      ? `自动校准中... (${calibrationProgress}/30 帧)` 
+                      : '等待检测人体姿态...'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button 
+                    className="btn-secondary btn-small" 
+                    onClick={handleClearCalibration}
+                    style={{ marginTop: '8px' }}
+                  >
+                    ✓ {autoCalibrated ? '自动校准完成' : '手动校准完成'} (点击重置)
+                  </button>
+                  <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
+                    校准完成，现在可以自由移动
+                  </p>
+                </>
+              )}
             </div>
           )}
 

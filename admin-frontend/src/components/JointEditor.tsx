@@ -47,7 +47,7 @@ interface PartPosition {
 const PART_LABELS: Record<string, string> = {
   head: '头部', body: '身体', 'left-arm': '左臂', 'right-arm': '右臂',
   'left-hand': '左手', 'right-hand': '右手', 'left-foot': '左脚',
-  'right-foot': '右脚', 'upper-leg': '大腿'
+  'right-foot': '右脚', 'skirt': '裙子', 'left-thigh': '左大腿', 'right-thigh': '右大腿'
 }
 
 const SUGGESTED_JOINTS: Record<string, { name: string; x: number; y: number }[]> = {
@@ -55,14 +55,18 @@ const SUGGESTED_JOINTS: Record<string, { name: string; x: number; y: number }[]>
     { name: '头部连接点', x: 0.5, y: 0.1 },
     { name: '左臂连接点', x: 0.15, y: 0.2 },
     { name: '右臂连接点', x: 0.85, y: 0.2 },
-    { name: '腿部连接点', x: 0.5, y: 0.95 },
+    { name: '下身连接点', x: 0.5, y: 0.95 },
   ],
   head: [{ name: '颈部连接点', x: 0.5, y: 0.9 }],
   'left-arm': [{ name: '肩部连接点', x: 0.8, y: 0.2 }, { name: '手部连接点', x: 0.2, y: 0.8 }],
   'right-arm': [{ name: '肩部连接点', x: 0.2, y: 0.2 }, { name: '手部连接点', x: 0.8, y: 0.8 }],
   'left-hand': [{ name: '腕部连接点', x: 0.8, y: 0.2 }],
   'right-hand': [{ name: '腕部连接点', x: 0.2, y: 0.2 }],
-  'upper-leg': [{ name: '髋部连接点', x: 0.5, y: 0.1 }, { name: '左脚连接点', x: 0.3, y: 0.9 }, { name: '右脚连接点', x: 0.7, y: 0.9 }],
+  // 裙子（一体式下身）
+  'skirt': [{ name: '髋部连接点', x: 0.5, y: 0.1 }, { name: '左脚连接点', x: 0.3, y: 0.9 }, { name: '右脚连接点', x: 0.7, y: 0.9 }],
+  // 左右大腿（分体式下身）
+  'left-thigh': [{ name: '左髋连接点', x: 0.5, y: 0.1 }, { name: '左脚连接点', x: 0.5, y: 0.9 }],
+  'right-thigh': [{ name: '右髋连接点', x: 0.5, y: 0.1 }, { name: '右脚连接点', x: 0.5, y: 0.9 }],
   'left-foot': [{ name: '踝部连接点', x: 0.5, y: 0.1 }],
   'right-foot': [{ name: '踝部连接点', x: 0.5, y: 0.1 }],
 }

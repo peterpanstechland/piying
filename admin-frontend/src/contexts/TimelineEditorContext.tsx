@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react'
+import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useEffect } from 'react'
 
 // Types based on design document
 export type AnimationType = 'fade_in' | 'fade_out' | 'slide_left' | 'slide_right' | 'slide_up' | 'slide_down' | 'instant'
@@ -11,6 +11,18 @@ export interface AnimationConfig {
   delay: number     // Delay from segment start/end
 }
 
+export interface PathPoint {
+  x: number  // 0-1 normalized
+  y: number  // 0-1 normalized
+}
+
+export interface SegmentPath {
+  startPoint: PathPoint
+  endPoint: PathPoint
+  waypoints: PathPoint[]
+  pathType: 'linear' | 'bezier' | 'freehand'
+}
+
 export interface TimelineSegment {
   id: string
   index: number
@@ -21,6 +33,8 @@ export interface TimelineSegment {
   guidanceText: string
   guidanceTextEn: string
   guidanceImage: string | null
+  // Movement path
+  path?: SegmentPath
 }
 
 export interface Transition {
@@ -125,6 +139,25 @@ export function TimelineEditorProvider({
   const [videoDuration, setVideoDurationState] = useState(initialVideoDuration)
   const [segments, setSegmentsState] = useState<TimelineSegment[]>(initialSegments)
   const [transitions, setTransitionsState] = useState<Transition[]>(initialTransitions)
+  
+  // Track if initial data has been loaded to avoid overwriting user changes
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  
+  // Sync segments when initialSegments changes (e.g., after page refresh/reload)
+  // Only update if this is initial load or segments are empty
+  useEffect(() => {
+    if (initialSegments.length > 0 && isInitialLoad) {
+      setSegmentsState(initialSegments)
+      setIsInitialLoad(false)
+    }
+  }, [initialSegments, isInitialLoad])
+  
+  // Sync transitions when initialTransitions changes
+  useEffect(() => {
+    if (initialTransitions.length > 0 && isInitialLoad) {
+      setTransitionsState(initialTransitions)
+    }
+  }, [initialTransitions, isInitialLoad])
 
   // Playhead actions
   const setPlayhead = useCallback((time: number) => {

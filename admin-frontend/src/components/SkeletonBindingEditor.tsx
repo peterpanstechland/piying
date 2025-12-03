@@ -80,7 +80,11 @@ const SUGGESTED_MAPPINGS: Record<string, number[]> = {
   'right-hand': [16, 18, 20, 22],
   'left-foot': [27, 29, 31],
   'right-foot': [28, 30, 32],
-  'upper-leg': [23, 24, 25, 26]
+  // 裙子（一体式下身）- 使用双腿关键点
+  'skirt': [23, 24, 25, 26],
+  // 左右大腿（分体式下身）
+  'left-thigh': [23, 25],
+  'right-thigh': [24, 26]
 }
 
 const PART_LABELS: Record<string, string> = {
@@ -92,11 +96,13 @@ const PART_LABELS: Record<string, string> = {
   'right-hand': '右手',
   'left-foot': '左脚',
   'right-foot': '右脚',
-  'upper-leg': '大腿'
+  'skirt': '裙子',
+  'left-thigh': '左大腿',
+  'right-thigh': '右大腿'
 }
 
-// Movable parts that require landmark bindings
-const MOVABLE_PARTS = ['head', 'left-arm', 'right-arm', 'left-hand', 'right-hand', 'left-foot', 'right-foot', 'upper-leg']
+// Movable parts that require landmark bindings (standard parts)
+const STANDARD_MOVABLE_PARTS = ['head', 'left-arm', 'right-arm', 'left-hand', 'right-hand', 'left-foot', 'right-foot', 'skirt', 'left-thigh', 'right-thigh']
 
 
 export default function SkeletonBindingEditor({ parts, bindings, onSave, saving }: Props) {
@@ -125,13 +131,26 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
   useEffect(() => {
     const newWarnings: string[] = []
     
-    for (const partName of MOVABLE_PARTS) {
+    // 获取实际存在的部件名称
+    const existingPartNames = parts.map(p => p.name)
+    
+    // 检查标准可动部件
+    for (const partName of STANDARD_MOVABLE_PARTS) {
       const binding = editedBindings.find(b => b.part_name === partName)
       if (!binding || binding.landmarks.length === 0) {
-        const partExists = parts.some(p => p.name === partName)
+        const partExists = existingPartNames.includes(partName)
         if (partExists) {
           newWarnings.push(`${PART_LABELS[partName] || partName} 缺少关键点绑定`)
         }
+      }
+    }
+    
+    // 检查自定义部件（不在标准列表中的）
+    const customParts = existingPartNames.filter(p => !STANDARD_MOVABLE_PARTS.includes(p) && p !== 'body')
+    for (const partName of customParts) {
+      const binding = editedBindings.find(b => b.part_name === partName)
+      if (!binding || binding.landmarks.length === 0) {
+        newWarnings.push(`自定义部件 "${partName}" 缺少关键点绑定`)
       }
     }
     
@@ -237,7 +256,8 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
           <div className="parts-list">
             {parts.map(part => {
               const binding = editedBindings.find(b => b.part_name === part.name)
-              const isMovable = MOVABLE_PARTS.includes(part.name)
+              const isStandardMovable = STANDARD_MOVABLE_PARTS.includes(part.name)
+              const isCustomPart = !STANDARD_MOVABLE_PARTS.includes(part.name) && part.name !== 'body'
               const hasBinding = binding && binding.landmarks.length > 0
               
               const jointCount = part.joints?.length || 0
@@ -245,10 +265,13 @@ export default function SkeletonBindingEditor({ parts, bindings, onSave, saving 
               return (
                 <div
                   key={part.name}
-                  className={`part-item ${selectedPart === part.name ? 'selected' : ''} ${!hasBinding && isMovable ? 'warning' : ''}`}
+                  className={`part-item ${selectedPart === part.name ? 'selected' : ''} ${!hasBinding && (isStandardMovable || isCustomPart) ? 'warning' : ''}`}
                   onClick={() => setSelectedPart(part.name)}
                 >
-                  <span className="part-name">{PART_LABELS[part.name] || part.name}</span>
+                  <span className="part-name">
+                    {PART_LABELS[part.name] || part.name}
+                    {isCustomPart && <span className="custom-badge">自定义</span>}
+                  </span>
                   <span className="binding-count">
                     {binding?.landmarks.length || 0} 个关键点
                   </span>

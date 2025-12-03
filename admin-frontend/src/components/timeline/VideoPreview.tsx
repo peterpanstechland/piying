@@ -18,9 +18,13 @@ const LOOP_MODES: { value: LoopMode; label: string }[] = [
 
 export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef }: VideoPreviewProps) {
   const internalVideoRef = useRef<HTMLVideoElement>(null)
-  // Use external ref if provided, otherwise use internal ref
   const videoRef = videoElementRef || internalVideoRef
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  
+  // 记录视频驱动更新的时间戳，用于判断 playhead 变化是否来自视频播放
+  const lastVideoUpdateTimeRef = useRef<number>(0)
+  // 记录上一次用户 seek 的时间戳，防止 seek 后立即被视频 timeupdate 覆盖
+  const lastUserSeekTimeRef = useRef<number>(0)
   
   const {
     playhead,
@@ -38,79 +42,131 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
     selectedSegmentId,
   } = useTimelineEditor()
 
-  // Sync video playback rate with context
+  // 1. 处理播放速度
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.playbackRate = playbackSpeed
     }
-  }, [playbackSpeed])
+  }, [playbackSpeed, videoRef])
 
-  // Sync video play/pause state with context
+  // 2. 处理 播放/暂停 状态
+  // 这里的逻辑只负责 .play() 和 .pause()，不负责时间跳转
   useEffect(() => {
-    if (!videoRef.current) return
+    const video = videoRef.current
+    if (!video) return
     
     if (isPlaying) {
-      videoRef.current.play().catch(() => {
-        // Handle autoplay restrictions
-        pause()
-      })
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // 只有在真的报错时才暂停（例如自动播放策略阻止），避免因为快速切换状态导致的打断
+          console.warn("Playback prevented or interrupted")
+          pause()
+        })
+      }
     } else {
-      videoRef.current.pause()
+      video.pause()
     }
-  }, [isPlaying, pause])
+  }, [isPlaying, pause, videoRef])
 
-  // Sync video currentTime with playhead (when not playing)
+  // 3. 核心逻辑：React State (Playhead) -> Video Element (CurrentTime)
+  // 这是解决"无法Seek"和"卡顿"的关键
   useEffect(() => {
-    if (!videoRef.current || isPlaying) return
+    const video = videoRef.current
+    if (!video || !Number.isFinite(playhead)) return
     
-    // Only update if difference is significant (avoid loops)
-    const diff = Math.abs(videoRef.current.currentTime - playhead)
-    if (diff > 0.05) {
-      videoRef.current.currentTime = playhead
+    const now = Date.now()
+    
+    // 关键：如果 playhead 是由视频 timeupdate 刚刚更新的（100ms 内），不要反向 seek
+    // 这样可以避免播放时的死循环
+    const timeSinceVideoUpdate = now - lastVideoUpdateTimeRef.current
+    if (timeSinceVideoUpdate < 100) {
+      return
     }
-  }, [playhead, isPlaying])
-
-  // Handle video time updates during playback (Requirements 11.5 - segment loop)
-  const handleTimeUpdate = useCallback(() => {
-    if (videoRef.current && isPlaying) {
-      const currentTime = videoRef.current.currentTime
-      setPlayhead(currentTime)
+    
+    // 计算 React 状态和 视频真实时间 的差值
+    const timeDiff = Math.abs(video.currentTime - playhead)
+    
+    // 定义"容忍度"
+    // 如果正在播放，容忍度大一点 (0.5s)
+    // 如果是暂停，容忍度极小 (0.05s)，保证精确对帧
+    const threshold = isPlaying ? 0.5 : 0.05
+    
+    // 只有当 差值 > 容忍度 时，才执行 seek
+    if (timeDiff > threshold) {
+      // 记录用户 seek 时间
+      lastUserSeekTimeRef.current = now
       
-      // Handle segment loop mode
-      if (loopMode === 'segment' && selectedSegmentId) {
-        const selectedSegment = segments.find(s => s.id === selectedSegmentId)
-        if (selectedSegment) {
-          const segmentEnd = selectedSegment.startTime + selectedSegment.duration
-          if (currentTime >= segmentEnd) {
-            videoRef.current.currentTime = selectedSegment.startTime
-            setPlayhead(selectedSegment.startTime)
-          }
+      console.log('[VideoPreview] Seeking to:', playhead, 'from:', video.currentTime, 'diff:', timeDiff)
+      
+      // 检查 video 是否已就绪
+      if (video.readyState >= 1) { // HAVE_METADATA
+        video.currentTime = playhead
+      } else {
+        const seekOnce = () => {
+          video.currentTime = playhead
+        }
+        video.addEventListener('loadedmetadata', seekOnce, { once: true })
+      }
+    }
+  }, [playhead, isPlaying, videoRef])
+
+  // 4. 核心逻辑：Video Element (CurrentTime) -> React State (Playhead)
+  const handleTimeUpdate = useCallback(() => {
+    if (!videoRef.current) return
+    
+    const now = Date.now()
+    const currentTime = videoRef.current.currentTime
+    
+    // 如果用户刚刚 seek（300ms 内），忽略 timeupdate，让视频先稳定
+    if (now - lastUserSeekTimeRef.current < 300) {
+      return
+    }
+    
+    // 只有在播放时才更新 playhead
+    if (isPlaying) {
+      // 记录视频更新时间戳
+      lastVideoUpdateTimeRef.current = now
+      setPlayhead(currentTime)
+    }
+    
+    // --- 循环逻辑 ---
+    if (loopMode === 'segment' && selectedSegmentId && isPlaying) {
+      const selectedSegment = segments.find(s => s.id === selectedSegmentId)
+      if (selectedSegment) {
+        const segmentEnd = selectedSegment.startTime + selectedSegment.duration
+        // 只有"自然播放"超过结束点（误差1秒内）才循环
+        const isNaturalEnd = currentTime >= segmentEnd && currentTime < (segmentEnd + 1.0)
+        if (isNaturalEnd) {
+          videoRef.current.currentTime = selectedSegment.startTime
+          lastVideoUpdateTimeRef.current = now
+          setPlayhead(selectedSegment.startTime)
         }
       }
     }
-  }, [isPlaying, setPlayhead, loopMode, selectedSegmentId, segments])
+  }, [isPlaying, setPlayhead, loopMode, selectedSegmentId, segments, videoRef])
 
-  // Handle video metadata loaded
+  // 5. 处理视频结束
+  const handleEnded = useCallback(() => {
+    if (loopMode === 'full') {
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0
+        videoRef.current.play().catch(console.error)
+      }
+      setPlayhead(0)
+    } else {
+      pause()
+      // 注意：这里不自动 setPlayhead(0)，让用户可以停在最后查看
+      // 如果需要回到开头，用户可以手动点击
+    }
+  }, [loopMode, pause, setPlayhead, videoRef])
+
+  // 6. 辅助功能：加载元数据
   const handleLoadedMetadata = useCallback(() => {
     if (videoRef.current) {
       setVideoDuration(videoRef.current.duration)
     }
-  }, [setVideoDuration])
-
-  // Handle video ended (Requirements 11.5 - loop mode)
-  const handleEnded = useCallback(() => {
-    if (loopMode === 'full') {
-      // Loop full video
-      setPlayhead(0)
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0
-        videoRef.current.play().catch(() => pause())
-      }
-    } else {
-      pause()
-      setPlayhead(0)
-    }
-  }, [loopMode, pause, setPlayhead])
+  }, [setVideoDuration, videoRef])
 
   // Capture current frame as image
   const captureFrame = useCallback(() => {
@@ -130,27 +186,23 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
     onFrameCapture(imageData)
   }, [onFrameCapture])
 
-  // Format time as MM:SS.ms
+  // 格式化时间
   const formatTime = (seconds: number): string => {
+    if (!Number.isFinite(seconds)) return "00:00.0"
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     const ms = Math.floor((seconds % 1) * 10)
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms}`
   }
 
-  // Skip forward/backward
+  // 手动跳转（快进快退）
   const skipTime = useCallback((delta: number) => {
-    setPlayhead(playhead + delta)
-  }, [playhead, setPlayhead])
+    const newTime = Math.max(0, Math.min(playhead + delta, videoDuration))
+    setPlayhead(newTime)
+  }, [playhead, setPlayhead, videoDuration])
 
-  // Jump to start/end
-  const jumpToStart = useCallback(() => {
-    setPlayhead(0)
-  }, [setPlayhead])
-
-  const jumpToEnd = useCallback(() => {
-    setPlayhead(videoDuration)
-  }, [setPlayhead, videoDuration])
+  const jumpToStart = () => setPlayhead(0)
+  const jumpToEnd = () => setPlayhead(videoDuration)
 
   if (!videoUrl) {
     return (
@@ -173,7 +225,8 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={handleEnded}
-          preload="metadata"
+          preload="auto"
+          onClick={togglePlayback}
         />
         {/* Hidden canvas for frame capture */}
         <canvas ref={canvasRef} style={{ display: 'none' }} />

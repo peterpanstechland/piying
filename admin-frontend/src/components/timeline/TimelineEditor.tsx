@@ -1,15 +1,18 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { 
   TimelineEditorProvider, 
   useTimelineEditor, 
   TimelineSegment,
   Transition,
+  SegmentPath,
   createDefaultSegment 
 } from '../../contexts/TimelineEditorContext'
 import { useTimelineKeyboard } from '../../hooks/useTimelineKeyboard'
 import VideoPreview from './VideoPreview'
 import TimelineTrack from './TimelineTrack'
 import PropertyPanel from './PropertyPanel'
+import PathEditor from './PathEditor'
+import { PathTool } from './PathEditorPanel'
 import './TimelineEditor.css'
 
 interface TimelineEditorProps {
@@ -41,6 +44,10 @@ function TimelineEditorInner({
   onTimeUpdate,
 }: Omit<TimelineEditorProps, 'initialSegments' | 'initialTransitions'>) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  
+  // Path editing state
+  const [pathTool, setPathTool] = useState<PathTool>('select')
   
   const {
     playhead,
@@ -51,10 +58,22 @@ function TimelineEditorInner({
     segments,
     transitions,
     addSegment,
+    updateSegment,
     selectedSegmentId,
     selectedTransitionId,
     clearSelection,
   } = useTimelineEditor()
+  
+  // Get current segment and its path
+  const selectedSegment = selectedSegmentId 
+    ? segments.find(s => s.id === selectedSegmentId) 
+    : null
+  const currentPath = selectedSegment?.path || null
+  
+  // Handle path change - update segment in context
+  const handlePathChange = useCallback((segmentId: string, path: SegmentPath) => {
+    updateSegment(segmentId, { path })
+  }, [updateSegment])
 
   // Initialize keyboard shortcuts (Requirements 11.3)
   useTimelineKeyboard({
@@ -117,12 +136,27 @@ function TimelineEditorInner({
       onClick={handleContainerClick}
       tabIndex={0} // Make focusable for keyboard events
     >
-      {/* Video Preview Section */}
+      {/* Video Preview Section with Path Editor Overlay */}
       <div className="timeline-editor__preview">
-        <VideoPreview 
-          videoUrl={videoUrl}
-          onFrameCapture={onFrameCapture}
-        />
+        <div className="timeline-editor__preview-container">
+          <VideoPreview 
+            videoUrl={videoUrl}
+            onFrameCapture={onFrameCapture}
+            videoElementRef={videoRef}
+          />
+          {/* Path Editor Overlay - only show when segment is selected */}
+          {selectedSegmentId && (
+            <PathEditor
+              videoRef={videoRef}
+              path={currentPath}
+              onPathChange={(path) => handlePathChange(selectedSegmentId, path)}
+              enabled={true}
+              tool={pathTool}
+              showPreview={false}
+              previewProgress={0}
+            />
+          )}
+        </div>
       </div>
 
       {/* Timeline Track Section */}
@@ -190,6 +224,9 @@ function TimelineEditorInner({
             storylineId={storylineId}
             onGuidanceImageUpload={onGuidanceImageUpload}
             onGuidanceFrameCapture={onGuidanceFrameCapture}
+            pathTool={pathTool}
+            onPathToolChange={setPathTool}
+            onPathChange={handlePathChange}
           />
         </div>
       )}
@@ -201,6 +238,13 @@ function TimelineEditorInner({
           <span className="timeline-editor__selection-hint">
             按 Delete 键删除
           </span>
+          <button
+            className="timeline-editor__delete-btn"
+            onClick={() => onSegmentDelete?.(selectedSegmentId)}
+            title="删除选中的段落"
+          >
+            🗑️ 删除段落
+          </button>
         </div>
       )}
     </div>

@@ -162,12 +162,15 @@ async def upload_character_part(
     
     Validates the file format, dimensions, and transparency.
     """
-    # Validate part name
+    # Validate part name: allow standard parts and custom parts (alphanumeric with hyphens)
+    import re
     if part_name not in REQUIRED_PARTS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid part name '{part_name}'. Must be one of: {', '.join(REQUIRED_PARTS)}",
-        )
+        # Allow custom parts with valid naming (lowercase letters, numbers, hyphens)
+        if not re.match(r'^[a-z0-9-]+$', part_name):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid part name '{part_name}'. Must contain only lowercase letters, numbers, and hyphens.",
+            )
     
     # Validate file type
     if not file.filename.lower().endswith('.png'):
@@ -397,8 +400,15 @@ async def update_pivot_configuration(
                 'editor_y': p.editor_y,
                 'editor_width': p.editor_width,
                 'editor_height': p.editor_height,
+                'joint_pivot_x': p.joint_pivot_x,
+                'joint_pivot_y': p.joint_pivot_y,
+                'rotation_offset': p.rotation_offset,
+                'rest_pose_offset': p.rest_pose_offset,
             })
         await spritesheet_service.generate_spritesheet(character_id, parts_data)
+        
+        # Regenerate thumbnail with correct assembly positions
+        await character_service.generate_thumbnail(db, character_id)
     
     return {"message": "Pivot configuration updated successfully"}
 
@@ -450,7 +460,8 @@ async def update_skeleton_binding(
     # Check for incomplete bindings (parts without landmarks)
     warnings = []
     bound_parts = {b.part_name for b in binding_config.bindings if b.landmarks}
-    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "upper-leg"}
+    # Standard movable parts (skirt and thighs are alternatives for lower body)
+    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "skirt", "left-thigh", "right-thigh"}
     unbound_movable = movable_parts.intersection(part_names) - bound_parts
     
     if unbound_movable:
@@ -483,8 +494,8 @@ async def validate_skeleton_binding(
     part_names = {p.name for p in character.parts}
     bound_parts = {b.part_name for b in character.bindings if b.landmarks and json.loads(b.landmarks)}
     
-    # Movable parts that should have bindings
-    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "upper-leg"}
+    # Movable parts that should have bindings (skirt and thighs are alternatives for lower body)
+    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "skirt", "left-thigh", "right-thigh"}
     required_bindings = movable_parts.intersection(part_names)
     unbound_parts = required_bindings - bound_parts
     
@@ -525,10 +536,18 @@ async def get_character_preview(
             "data", character.thumbnail_path
         )
         if os.path.exists(thumbnail_full_path):
+            # Add cache control headers to prevent browser caching
+            import time
             return FileResponse(
                 thumbnail_full_path,
                 media_type="image/png",
-                filename=f"{character.name}_preview.png"
+                filename=f"{character.name}_preview.png",
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                    "X-Timestamp": str(int(time.time()))
+                }
             )
     
     # Generate thumbnail if it doesn't exist
@@ -605,6 +624,32 @@ async def get_character_part_image(
 
 
 # ============== Sprite Sheet Export APIs ==============
+
+@router.post("/{character_id}/regenerate-thumbnail", status_code=status.HTTP_200_OK)
+async def regenerate_thumbnail(
+    character_id: str,
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """
+    Regenerate the thumbnail for a character using assembly positions.
+    """
+    character = await character_service.get_character_by_id(db, character_id)
+    if character is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Character with ID '{character_id}' not found",
+        )
+    
+    thumbnail_path = await character_service.generate_thumbnail(db, character_id)
+    if thumbnail_path:
+        return {"message": "Thumbnail regenerated successfully", "path": thumbnail_path}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate thumbnail",
+        )
+
 
 @router.post("/{character_id}/export/spritesheet", status_code=status.HTTP_200_OK)
 async def generate_spritesheet(
@@ -802,6 +847,8 @@ async def get_character_config(
             'joint_pivot_y': getattr(p, 'joint_pivot_y', None),
             # Rotation offset based on sprite orientation
             'rotation_offset': getattr(p, 'rotation_offset', None),
+            # Rest pose offset (default pose angle)
+            'rest_pose_offset': getattr(p, 'rest_pose_offset', None),
         })
     
     # Prepare bindings data
@@ -820,5 +867,8 @@ async def get_character_config(
         parts_data,
         bindings_data,
     )
+    
+    # 添加角色默认朝向
+    config['defaultFacing'] = getattr(character, 'default_facing', 'left') or 'left'
     
     return config

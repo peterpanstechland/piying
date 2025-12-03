@@ -355,3 +355,16 @@
   color: var(--accent-primary);
   font-weight: bold;
 }
+
+
+/* 自定义部件标记 */
+.custom-badge {
+  display: inline-block;
+  background: var(--accent-primary);
+  color: var(--bg-base);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}

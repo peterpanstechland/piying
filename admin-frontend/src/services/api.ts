@@ -216,7 +216,7 @@ class AdminApiClient {
     return response.data
   }
 
-  async updateCharacter(id: string, data: { name?: string; description?: string }) {
+  async updateCharacter(id: string, data: { name?: string; description?: string; default_facing?: 'left' | 'right' }) {
     const response = await this.client.put(`/characters/${id}`, data)
     return response.data
   }
@@ -477,6 +477,12 @@ class AdminApiClient {
     start_time: number;
     duration: number;
     path_type?: string;
+    // Path coordinates (normalized 0-1)
+    offset_start?: [number, number];
+    offset_end?: [number, number];
+    // Waypoints for curved paths: [[x1,y1], [x2,y2], ...]
+    path_waypoints?: Array<[number, number]>;
+    path_draw_type?: 'linear' | 'bezier' | 'freehand';
     entry_animation?: {
       type: string;
       duration: number;
@@ -696,7 +702,9 @@ class AdminApiClient {
       `/storylines/${storylineId}/characters/${characterId}/video`,
       formData,
       {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        // Let browser set Content-Type with boundary for multipart/form-data
+        headers: { 'Content-Type': undefined as unknown as string },
+        timeout: 300000, // 5 minutes for large video uploads
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -737,6 +745,64 @@ class AdminApiClient {
 
   getCharacterVideoThumbnailUrl(storylineId: string, characterId: string): string {
     return `${API_BASE_URL}/storylines/${storylineId}/characters/${characterId}/video/thumbnail`
+  }
+
+  // Character Video Segments API
+  async getCharacterVideoSegments(storylineId: string, characterId: string): Promise<{
+    segments: Array<{
+      id: string
+      index: number
+      start_time: number
+      duration: number
+      path_type: string
+      offset_start: number[]
+      offset_end: number[]
+      entry_animation: { type: string; duration: number; delay: number }
+      exit_animation: { type: string; duration: number; delay: number }
+      guidance_text: string
+      guidance_text_en: string
+      guidance_image: string | null
+    }>
+  }> {
+    const response = await this.client.get(
+      `/storylines/${storylineId}/characters/${characterId}/video/segments`
+    )
+    return response.data
+  }
+
+  async updateCharacterVideoSegments(
+    storylineId: string,
+    characterId: string,
+    segments: Array<{
+      index: number
+      start_time: number
+      duration: number
+      path_type?: string
+      offset_start?: number[]
+      offset_end?: number[]
+      entry_animation?: { type: string; duration: number; delay: number }
+      exit_animation?: { type: string; duration: number; delay: number }
+      guidance_text?: string
+      guidance_text_en?: string
+      guidance_image?: string | null
+    }>
+  ): Promise<{ message: string }> {
+    const response = await this.client.put(
+      `/storylines/${storylineId}/characters/${characterId}/video/segments`,
+      segments
+    )
+    return response.data
+  }
+
+  async deleteCharacterVideoSegment(
+    storylineId: string,
+    characterId: string,
+    segmentIndex: number
+  ): Promise<{ message: string }> {
+    const response = await this.client.delete(
+      `/storylines/${storylineId}/characters/${characterId}/video/segments/${segmentIndex}`
+    )
+    return response.data
   }
 }
 

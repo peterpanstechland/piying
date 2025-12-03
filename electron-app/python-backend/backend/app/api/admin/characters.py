@@ -151,12 +151,15 @@ async def upload_character_part(
     
     Validates the file format, dimensions, and transparency.
     """
-    # Validate part name
+    # Validate part name: allow standard parts and custom parts (alphanumeric with hyphens)
+    import re
     if part_name not in REQUIRED_PARTS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid part name '{part_name}'. Must be one of: {', '.join(REQUIRED_PARTS)}",
-        )
+        # Allow custom parts with valid naming (lowercase letters, numbers, hyphens)
+        if not re.match(r'^[a-z0-9-]+$', part_name):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid part name '{part_name}'. Must contain only lowercase letters, numbers, and hyphens.",
+            )
     
     # Validate file type
     if not file.filename.lower().endswith('.png'):
@@ -381,7 +384,8 @@ async def update_skeleton_binding(
     # Check for incomplete bindings (parts without landmarks)
     warnings = []
     bound_parts = {b.part_name for b in binding_config.bindings if b.landmarks}
-    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "upper-leg"}
+    # Standard movable parts (skirt and thighs are alternatives for lower body)
+    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "skirt", "left-thigh", "right-thigh"}
     unbound_movable = movable_parts.intersection(part_names) - bound_parts
     
     if unbound_movable:
@@ -414,8 +418,8 @@ async def validate_skeleton_binding(
     part_names = {p.name for p in character.parts}
     bound_parts = {b.part_name for b in character.bindings if b.landmarks and json.loads(b.landmarks)}
     
-    # Movable parts that should have bindings
-    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "upper-leg"}
+    # Movable parts that should have bindings (skirt and thighs are alternatives for lower body)
+    movable_parts = {"head", "left-arm", "right-arm", "left-hand", "right-hand", "left-foot", "right-foot", "skirt", "left-thigh", "right-thigh"}
     required_bindings = movable_parts.intersection(part_names)
     unbound_parts = required_bindings - bound_parts
     

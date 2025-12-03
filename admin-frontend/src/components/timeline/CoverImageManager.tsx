@@ -12,7 +12,7 @@ interface CoverImageManagerProps {
   storylineId: string
   currentCover: CoverImage | null
   videoUrl: string | null
-  currentTime: number
+  currentTime?: number
   onUpload: (file: File) => Promise<void>
   onFrameCapture: (timestamp: number) => Promise<void>
   onDelete: () => Promise<void>
@@ -32,14 +32,15 @@ export default function CoverImageManager({
   storylineId,
   currentCover,
   videoUrl,
-  currentTime,
+  currentTime = 0,
   onUpload,
   onFrameCapture,
   onDelete,
-  videoRef,
+  videoRef: externalVideoRef,
 }: CoverImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const internalVideoRef = useRef<HTMLVideoElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isCapturing, setIsCapturing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -48,6 +49,28 @@ export default function CoverImageManager({
   const [showCapturePreview, setShowCapturePreview] = useState(false)
   const [capturePreviewImage, setCapturePreviewImage] = useState<string | null>(null)
   const [captureTimestamp, setCaptureTimestamp] = useState<number>(0)
+  const [internalVideoTime, setInternalVideoTime] = useState<number>(0)
+  const [videoDuration, setVideoDuration] = useState<number>(0)
+  
+  // Use external video ref if provided, otherwise use internal
+  const videoRef = externalVideoRef || internalVideoRef
+  
+  // Handle video time update
+  const handleVideoTimeUpdate = useCallback(() => {
+    if (internalVideoRef.current) {
+      setInternalVideoTime(internalVideoRef.current.currentTime)
+    }
+  }, [])
+  
+  // Handle video loaded metadata
+  const handleVideoLoadedMetadata = useCallback(() => {
+    if (internalVideoRef.current) {
+      setVideoDuration(internalVideoRef.current.duration)
+    }
+  }, [])
+  
+  // Get current time from internal video or external prop
+  const effectiveCurrentTime = externalVideoRef ? currentTime : internalVideoTime
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,9 +127,9 @@ export default function CoverImageManager({
 
   // Capture frame from video element (Requirements 9.2)
   const captureFrameFromVideo = useCallback((): string | null => {
-    if (!videoRef?.current || !canvasRef.current) return null
+    const video = videoRef?.current || internalVideoRef.current
+    if (!video || !canvasRef.current) return null
 
-    const video = videoRef.current
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     
@@ -139,9 +162,9 @@ export default function CoverImageManager({
       setCapturePreviewImage(null)
     }
     
-    setCaptureTimestamp(currentTime)
+    setCaptureTimestamp(effectiveCurrentTime)
     setShowCapturePreview(true)
-  }, [videoUrl, currentTime, captureFrameFromVideo])
+  }, [videoUrl, effectiveCurrentTime, captureFrameFromVideo])
 
   // Confirm frame capture
   const handleConfirmCapture = async () => {
@@ -213,6 +236,28 @@ export default function CoverImageManager({
           <span className="cover-image-manager__title-en">Cover Image</span>
         </h3>
       </div>
+
+      {/* Video Player for frame selection - only show if no external video ref */}
+      {videoUrl && !externalVideoRef && (
+        <div className="cover-image-manager__video-section">
+          <div className="cover-image-manager__video-label">
+            选择截取时间点 / Select capture time
+          </div>
+          <div className="cover-image-manager__video-wrapper">
+            <video
+              ref={internalVideoRef}
+              src={videoUrl}
+              className="cover-image-manager__video"
+              controls
+              onTimeUpdate={handleVideoTimeUpdate}
+              onLoadedMetadata={handleVideoLoadedMetadata}
+            />
+          </div>
+          <div className="cover-image-manager__video-time">
+            当前时间: {formatTime(internalVideoTime)} / {formatTime(videoDuration)}
+          </div>
+        </div>
+      )}
 
       {/* Current Cover or Placeholder */}
       <div className="cover-image-manager__preview-container">

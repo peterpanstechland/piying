@@ -3,15 +3,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: var(--bg-base);
-  border: 1px solid var(--divider);
-  border-radius: 12px;
-  padding: 16px;
   outline: none;
 }
 
 .timeline-editor:focus {
-  box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.3);
+  /* Focus handled by parent container */
 }
 
 /* Preview section */
@@ -19,6 +15,11 @@
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
+}
+
+.timeline-editor__preview-container {
+  position: relative;
+  width: 100%;
 }
 
 /* Timeline section */
@@ -160,9 +161,10 @@
   color: var(--text-primary);
 }
 
-/* Property Panel */
+/* Property Panel - bottom panel layout */
 .timeline-editor__property-panel {
   margin-top: 8px;
+  width: 100%;
 }
 
 /* Selection info */
@@ -182,6 +184,22 @@
 .timeline-editor__selection-hint {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.timeline-editor__delete-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  border-radius: 6px;
+  color: #ff6b6b;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.timeline-editor__delete-btn:hover {
+  background: rgba(220, 53, 69, 0.25);
+  border-color: rgba(220, 53, 69, 0.6);
 }
 
 /* Responsive adjustments */

@@ -11,11 +11,22 @@ from pydantic import BaseModel, Field
 from ...database import Base
 
 
-# Required parts for a valid character
-REQUIRED_PARTS = [
+# Base required parts (always needed)
+BASE_REQUIRED_PARTS = [
     "head", "body", "left-arm", "right-arm", 
-    "left-hand", "right-hand", "left-foot", "right-foot", "upper-leg"
+    "left-hand", "right-hand", "left-foot", "right-foot"
 ]
+
+# Lower body options: skirt (one-piece) OR left-thigh + right-thigh (two-piece)
+LOWER_BODY_SKIRT = ["skirt"]
+LOWER_BODY_THIGHS = ["left-thigh", "right-thigh"]
+
+# All valid standard parts (for upload validation)
+VALID_STANDARD_PARTS = BASE_REQUIRED_PARTS + LOWER_BODY_SKIRT + LOWER_BODY_THIGHS
+
+# Legacy: keep REQUIRED_PARTS for backward compatibility but now it's just valid parts
+# Actual validation logic is in character_service.validate_required_parts()
+REQUIRED_PARTS = VALID_STANDARD_PARTS
 
 
 # SQLAlchemy Models for Database Storage

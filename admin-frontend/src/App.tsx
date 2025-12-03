@@ -9,6 +9,7 @@ import CameraTestPage from './pages/CameraTestPage'
 import StorylineListPage from './pages/StorylineListPage'
 import StorylineEditPage from './pages/StorylineEditPage'
 import StorylineTimelineEditorPage from './pages/StorylineTimelineEditorPage'
+import VideoEditorPage from './pages/VideoEditorPage'
 import StorageConfigPage from './pages/StorageConfigPage'
 import QRCodeConfigPage from './pages/QRCodeConfigPage'
 import SystemSettingsPage from './pages/SystemSettingsPage'
@@ -90,6 +91,22 @@ function App() {
           element={
             <ProtectedRoute>
               <StorylineTimelineEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/storylines/:storylineId/video-editor"
+          element={
+            <ProtectedRoute>
+              <VideoEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/storylines/:storylineId/characters/:characterId/video-editor"
+          element={
+            <ProtectedRoute>
+              <VideoEditorPage />
             </ProtectedRoute>
           }
         />

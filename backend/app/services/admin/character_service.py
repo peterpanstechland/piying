@@ -24,7 +24,9 @@ from ...models.admin.character import (
     SkeletonBinding,
     CharacterResponse,
     CharacterListResponse,
-    REQUIRED_PARTS,
+    BASE_REQUIRED_PARTS,
+    LOWER_BODY_SKIRT,
+    LOWER_BODY_THIGHS,
 )
 
 
@@ -89,10 +91,35 @@ class CharacterService:
         """
         Validate that all required parts are present.
         
+        Required parts:
+        - All BASE_REQUIRED_PARTS (head, body, arms, hands, feet)
+        - Lower body: EITHER skirt OR (left-thigh AND right-thigh)
+        
         Returns:
             Tuple of (is_valid, missing_parts)
         """
-        missing = [part for part in REQUIRED_PARTS if part not in part_names]
+        missing = []
+        
+        # Check base required parts
+        for part in BASE_REQUIRED_PARTS:
+            if part not in part_names:
+                missing.append(part)
+        
+        # Check lower body: need skirt OR both thighs
+        has_skirt = LOWER_BODY_SKIRT[0] in part_names  # "skirt"
+        has_left_thigh = LOWER_BODY_THIGHS[0] in part_names  # "left-thigh"
+        has_right_thigh = LOWER_BODY_THIGHS[1] in part_names  # "right-thigh"
+        has_both_thighs = has_left_thigh and has_right_thigh
+        
+        if not has_skirt and not has_both_thighs:
+            # Missing lower body
+            if has_left_thigh and not has_right_thigh:
+                missing.append("right-thigh")
+            elif has_right_thigh and not has_left_thigh:
+                missing.append("left-thigh")
+            else:
+                missing.append("skirt 或 left-thigh+right-thigh")
+        
         return len(missing) == 0, missing
 
     def get_character_dir(self, character_id: str) -> str:
@@ -156,6 +183,8 @@ class CharacterService:
             character.name = update_data.name
         if update_data.description is not None:
             character.description = update_data.description
+        if update_data.default_facing is not None:
+            character.default_facing = update_data.default_facing
         
         character.updated_at = datetime.utcnow()
         await db.commit()
@@ -373,10 +402,11 @@ class CharacterService:
         self,
         db: AsyncSession,
         character_id: str,
-        size: Tuple[int, int] = (128, 128),
+        size: Tuple[int, int] = (400, 400),
     ) -> Optional[str]:
         """
-        Generate a preview thumbnail for a character by compositing its parts.
+        Generate a preview thumbnail for a character by compositing its parts
+        using the assembly positions from spritesheet.json.
         
         Returns the thumbnail path or None if generation failed.
         """
@@ -385,35 +415,94 @@ class CharacterService:
             return None
         
         try:
-            # Create a blank canvas with transparency
-            canvas = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+            char_dir = self.get_character_dir(character_id)
+            spritesheet_json_path = os.path.join(char_dir, "spritesheet.json")
+            
+            # Try to load assembly data from spritesheet.json
+            assembly_data = {}
+            if os.path.exists(spritesheet_json_path):
+                with open(spritesheet_json_path, 'r') as f:
+                    spritesheet = json.load(f)
+                    frames = spritesheet.get('frames', {})
+                    for part_name, frame_data in frames.items():
+                        if 'assembly' in frame_data:
+                            assembly_data[part_name] = frame_data['assembly']
+            
+            # Calculate bounding box of all parts
+            min_x, min_y = float('inf'), float('inf')
+            max_x, max_y = float('-inf'), float('-inf')
+            
+            print(f"[Thumbnail] Generating for character {character_id}")
+            print(f"[Thumbnail] Found {len(assembly_data)} parts with assembly data")
+            
+            for part in character.parts:
+                if part.name in assembly_data:
+                    asm = assembly_data[part.name]
+                    min_x = min(min_x, asm['x'])
+                    min_y = min(min_y, asm['y'])
+                    max_x = max(max_x, asm['x'] + asm['width'])
+                    max_y = max(max_y, asm['y'] + asm['height'])
+            
+            print(f"[Thumbnail] Bounding box: ({min_x}, {min_y}) to ({max_x}, {max_y})")
+            
+            # If no assembly data, use simple center placement
+            if min_x == float('inf'):
+                print("[Thumbnail] No assembly data, using simple thumbnail")
+                return await self._generate_simple_thumbnail(db, character, char_dir, size)
+            
+            # Calculate content size
+            content_width = max_x - min_x
+            content_height = max_y - min_y
+            
+            # Calculate scale to fit in thumbnail while maintaining aspect ratio
+            # Add some padding (10% on each side)
+            target_width, target_height = size
+            padding_ratio = 0.1
+            available_width = target_width * (1 - 2 * padding_ratio)
+            available_height = target_height * (1 - 2 * padding_ratio)
+            
+            scale_x = available_width / content_width if content_width > 0 else 1
+            scale_y = available_height / content_height if content_height > 0 else 1
+            scale = min(scale_x, scale_y)  # Use smaller scale to fit both dimensions
+            
+            # Create final thumbnail canvas
+            canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+            
+            # Calculate offset to center the content
+            scaled_width = content_width * scale
+            scaled_height = content_height * scale
+            offset_x = (target_width - scaled_width) / 2
+            offset_y = (target_height - scaled_height) / 2
             
             # Sort parts by z_index
             sorted_parts = sorted(character.parts, key=lambda p: p.z_index)
             
-            # Composite each part onto the canvas
+            # Composite each part using assembly positions
             for part in sorted_parts:
                 part_path = os.path.join(
                     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
                     "data", part.file_path
                 )
-                if os.path.exists(part_path):
+                if os.path.exists(part_path) and part.name in assembly_data:
                     part_img = Image.open(part_path).convert("RGBA")
-                    # Resize part to fit canvas (simple center placement)
-                    part_img.thumbnail((400, 400), Image.Resampling.LANCZOS)
-                    # Center the part on canvas
-                    x = (512 - part_img.width) // 2
-                    y = (512 - part_img.height) // 2
+                    asm = assembly_data[part.name]
+                    
+                    # Calculate scaled position on canvas
+                    x = int((asm['x'] - min_x) * scale + offset_x)
+                    y = int((asm['y'] - min_y) * scale + offset_y)
+                    
+                    # Resize part to scaled assembly size
+                    target_part_width = max(1, int(asm['width'] * scale))
+                    target_part_height = max(1, int(asm['height'] * scale))
+                    part_img = part_img.resize((target_part_width, target_part_height), Image.Resampling.LANCZOS)
+                    
                     canvas.paste(part_img, (x, y), part_img)
             
-            # Resize to thumbnail size
-            canvas.thumbnail(size, Image.Resampling.LANCZOS)
-            
             # Save thumbnail
-            char_dir = self.get_character_dir(character_id)
             thumbnail_path = os.path.join(char_dir, "thumbnail.png")
             relative_path = f"characters/{character_id}/thumbnail.png"
             canvas.save(thumbnail_path, "PNG")
+            print(f"[Thumbnail] Saved to {thumbnail_path}, size: {canvas.size}")
             
             # Update character thumbnail path
             character.thumbnail_path = relative_path
@@ -425,6 +514,45 @@ class CharacterService:
         except Exception as e:
             # Log error but don't fail the operation
             print(f"Failed to generate thumbnail: {e}")
+            return None
+
+    async def _generate_simple_thumbnail(
+        self,
+        db: AsyncSession,
+        character,
+        char_dir: str,
+        size: Tuple[int, int],
+    ) -> Optional[str]:
+        """Fallback simple thumbnail generation without assembly data."""
+        try:
+            canvas = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+            sorted_parts = sorted(character.parts, key=lambda p: p.z_index)
+            
+            for part in sorted_parts:
+                part_path = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+                    "data", part.file_path
+                )
+                if os.path.exists(part_path):
+                    part_img = Image.open(part_path).convert("RGBA")
+                    part_img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+                    x = (512 - part_img.width) // 2
+                    y = (512 - part_img.height) // 2
+                    canvas.paste(part_img, (x, y), part_img)
+            
+            canvas.thumbnail(size, Image.Resampling.LANCZOS)
+            
+            thumbnail_path = os.path.join(char_dir, "thumbnail.png")
+            relative_path = f"characters/{character.id}/thumbnail.png"
+            canvas.save(thumbnail_path, "PNG")
+            
+            character.thumbnail_path = relative_path
+            character.updated_at = datetime.utcnow()
+            await db.commit()
+            
+            return relative_path
+        except Exception as e:
+            print(f"Failed to generate simple thumbnail: {e}")
             return None
 
     async def update_pivot_configuration(
@@ -475,6 +603,8 @@ class CharacterService:
                 part.joint_pivot_y = part_data.joint_pivot_y
             if hasattr(part_data, 'rotation_offset'):
                 part.rotation_offset = part_data.rotation_offset
+            if hasattr(part_data, 'rest_pose_offset'):
+                part.rest_pose_offset = part_data.rest_pose_offset
         
         character.updated_at = datetime.utcnow()
         await db.commit()
@@ -543,6 +673,7 @@ class CharacterService:
                 joint_pivot_x=p.joint_pivot_x if hasattr(p, 'joint_pivot_x') else None,
                 joint_pivot_y=p.joint_pivot_y if hasattr(p, 'joint_pivot_y') else None,
                 rotation_offset=p.rotation_offset if hasattr(p, 'rotation_offset') else None,
+                rest_pose_offset=p.rest_pose_offset if hasattr(p, 'rest_pose_offset') else None,
             ))
         
         bindings = []
@@ -561,6 +692,7 @@ class CharacterService:
             parts=parts,
             bindings=bindings,
             thumbnail_path=character.thumbnail_path,
+            default_facing=character.default_facing if hasattr(character, 'default_facing') else 'left',
             created_at=character.created_at,
             updated_at=character.updated_at,
         )

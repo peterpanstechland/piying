@@ -146,11 +146,8 @@ class CharacterVideoService:
         """
         Validate that video duration matches base video within tolerance.
         
-        Property 1: Video Duration Validation
-        *For any* character-specific video upload with duration D and base video
-        duration B, the upload SHALL be accepted if and only if |D - B| <= 1.0 second.
-        
-        Requirements 1.2, 2.3
+        NOTE: Duration validation is now disabled to allow flexible video lengths.
+        Character videos can have different durations from the base video.
         
         Args:
             video_duration: Duration of the uploaded video in seconds
@@ -158,16 +155,9 @@ class CharacterVideoService:
             tolerance: Maximum allowed difference in seconds (default 1.0)
             
         Returns:
-            Tuple of (is_valid, error_message)
+            Tuple of (is_valid, error_message) - always returns True now
         """
-        difference = abs(video_duration - base_video_duration)
-        
-        if difference > tolerance:
-            return False, (
-                f"Video duration ({video_duration:.1f}s) differs from base video "
-                f"({base_video_duration:.1f}s) by more than {tolerance} second."
-            )
-        
+        # Duration validation disabled - allow any video length
         return True, ""
 
     async def upload_character_video(
@@ -223,8 +213,9 @@ class CharacterVideoService:
         os.makedirs(videos_dir, exist_ok=True)
         
         # Save file temporarily for validation
+        # Use .mp4 extension for temp file so video_processor can validate it
         video_path = self.get_character_video_file_path(storyline_id, character_id)
-        temp_path = video_path + ".tmp"
+        temp_path = os.path.join(videos_dir, f"{character_id}_temp.mp4")
         
         try:
             # Write file to temp location
@@ -587,6 +578,196 @@ class CharacterVideoService:
         
         await db.commit()
         return True, deleted_files
+
+
+    # Character Video Segments Methods
+    
+    async def get_character_video_segments(
+        self,
+        db: AsyncSession,
+        storyline_id: str,
+        character_id: str,
+    ) -> List[dict]:
+        """
+        Get segments for a character-specific video.
+        
+        Args:
+            db: Database session
+            storyline_id: The storyline ID
+            character_id: The character ID
+            
+        Returns:
+            List of segment dictionaries
+        """
+        from ...models.admin.storyline import CharacterVideoSegmentDB
+        
+        # Get the storyline-character association
+        result = await db.execute(
+            select(StorylineCharacterDB)
+            .where(
+                StorylineCharacterDB.storyline_id == storyline_id,
+                StorylineCharacterDB.character_id == character_id
+            )
+            .options(selectinload(StorylineCharacterDB.segments))
+        )
+        assoc = result.scalar_one_or_none()
+        
+        if not assoc:
+            return []
+        
+        segments = []
+        for seg in sorted(assoc.segments, key=lambda x: x.index):
+            segments.append({
+                "id": str(seg.id),
+                "index": seg.index,
+                "start_time": seg.start_time,
+                "duration": seg.duration,
+                "path_type": seg.path_type,
+                "offset_start": [seg.offset_start_x, seg.offset_start_y],
+                "offset_end": [seg.offset_end_x, seg.offset_end_y],
+                "entry_animation": {
+                    "type": seg.entry_type or "instant",
+                    "duration": seg.entry_duration or 1.0,
+                    "delay": seg.entry_delay or 0.0,
+                },
+                "exit_animation": {
+                    "type": seg.exit_type or "instant",
+                    "duration": seg.exit_duration or 1.0,
+                    "delay": seg.exit_delay or 0.0,
+                },
+                "guidance_text": seg.guidance_text or "",
+                "guidance_text_en": seg.guidance_text_en or "",
+                "guidance_image": seg.guidance_image,
+            })
+        
+        return segments
+
+    async def update_character_video_segments(
+        self,
+        db: AsyncSession,
+        storyline_id: str,
+        character_id: str,
+        segments: List,
+    ) -> Tuple[bool, str]:
+        """
+        Update segments for a character-specific video.
+        
+        Args:
+            db: Database session
+            storyline_id: The storyline ID
+            character_id: The character ID
+            segments: List of TimelineSegment objects
+            
+        Returns:
+            Tuple of (success, error_message)
+        """
+        from ...models.admin.storyline import CharacterVideoSegmentDB, AnimationType
+        from sqlalchemy import delete
+        
+        # Get the storyline-character association
+        result = await db.execute(
+            select(StorylineCharacterDB)
+            .where(
+                StorylineCharacterDB.storyline_id == storyline_id,
+                StorylineCharacterDB.character_id == character_id
+            )
+        )
+        assoc = result.scalar_one_or_none()
+        
+        if not assoc:
+            return False, "Character not associated with this storyline"
+        
+        if not assoc.video_path:
+            return False, "Character video not uploaded yet"
+        
+        # Delete existing segments
+        await db.execute(
+            delete(CharacterVideoSegmentDB)
+            .where(CharacterVideoSegmentDB.storyline_character_id == assoc.id)
+        )
+        
+        # Add new segments
+        for seg in segments:
+            new_segment = CharacterVideoSegmentDB(
+                storyline_character_id=assoc.id,
+                index=seg.index,
+                start_time=seg.start_time,
+                duration=seg.duration,
+                path_type=seg.path_type,
+                offset_start_x=seg.offset_start[0],
+                offset_start_y=seg.offset_start[1],
+                offset_end_x=seg.offset_end[0],
+                offset_end_y=seg.offset_end[1],
+                entry_type=seg.entry_animation.type.value if hasattr(seg.entry_animation.type, 'value') else seg.entry_animation.type,
+                entry_duration=seg.entry_animation.duration,
+                entry_delay=seg.entry_animation.delay,
+                exit_type=seg.exit_animation.type.value if hasattr(seg.exit_animation.type, 'value') else seg.exit_animation.type,
+                exit_duration=seg.exit_animation.duration,
+                exit_delay=seg.exit_animation.delay,
+                guidance_text=seg.guidance_text or "",
+                guidance_text_en=seg.guidance_text_en or "",
+                guidance_image=seg.guidance_image,
+            )
+            db.add(new_segment)
+        
+        await db.commit()
+        return True, ""
+
+    async def delete_character_video_segment(
+        self,
+        db: AsyncSession,
+        storyline_id: str,
+        character_id: str,
+        segment_index: int,
+    ) -> Tuple[bool, str]:
+        """
+        Delete a segment from a character-specific video.
+        
+        Args:
+            db: Database session
+            storyline_id: The storyline ID
+            character_id: The character ID
+            segment_index: Index of segment to delete
+            
+        Returns:
+            Tuple of (success, error_message)
+        """
+        from ...models.admin.storyline import CharacterVideoSegmentDB
+        
+        # Get the storyline-character association
+        result = await db.execute(
+            select(StorylineCharacterDB)
+            .where(
+                StorylineCharacterDB.storyline_id == storyline_id,
+                StorylineCharacterDB.character_id == character_id
+            )
+            .options(selectinload(StorylineCharacterDB.segments))
+        )
+        assoc = result.scalar_one_or_none()
+        
+        if not assoc:
+            return False, "Character not associated with this storyline"
+        
+        # Find and delete the segment
+        segment_to_delete = None
+        for seg in assoc.segments:
+            if seg.index == segment_index:
+                segment_to_delete = seg
+                break
+        
+        if not segment_to_delete:
+            return False, f"Segment with index {segment_index} not found"
+        
+        await db.delete(segment_to_delete)
+        
+        # Re-index remaining segments
+        remaining = [s for s in assoc.segments if s.index != segment_index]
+        remaining.sort(key=lambda s: s.start_time)
+        for i, seg in enumerate(remaining):
+            seg.index = i
+        
+        await db.commit()
+        return True, ""
 
 
 # Singleton instance

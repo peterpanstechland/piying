@@ -5,8 +5,9 @@ Handles storyline CRUD operations, video uploads, and segment configuration.
 from typing import Annotated, List
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Request
+from fastapi.responses import FileResponse, StreamingResponse
+import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...database import get_db
@@ -276,15 +277,17 @@ async def upload_storyline_video(
     )
 
 
-@router.get("/{storyline_id}/video", status_code=status.HTTP_200_OK)
+@router.get("/{storyline_id}/video")
 async def get_storyline_video(
     storyline_id: str,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
     """
     Get the background video file for a storyline.
     
     Returns the video file for playback in the timeline editor.
+    Supports HTTP Range requests for video seeking.
     """
     storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
     if not storyline:
@@ -310,7 +313,55 @@ async def get_storyline_video(
             detail=f"Video file not found",
         )
     
-    return FileResponse(full_path, media_type="video/mp4")
+    file_size = os.path.getsize(full_path)
+    
+    # Check for Range header
+    range_header = request.headers.get("range")
+    
+    if range_header:
+        # Parse Range header: "bytes=start-end"
+        range_match = range_header.replace("bytes=", "").split("-")
+        start = int(range_match[0]) if range_match[0] else 0
+        end = int(range_match[1]) if range_match[1] else file_size - 1
+        
+        # Ensure valid range
+        if start >= file_size:
+            raise HTTPException(status_code=416, detail="Range not satisfiable")
+        
+        end = min(end, file_size - 1)
+        content_length = end - start + 1
+        
+        async def stream_range():
+            async with aiofiles.open(full_path, "rb") as f:
+                await f.seek(start)
+                remaining = content_length
+                chunk_size = 1024 * 1024  # 1MB chunks
+                while remaining > 0:
+                    read_size = min(chunk_size, remaining)
+                    data = await f.read(read_size)
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+        
+        return StreamingResponse(
+            stream_range(),
+            status_code=206,
+            media_type="video/mp4",
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(content_length),
+            },
+        )
+    
+    # No Range header - return full file
+    return FileResponse(
+        full_path, 
+        media_type="video/mp4",
+        filename=os.path.basename(full_path),
+        headers={"Accept-Ranges": "bytes"},
+    )
 
 
 @router.get("/{storyline_id}/video/frame", response_model=FrameExtractionResponse)

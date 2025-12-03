@@ -326,7 +326,7 @@ export default function StorylineEditPage() {
       {/* Video Upload Section - Only show for existing storylines */}
       {!isNew && id && (
         <section className="edit-section">
-          <h2>背景视频</h2>
+          <h2>默认背景视频</h2>
           <div className="video-section">
             {videoDuration > 0 ? (
               <div className="video-info">

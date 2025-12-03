@@ -2,9 +2,17 @@ import { useState, useRef, useCallback } from 'react'
 import { adminApi } from '../services/api'
 import './CharacterUploadForm.css'
 
-const REQUIRED_PARTS = [
+// 基础必需部件（不包含下身，下身有多种选择）
+const BASE_REQUIRED_PARTS = [
   'head', 'body', 'left-arm', 'right-arm',
-  'left-hand', 'right-hand', 'left-foot', 'right-foot', 'upper-leg'
+  'left-hand', 'right-hand', 'left-foot', 'right-foot'
+]
+
+// 所有可选部件（用于下拉选择）
+// 下身部件选项：裙子（一体式）或 左右大腿（分体式）
+const ALL_STANDARD_PARTS = [
+  ...BASE_REQUIRED_PARTS,
+  'skirt', 'left-thigh', 'right-thigh'
 ]
 
 const PART_LABELS: Record<string, string> = {
@@ -16,7 +24,9 @@ const PART_LABELS: Record<string, string> = {
   'right-hand': '右手',
   'left-foot': '左脚',
   'right-foot': '右脚',
-  'upper-leg': '大腿'
+  'skirt': '裙子',
+  'left-thigh': '左大腿',
+  'right-thigh': '右大腿'
 }
 
 interface CharacterPart {
@@ -42,15 +52,65 @@ interface Props {
   onUploadComplete: () => void
 }
 
+// 自定义部件类型：id（英文）和 label（显示名称，可中文）
+interface CustomPartDef {
+  id: string
+  label: string
+}
+
 export default function CharacterUploadForm({ characterId, existingParts, onUploadComplete }: Props) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [customPartId, setCustomPartId] = useState('')
+  const [customPartLabel, setCustomPartLabel] = useState('')
+  const [showCustomPartInput, setShowCustomPartInput] = useState(false)
+  // 本地添加的自定义部件（还未上传的）
+  const [localCustomParts, setLocalCustomParts] = useState<CustomPartDef[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const existingPartNames = existingParts.map(p => p.name)
-  const missingParts = REQUIRED_PARTS.filter(p => !existingPartNames.includes(p))
+  
+  // 计算缺少的部件
+  // 基础部件必须有
+  const missingBaseParts = BASE_REQUIRED_PARTS.filter(p => !existingPartNames.includes(p))
+  
+  // 下身部件：需要有裙子 或者 左右大腿都有
+  const hasSkirt = existingPartNames.includes('skirt')
+  const hasLeftThigh = existingPartNames.includes('left-thigh')
+  const hasRightThigh = existingPartNames.includes('right-thigh')
+  const hasBothThighs = hasLeftThigh && hasRightThigh
+  const hasLowerBody = hasSkirt || hasBothThighs
+  
+  // 缺少的下身部件提示
+  const missingLowerBodyParts: string[] = []
+  if (!hasLowerBody) {
+    if (!hasSkirt && !hasLeftThigh && !hasRightThigh) {
+      missingLowerBodyParts.push('裙子 或 左右大腿')
+    } else if (hasLeftThigh && !hasRightThigh) {
+      missingLowerBodyParts.push('right-thigh')
+    } else if (!hasLeftThigh && hasRightThigh) {
+      missingLowerBodyParts.push('left-thigh')
+    }
+  }
+  
+  const missingParts = [...missingBaseParts, ...missingLowerBodyParts]
+  
+  // 获取已上传的自定义部件（不在标准部件列表中的）
+  const uploadedCustomParts = existingPartNames.filter(p => !ALL_STANDARD_PARTS.includes(p))
+  
+  // 合并已上传和本地添加的自定义部件
+  const allCustomParts: CustomPartDef[] = [
+    ...uploadedCustomParts.map(id => ({ id, label: id })),
+    ...localCustomParts.filter(p => !uploadedCustomParts.includes(p.id))
+  ]
+  
+  // 获取自定义部件的显示名称
+  const getCustomPartLabel = (id: string): string => {
+    const found = localCustomParts.find(p => p.id === id)
+    return found?.label || id
+  }
 
   const handleDeletePart = async (partName: string) => {
     if (!confirm(`确定要删除 "${PART_LABELS[partName] || partName}" 吗？`)) return
@@ -79,7 +139,7 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
 
   const guessPartName = (filename: string): string => {
     const name = filename.toLowerCase().replace('.png', '')
-    for (const part of REQUIRED_PARTS) {
+    for (const part of ALL_STANDARD_PARTS) {
       if (name.includes(part.replace('-', '')) || name.includes(part)) {
         return part
       }
@@ -91,8 +151,36 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
     if (name.includes('righthand') || name.includes('right_hand')) return 'right-hand'
     if (name.includes('leftfoot') || name.includes('left_foot')) return 'left-foot'
     if (name.includes('rightfoot') || name.includes('right_foot')) return 'right-foot'
-    if (name.includes('upperleg') || name.includes('upper_leg') || name.includes('leg')) return 'upper-leg'
+    // 下身部件
+    if (name.includes('skirt') || name.includes('裙')) return 'skirt'
+    if (name.includes('leftthigh') || name.includes('left_thigh') || name.includes('左大腿')) return 'left-thigh'
+    if (name.includes('rightthigh') || name.includes('right_thigh') || name.includes('右大腿')) return 'right-thigh'
+    // 旧版兼容
+    if (name.includes('upperleg') || name.includes('upper_leg') || name.includes('leg')) return 'skirt'
     return ''
+  }
+  
+  // 添加自定义部件
+  const addCustomPart = () => {
+    if (!customPartId.trim() || !customPartLabel.trim()) {
+      alert('请填写部件ID和显示名称')
+      return
+    }
+    // ID 只允许英文、数字、连字符
+    const partId = customPartId.trim().toLowerCase().replace(/\s+/g, '-')
+    if (!/^[a-z0-9-]+$/.test(partId)) {
+      alert('部件ID只能包含英文字母、数字和连字符')
+      return
+    }
+    if (ALL_STANDARD_PARTS.includes(partId) || allCustomParts.some(p => p.id === partId)) {
+      alert('该部件ID已存在')
+      return
+    }
+    // 添加到本地自定义部件列表
+    setLocalCustomParts(prev => [...prev, { id: partId, label: customPartLabel.trim() }])
+    setCustomPartId('')
+    setCustomPartLabel('')
+    setShowCustomPartInput(false)
   }
 
 
@@ -244,11 +332,27 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
                   className={!uploadFile.partName ? 'error' : ''}
                 >
                   <option value="">选择部件类型</option>
-                  {REQUIRED_PARTS.map(part => (
-                    <option key={part} value={part}>
-                      {PART_LABELS[part] || part}
-                    </option>
-                  ))}
+                  <optgroup label="基础部件">
+                    {BASE_REQUIRED_PARTS.map(part => (
+                      <option key={part} value={part}>
+                        {PART_LABELS[part] || part}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="下身部件（二选一）">
+                    <option value="skirt">{PART_LABELS['skirt']}</option>
+                    <option value="left-thigh">{PART_LABELS['left-thigh']}</option>
+                    <option value="right-thigh">{PART_LABELS['right-thigh']}</option>
+                  </optgroup>
+                  {allCustomParts.length > 0 && (
+                    <optgroup label="自定义部件">
+                      {allCustomParts.map(part => (
+                        <option key={part.id} value={part.id}>
+                          {part.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
                 {uploadFile.error && (
                   <div className="upload-error">{uploadFile.error}</div>
@@ -298,6 +402,50 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
         </div>
       )}
 
+      {/* 自定义部件输入 */}
+      <div className="custom-part-section">
+        {showCustomPartInput ? (
+          <div className="custom-part-input">
+            <div className="custom-part-fields">
+              <input
+                type="text"
+                value={customPartId}
+                onChange={(e) => setCustomPartId(e.target.value)}
+                placeholder="部件ID（英文，如 accessory）"
+              />
+              <input
+                type="text"
+                value={customPartLabel}
+                onChange={(e) => setCustomPartLabel(e.target.value)}
+                placeholder="显示名称（如 饰品）"
+                onKeyDown={(e) => e.key === 'Enter' && addCustomPart()}
+              />
+            </div>
+            <div className="custom-part-actions">
+              <button className="btn-small btn-primary" onClick={addCustomPart}>添加</button>
+              <button className="btn-small" onClick={() => { setShowCustomPartInput(false); setCustomPartId(''); setCustomPartLabel('') }}>取消</button>
+            </div>
+          </div>
+        ) : (
+          <button className="btn-add-custom" onClick={() => setShowCustomPartInput(true)}>
+            + 添加自定义部件
+          </button>
+        )}
+        {allCustomParts.length > 0 && (
+          <div className="custom-parts-list">
+            <span className="custom-parts-label">已添加:</span>
+            {allCustomParts.map(part => (
+              <span key={part.id} className="custom-part-tag">
+                {part.label} <small>({part.id})</small>
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="custom-part-hint">
+          自定义部件需要在"枢轴配置"和"骨骼绑定"中手动配置
+        </p>
+      </div>
+
       <div className="existing-parts">
         <h3>已上传部件</h3>
         {existingParts.length === 0 ? (
@@ -316,7 +464,7 @@ export default function CharacterUploadForm({ characterId, existingParts, onUplo
                   />
                 </div>
                 <div className="part-info">
-                  <div className="part-name">{PART_LABELS[part.name] || part.name}</div>
+                  <div className="part-name">{PART_LABELS[part.name] || getCustomPartLabel(part.name)}</div>
                   <button
                     className="btn-delete-part"
                     onClick={() => handleDeletePart(part.name)}

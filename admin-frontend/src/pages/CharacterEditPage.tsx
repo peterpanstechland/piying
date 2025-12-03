@@ -6,8 +6,9 @@ import JointEditor from '../components/JointEditor'
 import SkeletonBindingEditor from '../components/SkeletonBindingEditor'
 import './CharacterEditPage.css'
 
-// Lazy load CharacterPreview to avoid loading PixiJS until needed
+// Lazy load CharacterPreview and RestPoseEditor to avoid loading PixiJS until needed
 const CharacterPreview = lazy(() => import('../components/CharacterPreview'))
+const RestPoseEditor = lazy(() => import('../components/RestPoseEditor'))
 
 interface Joint {
   id: string
@@ -54,7 +55,7 @@ interface Character {
   updated_at: string
 }
 
-type TabType = 'info' | 'parts' | 'pivot' | 'binding' | 'preview'
+type TabType = 'info' | 'parts' | 'pivot' | 'binding' | 'restpose' | 'preview'
 
 export default function CharacterEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -253,6 +254,13 @@ export default function CharacterEditPage() {
               骨骼绑定
             </button>
             <button
+              className={`tab ${activeTab === 'restpose' ? 'active' : ''}`}
+              onClick={() => setActiveTab('restpose')}
+              disabled={!character?.parts.length}
+            >
+              🎭 默认姿势
+            </button>
+            <button
               className={`tab tab-preview ${activeTab === 'preview' ? 'active' : ''}`}
               onClick={() => setActiveTab('preview')}
               disabled={!character?.parts.length}
@@ -288,6 +296,7 @@ export default function CharacterEditPage() {
                 maxLength={500}
               />
             </div>
+
             <div className="form-actions">
               <button
                 className="btn-primary"
@@ -324,6 +333,27 @@ export default function CharacterEditPage() {
             onSave={handleBindingSaved}
             saving={saving}
           />
+        )}
+
+        {activeTab === 'restpose' && character && id && (
+          <div className="restpose-tab">
+            <Suspense
+              fallback={
+                <div className="preview-loading">
+                  <div className="loading-spinner"></div>
+                  <p>加载姿势编辑器...</p>
+                </div>
+              }
+            >
+              <RestPoseEditor 
+                characterId={id} 
+                onSave={() => {
+                  setSuccessMessage('默认姿势已保存')
+                  loadCharacter()
+                }}
+              />
+            </Suspense>
+          </div>
         )}
 
         {activeTab === 'preview' && character && id && (

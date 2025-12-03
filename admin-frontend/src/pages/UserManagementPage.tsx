@@ -267,7 +267,7 @@ export default function UserManagementPage() {
   return (
     <div className="user-management-page">
       <div className="page-header">
-        <button className="btn-back" onClick={() => navigate('/admin/dashboard')}>
+        <button className="btn-back" onClick={() => navigate('/dashboard')}>
           ← 返回首页
         </button>
         <h1>用户管理</h1>

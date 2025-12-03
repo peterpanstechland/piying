@@ -203,10 +203,8 @@ export default function CharacterSelector({
 
   // Get thumbnail URL for a character
   const getThumbnailUrl = useCallback((character: Character) => {
-    if (character.thumbnail_path) {
-      return `/api/admin/${character.thumbnail_path}`
-    }
-    return null
+    // Use the preview endpoint with timestamp to prevent caching
+    return `/api/admin/characters/${character.id}/preview?t=${Date.now()}`
   }, [])
 
   // Sort characters: selected first (in order), then unselected
@@ -304,19 +302,19 @@ export default function CharacterSelector({
               
               {/* Thumbnail */}
               <div className="character-selector__thumbnail">
-                {getThumbnailUrl(character) ? (
-                  <img 
-                    src={getThumbnailUrl(character)!} 
-                    alt={character.name}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <div className="character-selector__thumbnail-placeholder">
-                    🎭
-                  </div>
-                )}
+                <img 
+                  src={getThumbnailUrl(character)} 
+                  alt={character.name}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement
+                    img.style.display = 'none'
+                    const placeholder = img.nextElementSibling as HTMLElement
+                    if (placeholder) placeholder.style.display = 'flex'
+                  }}
+                />
+                <div className="character-selector__thumbnail-placeholder" style={{ display: 'none' }}>
+                  🎭
+                </div>
               </div>
               
               {/* Character info */}

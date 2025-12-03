@@ -149,7 +149,7 @@ export default function CharacterListPage() {
               <div className="character-thumbnail">
                 {character.thumbnail_path ? (
                   <img
-                    src={`/api/admin/characters/${character.id}/preview`}
+                    src={`/api/admin/characters/${character.id}/preview?t=${Date.now()}`}
                     alt={character.name}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none'

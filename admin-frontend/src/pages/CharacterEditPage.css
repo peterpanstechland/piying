@@ -258,6 +258,13 @@
   min-height: 550px;
 }
 
+.restpose-tab {
+  background: var(--bg-base);
+  border-radius: 8px;
+  min-height: 650px;
+  overflow: hidden;
+}
+
 .preview-loading {
   display: flex;
   flex-direction: column;

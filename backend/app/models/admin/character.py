@@ -11,11 +11,22 @@ from pydantic import BaseModel, Field
 from ...database import Base
 
 
-# Required parts for a valid character
-REQUIRED_PARTS = [
+# Base required parts (always needed)
+BASE_REQUIRED_PARTS = [
     "head", "body", "left-arm", "right-arm", 
-    "left-hand", "right-hand", "left-foot", "right-foot", "upper-leg"
+    "left-hand", "right-hand", "left-foot", "right-foot"
 ]
+
+# Lower body options: skirt (one-piece) OR left-thigh + right-thigh (two-piece)
+LOWER_BODY_SKIRT = ["skirt"]
+LOWER_BODY_THIGHS = ["left-thigh", "right-thigh"]
+
+# All valid standard parts (for upload validation)
+VALID_STANDARD_PARTS = BASE_REQUIRED_PARTS + LOWER_BODY_SKIRT + LOWER_BODY_THIGHS
+
+# Legacy: keep REQUIRED_PARTS for backward compatibility but now it's just valid parts
+# Actual validation logic is in character_service.validate_required_parts()
+REQUIRED_PARTS = VALID_STANDARD_PARTS
 
 
 # SQLAlchemy Models for Database Storage
@@ -43,6 +54,8 @@ class CharacterPartDB(Base):
     joint_pivot_y: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     # Rotation offset (based on sprite drawing direction, in radians)
     rotation_offset: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    # Rest pose offset (angle difference between sprite default pose and "natural hanging" pose, in radians)
+    rest_pose_offset: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # Relationship back to character
     character: Mapped["CharacterDB"] = relationship("CharacterDB", back_populates="parts")
@@ -71,6 +84,8 @@ class CharacterDB(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     thumbnail_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # 角色默认朝向：'left' 或 'right'，表示素材绘制时角色面向的方向
+    default_facing: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, default='left')
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -119,6 +134,8 @@ class CharacterPart(BaseModel):
     joint_pivot_y: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Joint pivot Y for rotation (0-1)")
     # Rotation offset (based on sprite drawing direction, in radians)
     rotation_offset: Optional[float] = Field(default=None, description="Rotation offset in radians")
+    # Rest pose offset (angle difference between sprite default pose and "natural hanging" pose, in radians)
+    rest_pose_offset: Optional[float] = Field(default=None, description="Rest pose offset in radians")
 
     class Config:
         from_attributes = True
@@ -165,6 +182,7 @@ class Character(BaseModel):
     parts: List[CharacterPart] = Field(default_factory=list, description="Character parts")
     bindings: List[SkeletonBinding] = Field(default_factory=list, description="Skeleton bindings")
     thumbnail_path: Optional[str] = Field(default=None, description="Path to thumbnail image")
+    default_facing: Optional[str] = Field(default='left', description="Default facing direction: 'left' or 'right'")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
@@ -194,6 +212,7 @@ class CharacterUpdate(BaseModel):
     """Schema for updating a character."""
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
+    default_facing: Optional[str] = Field(default=None, description="Default facing direction: 'left' or 'right'")
 
 
 class CharacterResponse(BaseModel):
@@ -204,6 +223,7 @@ class CharacterResponse(BaseModel):
     parts: List[CharacterPart] = []
     bindings: List[SkeletonBinding] = []
     thumbnail_path: Optional[str] = None
+    default_facing: Optional[str] = 'left'
     created_at: datetime
     updated_at: datetime
 

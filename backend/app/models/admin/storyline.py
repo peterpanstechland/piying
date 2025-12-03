@@ -51,10 +51,15 @@ class SegmentDB(Base):
     index: Mapped[int] = mapped_column(Integer, nullable=False)
     duration: Mapped[float] = mapped_column(Float, nullable=False)
     path_type: Mapped[str] = mapped_column(String(50), default="static")
-    offset_start_x: Mapped[int] = mapped_column(Integer, default=0)
-    offset_start_y: Mapped[int] = mapped_column(Integer, default=0)
-    offset_end_x: Mapped[int] = mapped_column(Integer, default=0)
-    offset_end_y: Mapped[int] = mapped_column(Integer, default=0)
+    # Path coordinates (normalized 0-1)
+    offset_start_x: Mapped[float] = mapped_column(Float, default=0.1)
+    offset_start_y: Mapped[float] = mapped_column(Float, default=0.5)
+    offset_end_x: Mapped[float] = mapped_column(Float, default=0.9)
+    offset_end_y: Mapped[float] = mapped_column(Float, default=0.5)
+    # Waypoints stored as JSON string: [[x1,y1], [x2,y2], ...]
+    path_waypoints: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
+    # Path draw type: 'linear', 'bezier', 'freehand'
+    path_draw_type: Mapped[str] = mapped_column(String(20), default="linear")
     guidance_text: Mapped[str] = mapped_column(Text, default="")
     guidance_text_en: Mapped[str] = mapped_column(Text, default="")
     guidance_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -122,6 +127,49 @@ class StorylineCharacterDB(Base):
     
     # Relationships
     storyline: Mapped["StorylineDB"] = relationship("StorylineDB", back_populates="storyline_characters")
+    segments: Mapped[list["CharacterVideoSegmentDB"]] = relationship(
+        "CharacterVideoSegmentDB", 
+        back_populates="storyline_character",
+        cascade="all, delete-orphan"
+    )
+
+
+class CharacterVideoSegmentDB(Base):
+    """SQLAlchemy model for character-specific video segments.
+    
+    Each character video can have its own independent segment configuration
+    for entry/exit timing, animations, and positions.
+    """
+    __tablename__ = "character_video_segments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    storyline_character_id: Mapped[int] = mapped_column(Integer, ForeignKey("storyline_characters.id", ondelete="CASCADE"), nullable=False)
+    index: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_time: Mapped[float] = mapped_column(Float, default=0.0)
+    duration: Mapped[float] = mapped_column(Float, nullable=False)
+    path_type: Mapped[str] = mapped_column(String(50), default="static")
+    offset_start_x: Mapped[int] = mapped_column(Integer, default=0)
+    offset_start_y: Mapped[int] = mapped_column(Integer, default=0)
+    offset_end_x: Mapped[int] = mapped_column(Integer, default=0)
+    offset_end_y: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Entry animation configuration
+    entry_type: Mapped[str] = mapped_column(String(20), default=AnimationType.INSTANT.value)
+    entry_duration: Mapped[float] = mapped_column(Float, default=1.0)
+    entry_delay: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Exit animation configuration
+    exit_type: Mapped[str] = mapped_column(String(20), default=AnimationType.INSTANT.value)
+    exit_duration: Mapped[float] = mapped_column(Float, default=1.0)
+    exit_delay: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Guidance (optional, can inherit from base or be custom)
+    guidance_text: Mapped[str] = mapped_column(Text, default="")
+    guidance_text_en: Mapped[str] = mapped_column(Text, default="")
+    guidance_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Relationship back to storyline_character
+    storyline_character: Mapped["StorylineCharacterDB"] = relationship("StorylineCharacterDB", back_populates="segments")
 
 
 class StorylineDB(Base):
@@ -189,11 +237,15 @@ class StorylineDB(Base):
 
 class Segment(BaseModel):
     """Pydantic model for storyline segment data."""
+    id: Optional[str] = Field(default=None, description="Segment identifier")
     index: int = Field(..., ge=0, description="Segment order (0-based)")
+    start_time: float = Field(default=0.0, ge=0, description="Start time in seconds")
     duration: float = Field(..., gt=0, description="Duration in seconds")
     path_type: str = Field(default="static", description="Movement type")
     offset_start: List[int] = Field(default_factory=lambda: [0, 0], description="Starting position offset [x, y]")
     offset_end: List[int] = Field(default_factory=lambda: [0, 0], description="Ending position offset [x, y]")
+    entry_animation: Optional[dict] = Field(default=None, description="Entry animation config")
+    exit_animation: Optional[dict] = Field(default=None, description="Exit animation config")
     guidance_text: str = Field(default="", description="Chinese guidance text")
     guidance_text_en: str = Field(default="", description="English guidance text")
     guidance_image: Optional[str] = Field(default=None, description="Path to guidance image")
@@ -446,8 +498,12 @@ class TimelineSegment(BaseModel):
     start_time: float = Field(default=0.0, ge=0, description="Start time in seconds")
     duration: float = Field(default=10.0, gt=0, description="Duration in seconds")
     path_type: str = Field(default="static", description="Movement type")
-    offset_start: List[int] = Field(default_factory=lambda: [0, 0], description="Starting position offset [x, y]")
-    offset_end: List[int] = Field(default_factory=lambda: [0, 0], description="Ending position offset [x, y]")
+    # Path coordinates (normalized 0-1)
+    offset_start: List[float] = Field(default_factory=lambda: [0.1, 0.5], description="Starting position [x, y] normalized 0-1")
+    offset_end: List[float] = Field(default_factory=lambda: [0.9, 0.5], description="Ending position [x, y] normalized 0-1")
+    # Waypoints for curved paths
+    path_waypoints: Optional[List[List[float]]] = Field(default=None, description="Waypoints [[x1,y1], [x2,y2], ...] normalized 0-1")
+    path_draw_type: str = Field(default="linear", description="Path draw type: linear, bezier, freehand")
     entry_animation: AnimationConfig = Field(default_factory=AnimationConfig, description="Entry animation config")
     exit_animation: AnimationConfig = Field(default_factory=AnimationConfig, description="Exit animation config")
     guidance_text: str = Field(default="", description="Chinese guidance text")
@@ -457,15 +513,16 @@ class TimelineSegment(BaseModel):
     @field_validator('path_type')
     @classmethod
     def validate_path_type(cls, v: str) -> str:
-        if v not in VALID_PATH_TYPES:
-            raise ValueError(f"Invalid path_type. Must be one of: {VALID_PATH_TYPES}")
+        valid_types = VALID_PATH_TYPES + ['linear', 'bezier', 'freehand']
+        if v not in valid_types:
+            raise ValueError(f"Invalid path_type. Must be one of: {valid_types}")
         return v
 
     @field_validator('offset_start', 'offset_end')
     @classmethod
-    def validate_offset(cls, v: List[int]) -> List[int]:
+    def validate_offset(cls, v: List[float]) -> List[float]:
         if len(v) != 2:
-            raise ValueError("Offset must be a list of exactly 2 integers [x, y]")
+            raise ValueError("Offset must be a list of exactly 2 numbers [x, y]")
         return v
 
     class Config:
