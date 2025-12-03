@@ -8,7 +8,7 @@ export enum AppState {
   SCENE_SELECT = 'SCENE_SELECT',
   CHARACTER_SELECT = 'CHARACTER_SELECT',
   SEGMENT_GUIDE = 'SEGMENT_GUIDE',
-  SEGMENT_COUNTDOWN = 'SEGMENT_COUNTDOWN',
+  // SEGMENT_COUNTDOWN removed - now handled within SEGMENT_RECORD
   SEGMENT_RECORD = 'SEGMENT_RECORD',
   SEGMENT_REVIEW = 'SEGMENT_REVIEW',
   RENDER_WAIT = 'RENDER_WAIT',
@@ -39,6 +39,8 @@ export interface StateContext {
   sceneId?: string;
   characterId?: string;
   videoPath?: string;  // Resolved video path (character-specific or default) - Requirements 3.4
+  videoDuration?: number;  // Video duration in seconds for auto-reset timing
+  apiBaseUrl?: string;  // API base URL for reconstructing video URLs
   availableCharacters?: CharacterOption[];
   currentSegment: number;
   totalSegments: number;
@@ -56,8 +58,7 @@ const VALID_TRANSITIONS: Record<AppState, AppState[]> = {
   [AppState.IDLE]: [AppState.SCENE_SELECT],
   [AppState.SCENE_SELECT]: [AppState.CHARACTER_SELECT, AppState.SEGMENT_GUIDE, AppState.IDLE],
   [AppState.CHARACTER_SELECT]: [AppState.SEGMENT_GUIDE, AppState.SCENE_SELECT, AppState.IDLE],
-  [AppState.SEGMENT_GUIDE]: [AppState.SEGMENT_COUNTDOWN, AppState.IDLE],
-  [AppState.SEGMENT_COUNTDOWN]: [AppState.SEGMENT_RECORD, AppState.IDLE],
+  [AppState.SEGMENT_GUIDE]: [AppState.SEGMENT_RECORD, AppState.IDLE], // Direct to RECORD
   [AppState.SEGMENT_RECORD]: [AppState.SEGMENT_REVIEW, AppState.IDLE],
   [AppState.SEGMENT_REVIEW]: [
     AppState.SEGMENT_GUIDE, // Re-record
@@ -176,7 +177,6 @@ export class StateMachine {
   private validateStateContext(state: AppState): void {
     switch (state) {
       case AppState.SEGMENT_GUIDE:
-      case AppState.SEGMENT_COUNTDOWN:
       case AppState.SEGMENT_RECORD:
       case AppState.SEGMENT_REVIEW:
         if (!this.context.sessionId) {

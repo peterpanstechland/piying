@@ -17,6 +17,20 @@ class SegmentConfig(BaseModel):
     offset_start: list[int] = Field(..., description="Starting offset [x, y]")
     offset_end: list[int] = Field(..., description="Ending offset [x, y]")
     
+    # Path configuration
+    path_waypoints: list[list[int]] = Field(default_factory=list, description="Path waypoints [[x1,y1], [x2,y2], ...]")
+    path_draw_type: str = Field(default="linear", description="Path draw type: linear, bezier, freehand")
+    
+    # Entry animation
+    entry_type: str = Field(default="instant", description="Entry animation type")
+    entry_duration: float = Field(default=1.0, ge=0, description="Entry animation duration in seconds")
+    entry_delay: float = Field(default=0.0, ge=0, description="Entry animation delay in seconds")
+    
+    # Exit animation
+    exit_type: str = Field(default="instant", description="Exit animation type")
+    exit_duration: float = Field(default=1.0, ge=0, description="Exit animation duration in seconds")
+    exit_delay: float = Field(default=0.0, ge=0, description="Exit animation delay in seconds")
+    
     @field_validator('offset_start', 'offset_end')
     @classmethod
     def validate_offset(cls, v):

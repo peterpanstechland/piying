@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 class CharacterPath:
     """Calculates character position offsets based on time and path configuration"""
     
-    def __init__(self, offset_start: List[int], offset_end: List[int], duration: float):
+    def __init__(self, offset_start: List[int], offset_end: List[int], duration: float, 
+                 waypoints: List[List[int]] = None, path_draw_type: str = "linear"):
         """
         Initialize CharacterPath
         
@@ -25,10 +26,14 @@ class CharacterPath:
             offset_start: Starting offset [x, y]
             offset_end: Ending offset [x, y]
             duration: Duration of this path segment in seconds
+            waypoints: Optional waypoints for complex paths [[x1,y1], [x2,y2], ...]
+            path_draw_type: Type of path drawing: 'linear', 'bezier', 'freehand'
         """
         self.offset_start = np.array(offset_start, dtype=float)
         self.offset_end = np.array(offset_end, dtype=float)
         self.duration = duration
+        self.waypoints = [np.array(wp, dtype=float) for wp in (waypoints or [])]
+        self.path_draw_type = path_draw_type
     
     def get_offset(self, time: float) -> Tuple[int, int]:
         """
@@ -45,10 +50,42 @@ class CharacterPath:
         if time >= self.duration:
             return int(self.offset_end[0]), int(self.offset_end[1])
         
-        # Linear interpolation
         progress = time / self.duration
-        offset = self.offset_start + (self.offset_end - self.offset_start) * progress
+        
+        # Use waypoints if available
+        if self.waypoints:
+            offset = self._interpolate_with_waypoints(progress)
+        else:
+            # Linear interpolation
+            offset = self.offset_start + (self.offset_end - self.offset_start) * progress
         return int(offset[0]), int(offset[1])
+    
+    def _interpolate_with_waypoints(self, progress: float) -> np.ndarray:
+        """
+        Interpolate position using waypoints
+        
+        Args:
+            progress: Progress from 0 to 1
+            
+        Returns:
+            Interpolated offset as numpy array
+        """
+        # Build full path: start -> waypoints -> end
+        all_points = [self.offset_start] + self.waypoints + [self.offset_end]
+        
+        if len(all_points) < 2:
+            return self.offset_start
+        
+        # Calculate segment length
+        segment_count = len(all_points) - 1
+        segment_index = min(int(progress * segment_count), segment_count - 1)
+        segment_progress = (progress * segment_count) - segment_index
+        
+        # Linear interpolation between waypoints
+        start_point = all_points[segment_index]
+        end_point = all_points[segment_index + 1]
+        
+        return start_point + (end_point - start_point) * segment_progress
 
 
 class VideoRenderer:
@@ -88,6 +125,60 @@ class VideoRenderer:
         (0, 11),   # Nose to left shoulder (approximate neck)
         (0, 12),   # Nose to right shoulder (approximate neck)
     ]
+    
+    def _calculate_animation_alpha(self, segment_time: float, segment_duration: float, 
+                                   entry_type: str, entry_duration: float, entry_delay: float,
+                                   exit_type: str, exit_duration: float, exit_delay: float) -> float:
+        """
+        Calculate alpha (opacity) value based on entry/exit animations
+        
+        Args:
+            segment_time: Current time within segment (seconds)
+            segment_duration: Total segment duration (seconds)
+            entry_type: Entry animation type ('instant', 'fade', 'slide')
+            entry_duration: Entry animation duration (seconds)
+            entry_delay: Entry animation delay (seconds)
+            exit_type: Exit animation type ('instant', 'fade', 'slide')
+            exit_duration: Exit animation duration (seconds)
+            exit_delay: Exit animation delay (seconds)
+            
+        Returns:
+            Alpha value from 0.0 (transparent) to 1.0 (opaque)
+        """
+        # Entry phase
+        if segment_time < entry_delay:
+            # Before entry starts - invisible
+            return 0.0
+        elif segment_time < entry_delay + entry_duration:
+            # During entry animation
+            if entry_type == 'instant':
+                return 1.0
+            elif entry_type in ['fade', 'slide']:
+                # Linear fade in
+                progress = (segment_time - entry_delay) / entry_duration
+                return progress
+            else:
+                return 1.0
+        
+        # Exit phase
+        exit_start_time = segment_duration - exit_duration - exit_delay
+        if segment_time >= exit_start_time + exit_delay:
+            # During exit animation
+            if exit_type == 'instant':
+                return 0.0
+            elif exit_type in ['fade', 'slide']:
+                # Linear fade out
+                time_in_exit = segment_time - (exit_start_time + exit_delay)
+                progress = 1.0 - (time_in_exit / exit_duration)
+                return max(0.0, progress)
+            else:
+                return 1.0
+        elif segment_time >= exit_start_time:
+            # In exit delay period - still visible
+            return 1.0
+        
+        # Middle phase - fully visible
+        return 1.0
     
     def __init__(self, scene_config: SceneConfig, output_dir: str = None):
         """
@@ -132,16 +223,52 @@ class VideoRenderer:
         
         logger.info(
             f"Starting video rendering for session {session.id}",
-            extra={"context": {"session_id": session.id, "scene_id": session.scene_id}}
+            extra={"context": {"session_id": session.id, "scene_id": session.scene_id, "character_id": session.character_id}}
         )
         
-        # Load base video (resolve path relative to project root)
-        base_video_path = self.project_root / self.scene_config.base_video_path
+        # Determine which video to use as base
+        # If session has character_id, try to load character-specific video
+        base_video_path = None
+        
+        if session.character_id:
+            # Try to get character-specific video path from database
+            try:
+                from ..services.admin.character_video_service import character_video_service
+                from ..database import async_session_maker
+                import asyncio
+                
+                async def get_char_video():
+                    async with async_session_maker() as db:
+                        return await character_video_service.get_character_video_path(
+                            db, session.scene_id, session.character_id
+                        )
+                
+                # Run async function in sync context
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                char_video_path = loop.run_until_complete(get_char_video())
+                loop.close()
+                
+                if char_video_path:
+                    # Character-specific video exists
+                    # Path format: "storylines/{id}/videos/{char_id}.mp4"
+                    base_video_path = self.project_root / "backend" / "data" / char_video_path
+                    logger.info(f"Using character-specific video: {base_video_path}")
+            except Exception as e:
+                logger.warning(f"Failed to load character-specific video path: {e}")
+        
+        # Fallback to base video from scene config
+        if base_video_path is None or not base_video_path.exists():
+            if base_video_path:
+                logger.warning(f"Character-specific video not found: {base_video_path}, falling back to base video")
+            base_video_path = self.project_root / self.scene_config.base_video_path
+            logger.info(f"Using base video from scene config: {base_video_path}")
+        
         if not base_video_path.exists():
-            error_msg = f"Base video not found: {base_video_path}"
+            error_msg = f"Video file not found: {base_video_path}"
             logger.error(
                 error_msg,
-                extra={"context": {"session_id": session.id, "base_video_path": str(base_video_path)}}
+                extra={"context": {"session_id": session.id, "video_path": str(base_video_path)}}
             )
             raise ValueError(error_msg)
         
@@ -167,17 +294,38 @@ class VideoRenderer:
         
         # Prepare output video
         output_path = self.output_dir / f"final_{session.id}.mp4"
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
-        out = cv2.VideoWriter(
-            str(output_path),
-            fourcc,
-            self.fps,
-            (self.frame_width, self.frame_height)
-        )
         
-        if not out.isOpened():
+        # Try multiple codec options for better compatibility
+        codec_options = [
+            ('mp4v', 'MP4V codec'),  # MPEG-4 Part 2
+            ('MJPG', 'MJPEG codec'),  # Motion JPEG
+            ('DIVX', 'DIVX codec'),   # DIVX
+            ('avc1', 'H.264 codec'),  # H.264 (fallback)
+        ]
+        
+        out = None
+        for codec_code, codec_name in codec_options:
+            try:
+                fourcc = cv2.VideoWriter_fourcc(*codec_code)
+                test_out = cv2.VideoWriter(
+                    str(output_path),
+                    fourcc,
+                    self.fps,
+                    (self.frame_width, self.frame_height)
+                )
+                if test_out.isOpened():
+                    out = test_out
+                    logger.info(f"Using {codec_name} ({codec_code}) for video encoding")
+                    break
+                else:
+                    test_out.release()
+            except Exception as e:
+                logger.warning(f"Failed to initialize {codec_name}: {e}")
+                continue
+        
+        if out is None or not out.isOpened():
             cap.release()
-            raise ValueError("Failed to create output video writer")
+            raise ValueError("Failed to create output video writer with any available codec")
         
         # Build character paths for each segment
         character_paths = []
@@ -185,7 +333,9 @@ class VideoRenderer:
             path = CharacterPath(
                 segment_config.offset_start,
                 segment_config.offset_end,
-                segment_config.duration
+                segment_config.duration,
+                waypoints=segment_config.path_waypoints,
+                path_draw_type=segment_config.path_draw_type
             )
             character_paths.append(path)
         
@@ -208,11 +358,28 @@ class VideoRenderer:
                 segment_index, segment_time = self._get_segment_at_time(global_time, session.segments)
                 
                 if segment_index is not None and segment_index < len(character_paths):
-                    # Get character offset for this time
-                    offset = character_paths[segment_index].get_offset(segment_time)
+                    # Get segment config for animation parameters
+                    segment_config = self.scene_config.segments[segment_index]
                     
-                    # Draw shadow puppet
-                    frame = self._draw_puppet(frame, pose_frame.landmarks, offset)
+                    # Calculate alpha based on entry/exit animations
+                    alpha = self._calculate_animation_alpha(
+                        segment_time,
+                        segment_config.duration,
+                        segment_config.entry_type,
+                        segment_config.entry_duration,
+                        segment_config.entry_delay,
+                        segment_config.exit_type,
+                        segment_config.exit_duration,
+                        segment_config.exit_delay
+                    )
+                    
+                    # Only draw if alpha > 0
+                    if alpha > 0.0:
+                        # Get character offset for this time
+                        offset = character_paths[segment_index].get_offset(segment_time)
+                        
+                        # Draw shadow puppet with alpha
+                        frame = self._draw_puppet(frame, pose_frame.landmarks, offset, alpha)
             
             # Write frame to output
             out.write(frame)
@@ -319,15 +486,17 @@ class VideoRenderer:
         self,
         frame: np.ndarray,
         landmarks: List[List[float]],
-        offset: Tuple[int, int]
+        offset: Tuple[int, int],
+        alpha: float = 1.0
     ) -> np.ndarray:
         """
-        Draw shadow puppet skeleton on frame
+        Draw shadow puppet skeleton on frame with alpha blending
         
         Args:
             frame: Video frame to draw on
             landmarks: Pose landmarks as list of [x, y, z, visibility]
             offset: Position offset (x, y) for character placement
+            alpha: Opacity value from 0.0 (transparent) to 1.0 (opaque)
             
         Returns:
             Frame with puppet drawn
@@ -335,6 +504,12 @@ class VideoRenderer:
         if not landmarks or len(landmarks) < 33:
             # MediaPipe Pose has 33 landmarks
             return frame
+        
+        if alpha <= 0.0:
+            return frame
+        
+        # Create overlay for alpha blending
+        overlay = frame.copy()
         
         # Convert normalized coordinates to pixel coordinates
         h, w = frame.shape[:2]
@@ -362,7 +537,7 @@ class VideoRenderer:
             
             points.append((px, py))
         
-        # Draw connections (skeleton)
+        # Draw connections (skeleton) on overlay
         for connection in self.POSE_CONNECTIONS:
             start_idx, end_idx = connection
             
@@ -377,18 +552,21 @@ class VideoRenderer:
             
             # Draw line with shadow puppet style (black with slight transparency)
             # Create shadow effect by drawing thicker black line first
-            cv2.line(frame, start_point, end_point, (0, 0, 0), 8, cv2.LINE_AA)
+            cv2.line(overlay, start_point, end_point, (0, 0, 0), 8, cv2.LINE_AA)
             # Then draw thinner colored line on top
-            cv2.line(frame, start_point, end_point, (50, 50, 50), 5, cv2.LINE_AA)
+            cv2.line(overlay, start_point, end_point, (50, 50, 50), 5, cv2.LINE_AA)
         
-        # Draw joints as circles
+        # Draw joints as circles on overlay
         for point in points:
             if point is None:
                 continue
             
             # Draw shadow
-            cv2.circle(frame, point, 8, (0, 0, 0), -1, cv2.LINE_AA)
+            cv2.circle(overlay, point, 8, (0, 0, 0), -1, cv2.LINE_AA)
             # Draw joint
-            cv2.circle(frame, point, 5, (50, 50, 50), -1, cv2.LINE_AA)
+            cv2.circle(overlay, point, 5, (50, 50, 50), -1, cv2.LINE_AA)
+        
+        # Blend overlay with original frame using alpha
+        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
         
         return frame

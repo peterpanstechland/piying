@@ -3,6 +3,7 @@ Public storyline API endpoints for frontend.
 Returns only published storylines with cover images, synopsis, and character options.
 Requirements 10.1, 10.2, 10.3
 """
+import logging
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -20,6 +21,8 @@ from ..models.admin.storyline import (
 )
 from ..services.admin.storyline_service import storyline_service
 from ..services.admin.character_video_service import character_video_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/storylines", tags=["Public Storylines"])
 
@@ -71,6 +74,10 @@ class PublicStorylineResponse(BaseModel):
     
     # Cover image
     cover_image: Optional[CoverImage] = Field(default=None, description="Cover image paths")
+    
+    # Character and segment counts
+    character_count: int = Field(default=0, description="Number of available characters")
+    segment_count: int = Field(default=0, description="Number of segments in this storyline")
     
     # Character options
     characters: List[PublicCharacterOption] = Field(
@@ -247,10 +254,225 @@ async def get_published_storyline(
         display_order=storyline.display_order or 0,
         video_duration=storyline.video_duration or 0.0,
         cover_image=cover_image,
+        character_count=len(characters),
+        segment_count=len(segments),
         characters=characters,
         segments=segments,
     )
 
+
+
+@router.get("/{storyline_id}/video/file")
+async def get_storyline_video_file(
+    storyline_id: str,
+    character_id: Optional[str] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+):
+    """
+    Get the actual video file for a storyline (with optional character-specific video).
+    
+    This endpoint serves the video file itself, not just the path.
+    Used by the frontend to display background video during recording.
+    
+    Args:
+        storyline_id: The storyline ID
+        character_id: Optional character ID for character-specific video
+    
+    Returns:
+        FileResponse with the video file
+    
+    Raises:
+        404: Storyline not found or video not available
+    """
+    import os
+    from fastapi.responses import FileResponse
+    
+    # Get storyline
+    storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+    
+    if storyline is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Check if storyline is published
+    if storyline.status != StorylineStatus.PUBLISHED.value:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Determine which video to serve
+    video_path = None
+    
+    if character_id:
+        # Try to get character-specific video
+        character_video_path = await character_video_service.get_character_video_path(
+            db, storyline_id, character_id
+        )
+        if character_video_path:
+            video_path = character_video_path
+    
+    # Fall back to base video if no character-specific video
+    if not video_path:
+        video_path = storyline.base_video_path
+    
+    if not video_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No video available for this storyline",
+        )
+    
+    # Build full path - data directory is at backend/data
+    # __file__ is at backend/app/api/storylines.py
+    # We need to go up to backend/ then into data/
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # backend/
+    data_dir = os.path.join(backend_dir, "data")
+    full_path = os.path.join(data_dir, video_path)
+    
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Video path resolution: video_path={video_path}, data_dir={data_dir}, full_path={full_path}, exists={os.path.exists(full_path)}")
+    
+    if not os.path.exists(full_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Video file not found on disk: {full_path}",
+        )
+    
+    # Serve video file
+    return FileResponse(
+        full_path,
+        media_type="video/mp4",
+        filename=os.path.basename(full_path),
+        headers={"Accept-Ranges": "bytes"},
+    )
+
+
+@router.get("/{storyline_id}/characters/{character_id}/segments")
+async def get_character_video_segments(
+    storyline_id: str,
+    character_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """
+    Get segment configuration for a character-specific video.
+    
+    This endpoint returns the character's own segment configuration if it exists,
+    otherwise returns the base storyline segments.
+    
+    Requirements 3.2, 3.3:
+    - Returns character-specific segments if they exist
+    - Falls back to storyline's base segments if no specific segments exist
+    
+    This endpoint is public and does not require authentication.
+    It is used by the frontend to get the correct segment count and configuration
+    when a character is selected.
+    
+    Args:
+        storyline_id: The storyline ID
+        character_id: The character ID
+    
+    Returns:
+        Dictionary with segment_count and segments array
+    
+    Raises:
+        404: Storyline not found
+    """
+    from sqlalchemy import select
+    from ..models.admin.storyline import StorylineCharacterDB, CharacterVideoSegmentDB
+    
+    # Get storyline to verify it exists
+    storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+    
+    if storyline is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Check if storyline is published
+    if storyline.status != StorylineStatus.PUBLISHED.value:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    segments = []
+    
+    # Try to get character-specific video segments
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        logger.info(f"[CharacterSegments] Querying character-specific segments for storyline={storyline_id}, character={character_id}")
+        
+        result = await db.execute(
+            select(StorylineCharacterDB)
+            .options(selectinload(StorylineCharacterDB.segments))
+            .where(
+                (StorylineCharacterDB.storyline_id == storyline_id) &
+                (StorylineCharacterDB.character_id == character_id)
+            )
+        )
+        storyline_character = result.scalar_one_or_none()
+        
+        if storyline_character:
+            logger.info(f"[CharacterSegments] Found storyline_character association, segments count: {len(storyline_character.segments) if storyline_character.segments else 0}")
+        else:
+            logger.info(f"[CharacterSegments] No storyline_character association found")
+        
+        if storyline_character and storyline_character.segments:
+            # Use character-specific segments
+            logger.info(f"[CharacterSegments] Using character-specific segments: {len(storyline_character.segments)} segments")
+            for seg in sorted(storyline_character.segments, key=lambda x: x.index):
+                segments.append({
+                    "index": seg.index,
+                    "duration": seg.duration,
+                    "path_type": seg.path_type or "static",
+                    "offset_start": [int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
+                    "offset_end": [int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                    "entry_type": seg.entry_type or "instant",
+                    "entry_duration": seg.entry_duration or 1.0,
+                    "entry_delay": seg.entry_delay or 0.0,
+                    "exit_type": seg.exit_type or "instant",
+                    "exit_duration": seg.exit_duration or 1.0,
+                    "exit_delay": seg.exit_delay or 0.0,
+                })
+            logger.info(f"[CharacterSegments] Character-specific segments loaded: {segments}")
+    except Exception as e:
+        logger.warning(f"[CharacterSegments] Failed to load character-specific segments: {e}")
+    
+    # If no character-specific segments, use base storyline segments
+    if not segments and storyline.segments:
+        logger.info(f"[CharacterSegments] No character-specific segments, using base storyline segments: {len(storyline.segments)} segments")
+        for seg in sorted(storyline.segments, key=lambda x: x.index):
+            segments.append({
+                "index": seg.index,
+                "duration": seg.duration,
+                "path_type": seg.path_type or "static",
+                "offset_start": [int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
+                "offset_end": [int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                "entry_type": seg.entry_type or "instant",
+                "entry_duration": seg.entry_duration or 1.0,
+                "entry_delay": seg.entry_delay or 0.0,
+                "exit_type": seg.exit_type or "instant",
+                "exit_duration": seg.exit_duration or 1.0,
+                "exit_delay": seg.exit_delay or 0.0,
+            })
+        logger.info(f"[CharacterSegments] Base storyline segments loaded: {segments}")
+    
+    result = {
+        "storyline_id": storyline_id,
+        "character_id": character_id,
+        "segment_count": len(segments),
+        "segments": segments,
+    }
+    
+    logger.info(f"[CharacterSegments] Returning result: segment_count={result['segment_count']}")
+    
+    return result
 
 
 @router.get("/{storyline_id}/video", response_model=CharacterVideoPathResponse)

@@ -16,7 +16,7 @@ import {
 } from './components';
 import type { CharacterOption } from './components';
 import { SegmentGuidancePage } from './components/SegmentGuidancePage';
-import { CountdownPage } from './components/CountdownPage';
+// CountdownPage removed - countdown now handled in RecordingPage
 import { RecordingPage } from './components/RecordingPage';
 import { SegmentReviewPage } from './components/SegmentReviewPage';
 import { RenderWaitPage } from './components/RenderWaitPage';
@@ -129,6 +129,7 @@ function App() {
   const recorderRef = useRef<MotionCaptureRecorder>(new MotionCaptureRecorder());
   const apiClientRef = useRef<APIClient>(new APIClient());
   const recordedSegmentsRef = useRef<SegmentData[]>([]);
+  const poseCallbackRef = useRef<((landmarks: PoseLandmark[]) => void) | null>(null);
 
   // Setup global error handling
   useEffect(() => {
@@ -301,8 +302,16 @@ function App() {
         // Tracked person left during recording - pause recording
         console.warn('Tracked person left during recording');
         // TODO: Implement recording pause logic
-      } else if (result.pose && recorderRef.current.isRecordingActive()) {
-        recorderRef.current.addFrame(result.pose);
+      } else if (result.pose) {
+        // Update character renderer with pose data
+        if (poseCallbackRef.current) {
+          poseCallbackRef.current(result.pose);
+        }
+        
+        // Add frame to recorder if recording is active
+        if (recorderRef.current.isRecordingActive()) {
+          recorderRef.current.addFrame(result.pose);
+        }
       }
     }
 
@@ -333,8 +342,23 @@ function App() {
       setSelectedScene(scene);
       
       try {
-        // Fetch storyline details to get available characters
+        // Fetch storyline details to get available characters and segments
         const storylineDetail = await apiClientRef.current.getPublishedStorylineDetail(sceneId);
+        
+        // Update scene with detailed information
+        const updatedScene = {
+          ...scene,
+          segments: storylineDetail.segments || scene.segments,
+          segment_count: storylineDetail.segment_count || scene.segment_count,
+          character_count: storylineDetail.character_count || scene.character_count,
+        };
+        setSelectedScene(updatedScene);
+        
+        console.log('Storyline detail loaded:', {
+          segment_count: updatedScene.segment_count,
+          segments: updatedScene.segments?.length,
+          character_count: updatedScene.character_count,
+        });
         
         if (storylineDetail.characters && storylineDetail.characters.length > 0) {
           // Has characters - transition to character selection
@@ -351,8 +375,10 @@ function App() {
       }
       
       // No characters or fetch failed - proceed directly to session creation
-      // No character-specific video path needed when no characters
-      await createSessionAndStartRecording(scene, null, undefined);
+      // Use base video URL (no character_id parameter)
+      const videoUrl = `${apiClientRef.current.getBaseUrl()}/api/storylines/${sceneId}/video/file`;
+      // Use selectedScene which has been updated with segment info
+      await createSessionAndStartRecording(selectedScene || scene, null, videoUrl);
     }
   }, [scenes]);
 
@@ -377,13 +403,27 @@ function App() {
       // Reset recorded segments
       recordedSegmentsRef.current = [];
       
+      // Log segment information before transition
+      console.log('[CreateSession] Transitioning to SEGMENT_GUIDE with context:', {
+        sessionId: response.session_id,
+        sceneId: scene.id,
+        characterId: characterId || undefined,
+        totalSegments: scene.segment_count || scene.segments?.length || 3,
+        segments_from_scene: scene.segments?.length,
+        segment_count_from_scene: scene.segment_count,
+        segments: scene.segments,
+      });
+      
       // Transition to segment guidance
       stateMachineRef.current.transition(AppState.SEGMENT_GUIDE, {
         sessionId: response.session_id,
         sceneId: scene.id,
         characterId: characterId || undefined,
         videoPath: videoPath,
-        totalSegments: scene.segment_count || scene.segments.length || 3,
+        apiBaseUrl: apiClientRef.current.getBaseUrl(),
+        videoDuration: scene.video_duration || 30, // Store video duration for auto-reset
+        totalSegments: scene.segment_count || scene.segments?.length || 3,
+        segments: scene.segments || [], // Store segment configurations
         currentSegment: 0,
       });
     } catch (error) {
@@ -422,31 +462,60 @@ function App() {
     
     if (selectedScene) {
       try {
-        // Fetch character-specific video path
-        // Property 4: Video Path Resolution - returns character-specific video if exists, else base video
-        const videoPathResponse = await apiClientRef.current.getCharacterVideoPath(
+        // Fetch character-specific video segments configuration
+        console.log('[CharacterSelect] Fetching character-specific segments:', {
+          storyline_id: selectedScene.id,
+          character_id: characterId,
+        });
+        
+        const segmentData = await apiClientRef.current.getCharacterVideoSegments(
           selectedScene.id,
           characterId
         );
         
-        console.log(
-          'Video path resolved:',
-          videoPathResponse.video_path,
-          'is character-specific:',
-          videoPathResponse.is_character_specific
-        );
+        console.log('[CharacterSelect] Character video segments loaded:', {
+          segment_count: segmentData.segment_count,
+          segments_length: segmentData.segments?.length,
+          segments_detail: segmentData.segments,
+        });
         
-        // Create session with character ID and resolved video path
+        // Update selectedScene with character-specific segment info
+        const updatedScene = {
+          ...selectedScene,
+          segments: segmentData.segments || selectedScene.segments,
+          segment_count: segmentData.segment_count || selectedScene.segment_count,
+        };
+        
+        console.log('[CharacterSelect] Updated scene:', {
+          segment_count: updatedScene.segment_count,
+          segments_length: updatedScene.segments?.length,
+        });
+        
+        setSelectedScene(updatedScene);
+        
+        // Build video URL for character-specific or base video
+        // Use the new /video/file endpoint that serves the actual video file
+        const videoUrl = `${apiClientRef.current.getBaseUrl()}/api/storylines/${selectedScene.id}/video/file?character_id=${characterId}`;
+        
+        console.log('Video URL for recording:', videoUrl);
+        
+        // Create session with character ID and video URL
+        // IMPORTANT: Use updatedScene instead of selectedScene to get the correct segment count
+        await createSessionAndStartRecording(
+          updatedScene, 
+          characterId, 
+          videoUrl
+        );
+      } catch (error) {
+        console.warn('[CharacterSelect] Failed to fetch character-specific segments, using base segments:', error);
+        
+        // Even if fetching fails, still create session with base scene
+        const videoUrl = `${apiClientRef.current.getBaseUrl()}/api/storylines/${selectedScene.id}/video/file?character_id=${characterId}`;
         await createSessionAndStartRecording(
           selectedScene, 
           characterId, 
-          videoPathResponse.video_path
+          videoUrl
         );
-      } catch (error) {
-        console.warn('Failed to fetch character video path, using default:', error);
-        // Fall back to creating session without specific video path
-        // The backend will use the base video path
-        await createSessionAndStartRecording(selectedScene, characterId);
       }
     }
   }, [selectedScene, createSessionAndStartRecording]);
@@ -463,20 +532,17 @@ function App() {
   // Handle guidance complete - transition to countdown
   const handleGuidanceComplete = () => {
     if (stateMachineRef.current) {
-      stateMachineRef.current.transition(AppState.SEGMENT_COUNTDOWN);
+      const context = stateMachineRef.current.getContext();
+      console.log('Transitioning to SEGMENT_RECORD with context:', {
+        videoPath: context.videoPath,
+        characterId: context.characterId,
+        sceneId: context.sceneId,
+      });
+      stateMachineRef.current.transition(AppState.SEGMENT_RECORD);
     }
   };
 
-  // Handle countdown complete - transition to recording
-  const handleCountdownComplete = () => {
-    if (stateMachineRef.current) {
-      stateMachineRef.current.transition(AppState.SEGMENT_RECORD);
-      // Set recording state in camera service for multi-person tracking persistence
-      if (cameraServiceRef.current) {
-        cameraServiceRef.current.setRecordingState(true);
-      }
-    }
-  };
+  // Countdown removed - recording state is now set in RecordingPage
 
   // Handle recording complete - stop recording and transition to review
   const handleRecordingComplete = () => {
@@ -582,10 +648,19 @@ function App() {
         // More segments to record - go to next segment guidance
         console.log('Moving to next segment');
         if (stateMachineRef.current) {
-          // Update context with current recorded segments
+          // Update context with current recorded segments and preserve other fields
           stateMachineRef.current.transition(AppState.SEGMENT_GUIDE, {
             currentSegment: context.currentSegment + 1,
             recordedSegments: [...recordedSegmentsRef.current],
+            // Preserve existing context fields
+            sessionId: context.sessionId,
+            sceneId: context.sceneId,
+            characterId: context.characterId,
+            videoPath: context.videoPath,
+            apiBaseUrl: context.apiBaseUrl,
+            videoDuration: context.videoDuration,
+            totalSegments: context.totalSegments,
+            segments: context.segments, // Preserve segment configurations
           });
         }
       }
@@ -721,22 +796,46 @@ function App() {
           />
         );
       
-      case AppState.SEGMENT_COUNTDOWN:
-        return (
-          <CountdownPage
-            videoElement={videoElement}
-            onCountdownComplete={handleCountdownComplete}
-          />
-        );
-      
       case AppState.SEGMENT_RECORD:
+        // Reconstruct video URL if needed (in case of page refresh)
+        let recordingVideoPath = context?.videoPath;
+        if (!recordingVideoPath && context?.sceneId && context?.characterId && context?.apiBaseUrl) {
+          recordingVideoPath = `${context.apiBaseUrl}/api/storylines/${context.sceneId}/video/file?character_id=${context.characterId}`;
+          console.log('Reconstructed video URL from context:', recordingVideoPath);
+        } else if (!recordingVideoPath && context?.sceneId && context?.apiBaseUrl) {
+          recordingVideoPath = `${context.apiBaseUrl}/api/storylines/${context.sceneId}/video/file`;
+          console.log('Reconstructed base video URL from context:', recordingVideoPath);
+        }
+        
+        // Get current segment configuration
+        const currentSegmentIndex = context?.currentSegment || 0;
+        const segments = context?.segments || [];
+        const currentSegmentConfig = segments[currentSegmentIndex];
+        const segmentDuration = currentSegmentConfig?.duration || 8; // Fallback to 8 seconds
+        const segmentGuidance = currentSegmentConfig?.guidance_text;
+        
+        console.log('Rendering SEGMENT_RECORD:', {
+          videoPath: recordingVideoPath,
+          segmentIndex: currentSegmentIndex,
+          segmentDuration,
+          segmentGuidance,
+          totalSegments: segments.length,
+        });
+        
         return (
           <RecordingPage
-            segmentIndex={context?.currentSegment || 0}
-            segmentDuration={8} // TODO: Get from scene config
+            segmentIndex={currentSegmentIndex}
+            segmentDuration={segmentDuration}
+            segmentGuidance={segmentGuidance}
+            characterId={context?.characterId}
+            videoPath={recordingVideoPath}
             videoElement={videoElement}
             recorder={recorderRef.current}
             onRecordingComplete={handleRecordingComplete}
+            onPoseDetected={(callback) => {
+              // Set up pose detection callback
+              poseCallbackRef.current = callback;
+            }}
           />
         );
       
@@ -769,11 +868,13 @@ function App() {
         );
       
       case AppState.FINAL_RESULT:
+        // Use video duration for auto-reset, with minimum of 10 seconds
+        const autoResetSeconds = Math.max(Math.ceil(context?.videoDuration || 30), 10);
         return (
           <FinalResultPage
             videoUrl={videoUrl || context?.videoUrl || ''}
             onReset={handleReset}
-            inactivityTimeoutSeconds={30}
+            inactivityTimeoutSeconds={autoResetSeconds}
             cursorPosition={handPosition}
             hoverDurationMs={3000}
           />

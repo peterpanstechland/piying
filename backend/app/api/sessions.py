@@ -28,17 +28,22 @@ session_manager = SessionManager()
 config_loader = ConfigLoader()
 
 
-async def _get_scene_config_from_storyline(scene_id: str) -> SceneConfig | None:
+async def _get_scene_config_from_storyline(scene_id: str, character_id: str = None) -> SceneConfig | None:
     """
     Try to load scene configuration from database storyline.
+    If character_id is provided and has character-specific video segments, use those.
+    Otherwise, use base storyline segments.
     
     Args:
         scene_id: Storyline ID (UUID format)
+        character_id: Optional character ID for character-specific video segments
         
     Returns:
         SceneConfig if found, None otherwise
     """
     from ..services.admin.storyline_service import storyline_service
+    from sqlalchemy import select
+    from ..models.admin.storyline import StorylineCharacterDB, CharacterVideoSegmentDB
     
     try:
         async with async_session_maker() as db:
@@ -52,18 +57,82 @@ async def _get_scene_config_from_storyline(scene_id: str) -> SceneConfig | None:
                 logger.error(f"Storyline {scene_id} has no base video")
                 return None
             
-            # Convert storyline segments to SegmentConfig format
+            # Try to load character-specific video segments if character_id provided
             segment_configs = []
-            if storyline.segments:
+            if character_id:
+                try:
+                    from sqlalchemy.orm import selectinload
+                    
+                    logger.info(f"[SceneConfig] Attempting to load character-specific segments for character_id={character_id}, scene_id={scene_id}")
+                    
+                    # Get storyline_character association with segments eagerly loaded
+                    result = await db.execute(
+                        select(StorylineCharacterDB)
+                        .options(selectinload(StorylineCharacterDB.segments))
+                        .where(
+                            (StorylineCharacterDB.storyline_id == scene_id) &
+                            (StorylineCharacterDB.character_id == character_id)
+                        )
+                    )
+                    storyline_character = result.scalar_one_or_none()
+                    
+                    if storyline_character:
+                        logger.info(f"[SceneConfig] Found storyline_character, segments: {len(storyline_character.segments) if storyline_character.segments else 0}")
+                    else:
+                        logger.info(f"[SceneConfig] No storyline_character found")
+                    
+                    if storyline_character and storyline_character.segments:
+                        # Load character-specific video segments
+                        logger.info(f"[SceneConfig] Loading {len(storyline_character.segments)} character-specific video segments for {character_id}")
+                        for seg in sorted(storyline_character.segments, key=lambda x: x.index):
+                            segment_configs.append(SegmentConfig(
+                                duration=seg.duration,
+                                path_type=seg.path_type or "static",
+                                offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
+                                offset_end=[int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                                path_waypoints=[],
+                                path_draw_type="linear",
+                                entry_type=seg.entry_type or "instant",
+                                entry_duration=seg.entry_duration or 1.0,
+                                entry_delay=seg.entry_delay or 0.0,
+                                exit_type=seg.exit_type or "instant",
+                                exit_duration=seg.exit_duration or 1.0,
+                                exit_delay=seg.exit_delay or 0.0,
+                            ))
+                        logger.info(f"[SceneConfig] Character-specific segments loaded: {len(segment_configs)} configs")
+                except Exception as e:
+                    logger.warning(f"[SceneConfig] Failed to load character-specific segments: {e}")
+            
+            # If no character-specific segments, use base storyline segments
+            if not segment_configs and storyline.segments:
+                logger.info(f"[SceneConfig] No character-specific segments found, using base storyline segments: {len(storyline.segments)} segments")
                 for seg in sorted(storyline.segments, key=lambda x: x.index):
+                    # Parse waypoints if available
+                    waypoints = []
+                    if seg.path_waypoints:
+                        try:
+                            import json
+                            waypoints = json.loads(seg.path_waypoints)
+                        except (json.JSONDecodeError, TypeError):
+                            waypoints = []
+                    
                     segment_configs.append(SegmentConfig(
                         duration=seg.duration,
                         path_type=seg.path_type or "static",
-                        offset_start=[seg.offset_start_x or 0, seg.offset_start_y or 0],
-                        offset_end=[seg.offset_end_x or 0, seg.offset_end_y or 0],
+                        offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
+                        offset_end=[int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                        path_waypoints=waypoints,
+                        path_draw_type=seg.path_draw_type or "linear",
+                        entry_type=seg.entry_type or "instant",
+                        entry_duration=seg.entry_duration or 1.0,
+                        entry_delay=seg.entry_delay or 0.0,
+                        exit_type=seg.exit_type or "instant",
+                        exit_duration=seg.exit_duration or 1.0,
+                        exit_delay=seg.exit_delay or 0.0,
                     ))
+                logger.info(f"[SceneConfig] Base storyline segments loaded: {len(segment_configs)} configs")
             
-            # If no segments, create a default one based on video duration
+            # If still no segments, create a default one based on video duration
             if not segment_configs:
                 segment_configs.append(SegmentConfig(
                     duration=storyline.video_duration or 30.0,
@@ -79,7 +148,7 @@ async def _get_scene_config_from_storyline(scene_id: str) -> SceneConfig | None:
                 base_video_path = f"backend/data/{base_video_path}"
             
             # Create SceneConfig from storyline
-            return SceneConfig(
+            scene_config = SceneConfig(
                 id=storyline.id,
                 name=storyline.name,
                 name_en=storyline.name_en or storyline.name,
@@ -89,6 +158,10 @@ async def _get_scene_config_from_storyline(scene_id: str) -> SceneConfig | None:
                 icon=storyline.icon or "⛏️",
                 segments=segment_configs,
             )
+            
+            logger.info(f"[SceneConfig] Created SceneConfig with {len(scene_config.segments)} segments for scene_id={scene_id}, character_id={character_id}")
+            
+            return scene_config
     except Exception as e:
         logger.error(f"Failed to load storyline {scene_id}: {e}")
         return None
@@ -274,8 +347,9 @@ async def _render_video_background(session_id: str):
         
         if scene_config is None:
             # Try to load from database storyline (UUID format scene_id)
+            # Pass character_id to load character-specific video segments if available
             logger.info(f"Scene {session.scene_id} not found in static config, trying database storyline")
-            scene_config = await _get_scene_config_from_storyline(session.scene_id)
+            scene_config = await _get_scene_config_from_storyline(session.scene_id, session.character_id)
         
         if scene_config is None:
             log_error_with_context(

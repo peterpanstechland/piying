@@ -371,6 +371,28 @@ export class APIClient {
   }
 
   /**
+   * Get character-specific video segments configuration
+   * Requirements 3.2, 3.3:
+   * - Returns character-specific segments if they exist
+   * - Falls back to storyline's base segments if no specific segments exist
+   * 
+   * @param storylineId - Storyline identifier
+   * @param characterId - Character identifier
+   * @returns Object with segment_count and segments array
+   */
+  async getCharacterVideoSegments(
+    storylineId: string,
+    characterId: string
+  ): Promise<{ storyline_id: string; character_id: string; segment_count: number; segments: any[] }> {
+    return this.retryRequest(async () => {
+      const response = await this.client.get(
+        `/api/storylines/${storylineId}/characters/${characterId}/segments`
+      );
+      return response.data;
+    });
+  }
+
+  /**
    * Process cached uploads (retry failed uploads)
    * @returns Number of successfully processed uploads
    */
