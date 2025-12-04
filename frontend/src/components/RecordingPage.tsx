@@ -111,15 +111,15 @@ export const RecordingPage = ({
   
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [isCalibrated, setIsCalibrated] = useState(false);
-  const [calibrationProgress, setCalibrationProgress] = useState(0);
+  
+  // 校准已在上一步完成，直接开始录制
+  const isCalibrated = true;
   
   const recordingStartedRef = useRef(false);
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CharacterRenderer | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
-  const poseDetectionCountRef = useRef(0);
   const canvasRecorderRef = useRef<CanvasRecorder | null>(null);
   const recordedVideoBlobRef = useRef<Blob | null>(null);
   
@@ -348,21 +348,6 @@ export const RecordingPage = ({
     
     // 使用处理后的数据更新角色
     renderer.updatePoseFromProcessed(processed);
-    
-    // 更新校准状态
-    if (processor.isCalibrated() && !isCalibrated) {
-      setIsCalibrated(true);
-      setCalibrationProgress(30);
-      console.log('✓ Auto-calibrated via PoseProcessor');
-    }
-    
-    // 更新校准进度（自动校准进行中）
-    if (!processor.isCalibrated()) {
-      poseDetectionCountRef.current++;
-      if (poseDetectionCountRef.current % 5 === 0) {
-        setCalibrationProgress(Math.min(poseDetectionCountRef.current, 29));
-      }
-    }
 
     // 录制姿态数据
     if (isRecording) {
@@ -375,7 +360,7 @@ export const RecordingPage = ({
       }));
       recorder.addFrame(recordLandmarks);
     }
-  }, [isCalibrated, isRecording, recorder, mirrorMode]);
+  }, [isRecording, recorder, mirrorMode]);
 
   // 注册姿态检测回调
   useEffect(() => {
@@ -503,16 +488,7 @@ export const RecordingPage = ({
 
       {/* 顶部：状态和引导 */}
       <div className="recording-header">
-        {!isCalibrated ? (
-          <div className="calibration-status">
-            <div className="calibration-text">
-              正在校准姿态... ({calibrationProgress}/30)
-            </div>
-            <div className="calibration-hint">
-              请站在摄像头前保持静止
-            </div>
-          </div>
-        ) : !isRecording ? (
+        {!isRecording ? (
           <div className="ready-status">
             <div className="ready-text">准备开始录制</div>
           </div>
