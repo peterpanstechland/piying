@@ -914,42 +914,67 @@ export default function CameraTestPage() {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Debug Panel - 姿态关键点数据 */}
-      {showDebugPanel && currentPose && (
-        <div className="debug-panel">
-          <h3>姿态数据 (关键点)</h3>
-          <div className="debug-grid">
-            {Object.entries(LANDMARK_NAMES).map(([idx, name]) => {
-              const lm = currentPose[parseInt(idx)]
-              if (!lm) return null
-              return (
-                <div key={idx} className="debug-item">
-                  <span className="debug-label">{name} ({idx})</span>
-                  <span className="debug-value">
-                    x: {lm.x.toFixed(3)}, y: {lm.y.toFixed(3)}
-                    {lm.visibility !== undefined && ` (${(lm.visibility * 100).toFixed(0)}%)`}
-                  </span>
+        {/* 底部调试区域 1：姿态数据 (对应视频下方) */}
+        {(showDebugPanel || showMotionDebugPanel) && (
+          <div className="debug-cell-left">
+            {showDebugPanel ? (
+              currentPose ? (
+                <div className="debug-panel">
+                  <h3>姿态数据 (关键点)</h3>
+                  <div className="debug-grid">
+                    {Object.entries(LANDMARK_NAMES).map(([idx, name]) => {
+                      const lm = currentPose[parseInt(idx)]
+                      if (!lm) return null
+                      return (
+                        <div key={idx} className="debug-item">
+                          <span className="debug-label">{name} ({idx})</span>
+                          <span className="debug-value">
+                            x: {lm.x.toFixed(3)}, y: {lm.y.toFixed(3)}
+                            {lm.visibility !== undefined && ` (${(lm.visibility * 100).toFixed(0)}%)`}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="debug-placeholder">
+                  等待姿态识别...
                 </div>
               )
-            })}
+            ) : (
+              <div className="debug-placeholder hint">
+                勾选"调试面板"查看数据
+              </div>
+            )}
           </div>
-        </div>
-      )}
-      
-      {/* Motion Capture Debug Panel - 动捕调试面板 */}
-      {showMotionDebugPanel && (
-        <MotionCaptureDebugPanel
-          config={pipelineConfig}
-          onConfigChange={handlePipelineConfigChange}
-          processedPose={processedPose}
-          onCalibrate={handlePipelineCalibrate}
-          onClearCalibration={handleClearCalibration}
-          onExportConfig={handleExportConfig}
-          onImportConfig={handleImportConfig}
-        />
-      )}
+        )}
+
+        {/* 底部调试区域 2：动捕调试 (对应人物下方) */}
+        {(showDebugPanel || showMotionDebugPanel) && showCharacterPreview && (
+          <div className="debug-cell-right">
+            {showMotionDebugPanel ? (
+              <div className="mocap-debug-wrapper">
+                <MotionCaptureDebugPanel
+                  config={pipelineConfig}
+                  onConfigChange={handlePipelineConfigChange}
+                  processedPose={processedPose}
+                  onCalibrate={handlePipelineCalibrate}
+                  onClearCalibration={handleClearCalibration}
+                  onExportConfig={handleExportConfig}
+                  onImportConfig={handleImportConfig}
+                />
+              </div>
+            ) : (
+              <div className="debug-placeholder hint">
+                勾选"动捕调试面板"调整参数
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {/* 原 debug-section 已移除 */}
     </div>
   )
 }

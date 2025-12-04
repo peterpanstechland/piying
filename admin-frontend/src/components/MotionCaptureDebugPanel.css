@@ -15,6 +15,12 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+/* 在 debug-section 中时，宽度自适应 */
+.mocap-debug-wrapper .mocap-debug-panel {
+  width: 100%;
+  max-height: 450px;
+}
+
 .debug-header {
   display: flex;
   justify-content: space-between;
