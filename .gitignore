@@ -47,3 +47,5 @@ data/logs/
 # Temporary files
 *.tmp
 *.temp
+data/session_videos/
+data/admin.db
