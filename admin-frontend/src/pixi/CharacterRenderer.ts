@@ -876,6 +876,15 @@ export class CharacterRenderer {
     // Apply part angles from pipeline
     this.applyPartAngles(processedPose.partAngles, processedPose.isCalibrated, shouldLog)
 
+    // Update facing direction based on pipeline turn state
+    // Use animated turn if we are in a turning state
+    if (processedPose.turnState) {
+      this.setFacingDirection(
+        processedPose.turnState.currentFacing,
+        processedPose.turnState.isTurning
+      )
+    }
+
     // Update foot positions based on leg state
     if (processedPose.legState) {
       this.updateFootFromLegState(processedPose)
