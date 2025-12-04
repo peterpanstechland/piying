@@ -259,7 +259,14 @@ export class PoseProcessor {
 
     // --- 上身角度 ---
 
+    // 头部角度（暂不处理，头部通常不旋转）
+    // const headAngle = this.computeAngle(...)
+
+    // 身体角度（躯干倾斜）- 暂不处理，皮影的身体通常不旋转
+    // const bodyAngle = this.computeBodyAngle(landmarks)
+
     // 左臂（保持原值，抬手为负）
+    // 物理含义：从垂直向下（90度）逆时针旋转到向前/上
     const leftArmAngle = this.computeJointAngle(
       landmarks,
       LANDMARK_INDEX.LEFT_SHOULDER,
@@ -279,6 +286,8 @@ export class PoseProcessor {
     )
     
     // 应用肘关节约束（防止反关节）
+    // 归一化后的角度体系中，抬手/弯曲都是负值（逆时针）
+    // 注意：下面的约束参数基于这个体系
     if (leftHandAngle !== null && angles['left-arm'] !== undefined) {
       leftHandAngle = this.constrainJointAngle(
         angles['left-arm'], 
@@ -290,6 +299,9 @@ export class PoseProcessor {
     }
 
     // 右臂（标准化处理）
+    // 原始计算中，右臂抬起是顺时针旋转（正值）。
+    // 为了简化后续处理（如 SecondaryMotion），我们将所有肢体的“向前/向上”运动统一为负值（逆时针）。
+    // CharacterRenderer 会根据角色朝向自动处理这种标准化带来的符号差异。
     const rightArmAngle = this.computeJointAngle(
       landmarks,
       LANDMARK_INDEX.RIGHT_SHOULDER,
@@ -345,6 +357,14 @@ export class PoseProcessor {
 
   /**
    * 计算两点连线的角度
+   * 
+   * 返回的是**相对于参考姿势的角度变化量**：
+   * - 如果有校准数据，使用校准时的姿势作为参考
+   * - 如果没有校准，使用默认参考角度（π/2，即垂直向下）
+   * 
+   * 注意：返回值取反以匹配 PixiJS 的旋转方向
+   * - PixiJS 正值 = 顺时针
+   * - 用户向前抬手（角度减小）应该让皮影顺时针旋转（正值）
    */
   private computeJointAngle(
     landmarks: PoseLandmarks,
@@ -388,6 +408,11 @@ export class PoseProcessor {
 
   /**
    * 约束关节角度（防止反关节）
+   * 
+   * @param parentAngle 父骨骼角度
+   * @param childAngle 子骨骼角度
+   * @param minRelative 最小相对角度（弧度）
+   * @param maxRelative 最大相对角度（弧度）
    */
   private constrainJointAngle(
     parentAngle: number,
@@ -531,6 +556,4 @@ export class PoseProcessor {
     }
   }
 }
-
-
 
