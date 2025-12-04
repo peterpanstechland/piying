@@ -243,7 +243,12 @@ export class CharacterRenderer {
   /**
    * Initialize the PixiJS application
    */
-  async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
+  async init(
+    canvas: HTMLCanvasElement, 
+    width: number, 
+    height: number,
+    options: Record<string, any> = {}
+  ): Promise<void> {
     console.log('CharacterRenderer.init called, initialized:', this.initialized)
     
     // 如果已经初始化过，先销毁
@@ -267,6 +272,7 @@ export class CharacterRenderer {
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
+      ...options
     })
     console.log('app.init completed, stage:', app.stage)
 

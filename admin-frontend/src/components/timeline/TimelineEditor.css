@@ -20,6 +20,7 @@
 .timeline-editor__preview-container {
   position: relative;
   width: 100%;
+  /* Ensure overlay layers (like CharacterOverlay) can be positioned absolutely relative to this */
 }
 
 /* Timeline section */

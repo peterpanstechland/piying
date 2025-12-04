@@ -179,6 +179,10 @@ export interface LegConfig {
   jumpThreshold: number
   /** 下蹲阈值（髋部下降，用于退出飞行状态） */
   squatThreshold: number
+  /** 跳跃速度阈值（髋部上升速度，负值） */
+  jumpVelocityThreshold: number
+  /** 跳跃高度阈值（髋部相对静止状态上升的距离） */
+  jumpHeightThreshold: number
 }
 
 /** 腿部状态 */
@@ -339,6 +343,8 @@ export const DEFAULT_CONFIG: ProcessorConfig = {
     liftThreshold: 0.05,
     jumpThreshold: 0.08,
     squatThreshold: -0.05,
+    jumpVelocityThreshold: 0.02,
+    jumpHeightThreshold: 0.05,
   },
   ik: {
     enabled: true,

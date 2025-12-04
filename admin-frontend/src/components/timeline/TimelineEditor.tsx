@@ -12,12 +12,15 @@ import VideoPreview from './VideoPreview'
 import TimelineTrack from './TimelineTrack'
 import PropertyPanel from './PropertyPanel'
 import PathEditor from './PathEditor'
+import CharacterOverlay from './CharacterOverlay'
 import { PathTool } from './PathEditorPanel'
 import './TimelineEditor.css'
 
 interface TimelineEditorProps {
   videoUrl: string | null
   storylineId?: string
+  /** Character ID for character-specific video editing */
+  characterId?: string
   initialSegments?: TimelineSegment[]
   initialTransitions?: Transition[]
   onSegmentsChange?: (segments: TimelineSegment[]) => void
@@ -37,6 +40,7 @@ interface TimelineEditorProps {
 function TimelineEditorInner({
   videoUrl,
   storylineId,
+  characterId,
   onSegmentsChange,
   onTransitionsChange,
   onSegmentDelete,
@@ -48,6 +52,23 @@ function TimelineEditorInner({
 }: Omit<TimelineEditorProps, 'initialSegments' | 'initialTransitions'>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const [previewDimensions, setPreviewDimensions] = useState({ width: 0, height: 0 })
+
+  // Observe preview container size
+  useEffect(() => {
+    if (!previewContainerRef.current) return
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setPreviewDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        })
+      }
+    })
+    observer.observe(previewContainerRef.current)
+    return () => observer.disconnect()
+  }, [])
   
   // Path editing state
   const [pathTool, setPathTool] = useState<PathTool>('select')
@@ -141,12 +162,13 @@ function TimelineEditorInner({
     >
       {/* Video Preview Section with Path Editor Overlay */}
       <div className="timeline-editor__preview">
-        <div className="timeline-editor__preview-container">
+        <div className="timeline-editor__preview-container" ref={previewContainerRef}>
           <VideoPreview 
             videoUrl={videoUrl}
             onFrameCapture={onFrameCapture}
             videoElementRef={videoRef}
           />
+          
           {/* Path Editor Overlay - only show when segment is selected */}
           {selectedSegmentId && (
             <PathEditor
@@ -157,6 +179,19 @@ function TimelineEditorInner({
               tool={pathTool}
               showPreview={false}
               previewProgress={0}
+            />
+          )}
+
+          {/* Character Overlay (Requirements 11.6) - rendered after PathEditor to be on top */}
+          {selectedSegment && characterId && (
+            <CharacterOverlay
+              characterId={characterId}
+              segment={selectedSegment}
+              playhead={playhead}
+              containerWidth={previewDimensions.width}
+              containerHeight={previewDimensions.height}
+              onScaleChange={(config) => updateSegment(selectedSegment.id, { scale: config })}
+              visible={true}
             />
           )}
         </div>
@@ -272,6 +307,7 @@ export default function TimelineEditor({
   onGuidanceImageUpload,
   onGuidanceFrameCapture,
   onTimeUpdate,
+  characterId,
   saving = false,
 }: TimelineEditorProps) {
   return (
@@ -282,6 +318,7 @@ export default function TimelineEditor({
       <TimelineEditorInner
         videoUrl={videoUrl}
         storylineId={storylineId}
+        characterId={characterId}
         onSegmentsChange={onSegmentsChange}
         onTransitionsChange={onTransitionsChange}
         onSegmentDelete={onSegmentDelete}

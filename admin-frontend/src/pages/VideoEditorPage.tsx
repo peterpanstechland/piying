@@ -459,6 +459,7 @@ export default function VideoEditorPage() {
         <TimelineEditor
           videoUrl={getVideoUrl()}
           storylineId={storylineId || ''}
+          characterId={characterId}
           initialSegments={getTimelineSegments()}
           initialTransitions={getTimelineTransitions()}
           onSegmentsChange={handleSegmentsChange}

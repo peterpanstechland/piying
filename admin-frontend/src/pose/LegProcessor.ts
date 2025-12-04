@@ -21,6 +21,12 @@ export class LegProcessor {
   private config: LegConfig
   private state: LegState = this.createDefaultState()
   private isInFlyingState = false
+  
+  // Jump detection state
+  private lastHipY: number = 0
+  private hipVelocity: number = 0
+  private baselineHipY: number | null = null
+  private frameCount: number = 0
 
   constructor(config?: Partial<LegConfig>) {
     this.config = { ...DEFAULT_CONFIG.leg, ...config }
@@ -73,6 +79,10 @@ export class LegProcessor {
   reset(): void {
     this.state = this.createDefaultState()
     this.isInFlyingState = false
+    this.lastHipY = 0
+    this.hipVelocity = 0
+    this.baselineHipY = null
+    this.frameCount = 0
   }
 
   /**
@@ -82,6 +92,11 @@ export class LegProcessor {
     if (!landmarks || !calibration) {
       return this.state
     }
+
+    this.frameCount++
+
+    // Update jump metrics
+    this.updateJumpMetrics(landmarks)
 
     // 分析左腿
     this.state.left = this.analyzeSingleLeg(
@@ -102,6 +117,36 @@ export class LegProcessor {
     this.state.isFlying = this.isInFlyingState
 
     return this.state
+  }
+
+  /**
+   * Update hip position and velocity for jump detection
+   */
+  private updateJumpMetrics(landmarks: PoseLandmarks): void {
+    const leftHip = landmarks[LANDMARK_INDEX.LEFT_HIP]
+    const rightHip = landmarks[LANDMARK_INDEX.RIGHT_HIP]
+
+    if (!leftHip || !rightHip) return
+
+    const currentHipY = (leftHip.y + rightHip.y) / 2
+
+    // Initialize if first frame
+    if (this.frameCount === 1 || this.baselineHipY === null) {
+      this.lastHipY = currentHipY
+      this.baselineHipY = currentHipY
+      return
+    }
+
+    // Calculate velocity (negative is up)
+    this.hipVelocity = currentHipY - this.lastHipY
+    this.lastHipY = currentHipY
+
+    // Update baseline if standing and stable
+    // Only update baseline if we are NOT flying/jumping to avoid dragging baseline up with jump
+    if (!this.isInFlyingState && Math.abs(this.hipVelocity) < 0.01) {
+      // Slow lerp to adapt to position changes
+      this.baselineHipY = this.baselineHipY * 0.95 + currentHipY * 0.05
+    }
   }
 
   /**
@@ -211,8 +256,20 @@ export class LegProcessor {
    */
   private determineOverallIntent(): LegIntent {
     const { left, right } = this.state
-    const { jumpThreshold, squatThreshold } = this.config
+    const { jumpThreshold, squatThreshold, jumpVelocityThreshold, jumpHeightThreshold } = this.config
 
+    // 1. 基于速度和高度的跳跃检测 (Whole Body Jump)
+    // Y轴向下为正，所以向上跳跃时 velocity 为负，height (current) < baseline
+    const isMovingUpFast = this.hipVelocity < -jumpVelocityThreshold
+    const isHighEnough = this.baselineHipY !== null && (this.baselineHipY - this.lastHipY) > jumpHeightThreshold
+    
+    // 如果检测到明显的向上冲量或高度，触发跳跃
+    if (isMovingUpFast && isHighEnough) {
+       this.isInFlyingState = true
+       return LegIntent.JUMPING
+    }
+
+    // 2. 基于双脚抬起的跳跃检测 (Leg Tuck Jump)
     // 跳跃检测：双脚同时抬起
     if (
       left.ankleHeightDelta > jumpThreshold &&
@@ -222,20 +279,32 @@ export class LegProcessor {
       return LegIntent.JUMPING
     }
 
-    // 下蹲检测：髋部下降（用于退出飞行状态）
-    // 注：这里使用 ankleHeightDelta 的反向作为蹲下判断
-    if (
-      this.isInFlyingState &&
-      left.ankleHeightDelta < squatThreshold &&
-      right.ankleHeightDelta < squatThreshold
-    ) {
-      this.isInFlyingState = false
+    // 3. 落地检测 / 下蹲检测
+    // 如果在飞行状态
+    if (this.isInFlyingState) {
+      // 退出条件 1: 双脚放下 (ankleHeightDelta 变小) 且 髋部回落 (接近 baseline)
+      const legsDown = left.ankleHeightDelta < jumpThreshold && right.ankleHeightDelta < jumpThreshold
+      const hipsDown = this.baselineHipY !== null && (this.baselineHipY - this.lastHipY) < (jumpHeightThreshold * 0.5)
+      
+      if (legsDown && hipsDown) {
+        this.isInFlyingState = false
+      }
+      
+      // 退出条件 2: 下蹲 (ankleHeightDelta 为负值，表示髋部比脚踝更低/接近)
+      // 下蹲检测：髋部下降（用于退出飞行状态）
+      if (
+        left.ankleHeightDelta < squatThreshold &&
+        right.ankleHeightDelta < squatThreshold
+      ) {
+        this.isInFlyingState = false
+      }
     }
 
     // 如果在飞行状态，保持
     if (this.isInFlyingState) {
       return LegIntent.JUMPING
     }
+
 
     // 检测是否有高抬腿或后踢腿
     if (left.intent === LegIntent.HIGH_KICK || right.intent === LegIntent.HIGH_KICK) {

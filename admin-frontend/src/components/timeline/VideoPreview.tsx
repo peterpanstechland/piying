@@ -7,6 +7,7 @@ interface VideoPreviewProps {
   onFrameCapture?: (imageData: string) => void
   /** Expose video element ref for external frame capture */
   videoElementRef?: React.RefObject<HTMLVideoElement>
+  children?: React.ReactNode
 }
 
 const PLAYBACK_SPEEDS: PlaybackSpeed[] = [0.25, 0.5, 1, 1.5, 2]
@@ -16,7 +17,7 @@ const LOOP_MODES: { value: LoopMode; label: string }[] = [
   { value: 'full', label: '全片循环' },
 ]
 
-export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef }: VideoPreviewProps) {
+export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef, children }: VideoPreviewProps) {
   const internalVideoRef = useRef<HTMLVideoElement>(null)
   const videoRef = videoElementRef || internalVideoRef
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -230,6 +231,9 @@ export default function VideoPreview({ videoUrl, onFrameCapture, videoElementRef
         />
         {/* Hidden canvas for frame capture */}
         <canvas ref={canvasRef} style={{ display: 'none' }} />
+        
+        {/* Overlay elements (PathEditor, CharacterOverlay) */}
+        {children}
       </div>
 
       <div className="video-preview__controls">
