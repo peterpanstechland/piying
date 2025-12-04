@@ -217,12 +217,12 @@ export const SegmentGuidancePage = ({
     }
   }, [isCalibrated, onCalibrationComplete]);
 
-  // 当有姿态数据时，更新皮影人物
+  // 当有姿态数据时，更新皮影人物（始终处理，与 CameraTestPage 保持一致）
   useEffect(() => {
-    if (currentPose && isStableInBox) {
+    if (currentPose) {
       handlePoseUpdate(currentPose);
     }
-  }, [currentPose, isStableInBox, handlePoseUpdate]);
+  }, [currentPose, handlePoseUpdate]);
 
   // Store callback in ref to avoid dependency issues
   const onGuidanceCompleteRef = useRef(onGuidanceComplete);
