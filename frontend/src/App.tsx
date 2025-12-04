@@ -862,6 +862,10 @@ function App() {
               exit_type: currentSegmentConfig.exit_type,
               exit_duration: currentSegmentConfig.exit_duration,
               exit_delay: currentSegmentConfig.exit_delay,
+              // Scale configuration
+              scale_mode: currentSegmentConfig.scale_mode,
+              scale_start: currentSegmentConfig.scale_start,
+              scale_end: currentSegmentConfig.scale_end,
             } : undefined}
             videoElement={videoElement}
             recorder={recorderRef.current}

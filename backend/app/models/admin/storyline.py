@@ -179,6 +179,13 @@ class CharacterVideoSegmentDB(Base):
     # Audio playback during recording
     play_audio: Mapped[bool] = mapped_column(Boolean, default=False)
     
+    # Scale configuration
+    # scale_mode: 'manual' = user controls scale, 'auto' = MediaPipe auto-detect based on body size
+    scale_mode: Mapped[str] = mapped_column(String(20), default="auto")
+    # scale_start/end: only used when scale_mode='manual' (1.0 = 100%, normalized)
+    scale_start: Mapped[float] = mapped_column(Float, default=1.0)
+    scale_end: Mapped[float] = mapped_column(Float, default=1.0)
+    
     # Relationship back to storyline_character
     storyline_character: Mapped["StorylineCharacterDB"] = relationship("StorylineCharacterDB", back_populates="segments")
 

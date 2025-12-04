@@ -2,7 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { adminApi } from '../services/api'
 import { CharacterRenderer } from '../pixi/CharacterRenderer'
 import { visionManager } from '../services/VisionManager'
+import { PoseProcessor } from '../pose/PoseProcessor'
+import type { ProcessorConfig, ProcessedPose } from '../pose/types'
+import { DEFAULT_CONFIG } from '../pose/types'
 import type { PoseLandmarks } from '../pixi/types'
+import MotionCaptureDebugPanel from '../components/MotionCaptureDebugPanel'
 import './CameraTestPage.css'
 
 interface CharacterListItem {
@@ -36,12 +40,53 @@ const LANDMARK_NAMES: Record<number, string> = {
   25: '左膝', 26: '右膝', 27: '左踝', 28: '右踝',
 }
 
+// Helper to mirror pose landmarks (flip X and swap left/right indices)
+const mirrorPoseLandmarks = (landmarks: PoseLandmarks): PoseLandmarks => {
+  // Create a copy with flipped X
+  const mirrored = landmarks.map(lm => ({ ...lm, x: 1 - lm.x }))
+  
+  // Swap left/right indices
+  // MediaPipe Pose Landmarks: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker
+  const swap = (i: number, j: number) => {
+    if (mirrored[i] && mirrored[j]) {
+      const temp = mirrored[i]
+      mirrored[i] = mirrored[j]
+      mirrored[j] = temp
+    }
+  }
+
+  // Face
+  swap(1, 4)   // Eye Inner
+  swap(2, 5)   // Eye
+  swap(3, 6)   // Eye Outer
+  swap(7, 8)   // Ear
+  swap(9, 10)  // Mouth
+
+  // Body
+  swap(11, 12) // Shoulders
+  swap(13, 14) // Elbows
+  swap(15, 16) // Wrists
+  swap(17, 18) // Pinkies
+  swap(19, 20) // Indices
+  swap(21, 22) // Thumbs
+  
+  // Legs
+  swap(23, 24) // Hips
+  swap(25, 26) // Knees
+  swap(27, 28) // Ankles
+  swap(29, 30) // Heels
+  swap(31, 32) // Foot indices
+  
+  return mirrored
+}
+
 export default function CameraTestPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const skeletonCanvasRef = useRef<HTMLCanvasElement>(null)
   const characterCanvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number | null>(null)
   const rendererRef = useRef<CharacterRenderer | null>(null)
+  const poseProcessorRef = useRef<PoseProcessor | null>(null)
   const fpsRef = useRef({ frames: 0, lastTime: performance.now(), fps: 0 })
 
   const [cameras, setCameras] = useState<CameraDevice[]>([])
@@ -56,18 +101,18 @@ export default function CameraTestPage() {
   const [savingDefault, setSavingDefault] = useState(false)
   const [mediaPipeLoaded, setMediaPipeLoaded] = useState(false)
   const [currentPose, setCurrentPose] = useState<PoseLandmarks | null>(null)
+  const [processedPose, setProcessedPose] = useState<ProcessedPose | null>(null)
   const [fps, setFps] = useState(0)
   const [showSkeleton, setShowSkeleton] = useState(true)
-  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [showDebugPanel, setShowDebugPanel] = useState(true)
   const [showCharacterPreview, setShowCharacterPreview] = useState(true)
   const [showStaticPose, setShowStaticPose] = useState(true)
   const [characterLoaded, setCharacterLoaded] = useState(false)
   const [mirrorMode, setMirrorMode] = useState(true)
-  const [isCalibrating, setIsCalibrating] = useState(false)
-  const [isCalibrated, setIsCalibrated] = useState(false)
-  const [autoCalibrated, setAutoCalibrated] = useState(false)
-  const [calibrationProgress, setCalibrationProgress] = useState(0)
-  const poseDetectionCountRef = useRef(0) // 连续检测到姿态的帧数
+  const [usePipeline, setUsePipeline] = useState(true)
+  
+  // Pipeline config state
+  const [pipelineConfig, setPipelineConfig] = useState<ProcessorConfig>(DEFAULT_CONFIG)
 
 
   // Load available cameras
@@ -121,8 +166,6 @@ export default function CameraTestPage() {
     }
   }, [])
 
-  // Note: Character renderer initialization moved to useEffect below
-
   // Load character into renderer
   const loadCharacterIntoRenderer = useCallback(async (characterId: string, staticPose: boolean) => {
     if (!rendererRef.current || !characterId) {
@@ -136,7 +179,6 @@ export default function CameraTestPage() {
       console.log('Loading character from:', configUrl, 'staticPose:', staticPose)
       await rendererRef.current.loadCharacter(configUrl)
       
-      // Set static pose visibility AFTER loading (to override loadCharacter's default)
       rendererRef.current.setShowStaticPose(staticPose)
       
       setCharacterLoaded(true)
@@ -161,6 +203,106 @@ export default function CameraTestPage() {
       console.error('Failed to initialize MediaPipe:', err)
       setMediaPipeLoaded(false)
     }
+  }, [])
+
+  // Initialize PoseProcessor
+  const initPoseProcessor = useCallback(() => {
+    if (!poseProcessorRef.current) {
+      poseProcessorRef.current = new PoseProcessor(pipelineConfig)
+      
+      // Set turn callback to animate character turn
+      poseProcessorRef.current.setOnTurn((facing) => {
+        if (rendererRef.current) {
+          rendererRef.current.setFacingDirection(facing, true, pipelineConfig.turn.animationDuration)
+        }
+      })
+      
+      console.log('PoseProcessor initialized')
+    }
+  }, [pipelineConfig])
+
+  // Handle pipeline config change
+  const handleConfigChange = useCallback((partialConfig: Partial<ProcessorConfig>) => {
+    setPipelineConfig(prev => {
+      // Deep merge the config
+      const newConfig: ProcessorConfig = {
+        calibration: { ...prev.calibration, ...(partialConfig.calibration || {}) },
+        filter: { ...prev.filter, ...(partialConfig.filter || {}) },
+        turn: { ...prev.turn, ...(partialConfig.turn || {}) },
+        scale: { ...prev.scale, ...(partialConfig.scale || {}) },
+        leg: { ...prev.leg, ...(partialConfig.leg || {}) },
+        ik: { ...prev.ik, ...(partialConfig.ik || {}) },
+        secondary: { ...prev.secondary, ...(partialConfig.secondary || {}) },
+      }
+      
+      // Update processor with new config
+      if (poseProcessorRef.current) {
+        poseProcessorRef.current.updateConfig(partialConfig)
+      }
+      
+      return newConfig
+    })
+  }, [])
+
+  // Handle manual calibration
+  const handleCalibrate = useCallback(() => {
+    if (!currentPoseRef.current || !poseProcessorRef.current) {
+      alert('请先检测到人体姿态')
+      return
+    }
+    
+    const result = poseProcessorRef.current.calibrate(currentPoseRef.current)
+    if (result) {
+      console.log('✓ Manual calibration complete')
+    }
+  }, [])
+
+  // Handle clear calibration
+  const handleClearCalibration = useCallback(() => {
+    if (poseProcessorRef.current) {
+      poseProcessorRef.current.clearCalibration()
+      console.log('Calibration cleared')
+    }
+    if (rendererRef.current) {
+      rendererRef.current.clearReferencePose()
+    }
+  }, [])
+
+  // Export config to JSON
+  const handleExportConfig = useCallback(() => {
+    const configJson = JSON.stringify(pipelineConfig, null, 2)
+    const blob = new Blob([configJson], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mocap-config-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [pipelineConfig])
+
+  // Import config from JSON
+  const handleImportConfig = useCallback(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      
+      try {
+        const text = await file.text()
+        const imported = JSON.parse(text) as ProcessorConfig
+        setPipelineConfig(imported)
+        if (poseProcessorRef.current) {
+          poseProcessorRef.current.updateConfig(imported)
+        }
+        console.log('Config imported successfully')
+      } catch (err) {
+        console.error('Failed to import config:', err)
+        alert('配置文件格式错误')
+      }
+    }
+    input.click()
   }, [])
 
   // Draw skeleton on canvas
@@ -253,49 +395,70 @@ export default function CameraTestPage() {
           const result = visionManager.detectPose(video)
           if (result && result.landmarks && result.landmarks.length > 0) {
             setPoseDetected(true)
-            const landmarks: PoseLandmarks = result.landmarks[0].map((lm) => ({
-              x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility
+            
+            // 原始 landmarks - 用于骨骼绘制（CSS 会处理镜像）
+            const rawLandmarks: PoseLandmarks = result.landmarks[0].map((lm) => ({
+              x: lm.x,
+              y: lm.y,
+              z: lm.z,
+              visibility: lm.visibility
             }))
-            setCurrentPose(landmarks)
-            currentPoseRef.current = landmarks
             
-            // 自动校准：连续检测到姿态30帧后自动校准（只执行一次）
-            if (!isCalibrated) {
-              poseDetectionCountRef.current++
-              // 每5帧更新一次进度显示，避免过于频繁的状态更新
-              if (poseDetectionCountRef.current % 5 === 0) {
-                setCalibrationProgress(poseDetectionCountRef.current)
-              }
+            // 骨骼绘制使用原始 landmarks
+            setCurrentPose(rawLandmarks)
+            currentPoseRef.current = rawLandmarks
+            
+            // 镜像模式下翻转 X 坐标，让角度计算与镜像显示一致
+            // 这样用户向左伸手时，皮影也向左
+            const processLandmarks: PoseLandmarks = mirrorMode
+              ? rawLandmarks.map((lm) => ({ ...lm, x: 1 - lm.x }))
+              : rawLandmarks
+            
+            // Process through pipeline or direct
+            if (usePipeline && poseProcessorRef.current) {
+              const processed = poseProcessorRef.current.process(processLandmarks)
+              setProcessedPose(processed)
               
-              if (poseDetectionCountRef.current === 30) {
+              // Update character with processed pose
                 if (rendererRef.current) {
-                  rendererRef.current.setReferencePose(landmarks)
-                  setAutoCalibrated(true)
-                  setIsCalibrated(true)
-                  setCalibrationProgress(30)
-                  console.log('✓ Auto-calibrated after 30 frames')
-                }
+                rendererRef.current.updatePoseFromProcessed(processed)
               }
-            }
-            
-            // Update character with pose
-            if (rendererRef.current) {
-              rendererRef.current.updatePose(landmarks)
             } else {
-              console.warn('[CameraTest] No renderer available for updatePose')
+              // Legacy: Direct update without pipeline
+            if (rendererRef.current) {
+                rendererRef.current.updatePose(processLandmarks)
+              }
             }
           } else {
             setPoseDetected(false)
             setCurrentPose(null)
             currentPoseRef.current = null
-            poseDetectionCountRef.current = 0 // 重置计数
-            if (calibrationProgress > 0) {
-              setCalibrationProgress(0)
+            
+            // Process null pose through pipeline
+            if (usePipeline && poseProcessorRef.current) {
+              const processed = poseProcessorRef.current.process(null)
+              setProcessedPose(processed)
             }
             
-            // 检测丢失时显示默认站立姿势
+            // Show static pose when no detection
             if (rendererRef.current) {
+              if (usePipeline) {
+                rendererRef.current.updatePoseFromProcessed({
+                  rawLandmarks: null,
+                  filteredLandmarks: null,
+                  partAngles: {},
+                  turnState: { currentFacing: 'right', currentDepthDiff: 0, inDeadzone: true, isTurning: false },
+                  scaleState: { currentScale: 1, currentTorsoHeight: 0, referenceTorsoHeight: 0 },
+                  legState: { left: { intent: 'STANDING' as never, kneeHeightDelta: 0, ankleHeightDelta: 0, thighLengthRatio: 1, isLifted: false }, right: { intent: 'STANDING' as never, kneeHeightDelta: 0, ankleHeightDelta: 0, thighLengthRatio: 1, isLifted: false }, overallIntent: 'STANDING' as never, isFlying: false },
+                  ikState: { left: { thighAngle: 0, kneeAngle: 0, distance: 0, valid: true }, right: { thighAngle: 0, kneeAngle: 0, distance: 0, valid: true } },
+                  calibration: null,
+                  isCalibrated: false,
+                  frameCount: 0,
+                  processingTime: 0,
+                })
+              } else {
               rendererRef.current.updatePose(null)
+              }
             }
           }
         } catch (err) {
@@ -312,7 +475,7 @@ export default function CameraTestPage() {
     }
     
     animationRef.current = requestAnimationFrame(render)
-  }, [drawSkeleton])
+  }, [drawSkeleton, usePipeline])
 
   // Start camera stream
   const startCamera = useCallback(async () => {
@@ -338,7 +501,6 @@ export default function CameraTestPage() {
       setError(null)
       
       console.log('Camera started, starting render loop...')
-      // Start render loop
       startRenderLoop()
     } catch (err) {
       console.error('Failed to start camera:', err)
@@ -363,6 +525,7 @@ export default function CameraTestPage() {
     setCameraActive(false)
     setPoseDetected(false)
     setCurrentPose(null)
+    setProcessedPose(null)
     
     // Clear skeleton canvas
     const canvas = skeletonCanvasRef.current
@@ -392,13 +555,12 @@ export default function CameraTestPage() {
   // Handle character selection change
   const handleCharacterChange = async (characterId: string) => {
     setSelectedCharacterId(characterId)
-    loadedCharacterRef.current = characterId // Update ref to track current selection
+    loadedCharacterRef.current = characterId
     
     if (characterId) {
       await loadCharacterIntoRenderer(characterId, showStaticPose)
     } else {
       setCharacterLoaded(false)
-      // Hide the character when "no character" is selected
       rendererRef.current?.hide()
     }
   }
@@ -414,44 +576,7 @@ export default function CameraTestPage() {
   // Reset character pose
   const handleResetPose = () => {
     rendererRef.current?.resetPose()
-  }
-
-  // Calibrate pose - capture current pose as reference
-  const handleCalibrate = () => {
-    if (!currentPoseRef.current) {
-      alert('请先检测到人体姿态')
-      return
-    }
-    
-    setIsCalibrating(true)
-    
-    // Wait 3 seconds for user to get into position
-    let countdown = 3
-    const countdownInterval = setInterval(() => {
-      countdown--
-      if (countdown === 0) {
-        clearInterval(countdownInterval)
-        
-        // Capture reference pose
-        if (currentPoseRef.current && rendererRef.current) {
-          rendererRef.current.setReferencePose(currentPoseRef.current)
-          setIsCalibrated(true)
-          setIsCalibrating(false)
-          console.log('Calibration complete!')
-        }
-      } else {
-        console.log(`Calibrating in ${countdown}...`)
-      }
-    }, 1000)
-  }
-
-  // Clear calibration
-  const handleClearCalibration = () => {
-    rendererRef.current?.clearReferencePose()
-    setIsCalibrated(false)
-    setAutoCalibrated(false)
-    setCalibrationProgress(0)
-    poseDetectionCountRef.current = 0
+    poseProcessorRef.current?.reset()
   }
 
   // Initial load
@@ -460,13 +585,13 @@ export default function CameraTestPage() {
       setLoading(true)
       await Promise.all([loadCameras(), loadCharacters()])
       await initMediaPipe()
+      initPoseProcessor()
       setLoading(false)
     }
     init()
     
     return () => {
       stopCamera()
-      // Note: Don't cleanup visionManager here as it's a singleton
       rendererRef.current?.destroy()
     }
   }, [])
@@ -478,7 +603,7 @@ export default function CameraTestPage() {
   // Initialize character renderer and load character if selected
   useEffect(() => {
     if (loading || !characterCanvasRef.current) return
-    if (rendererInitializedRef.current) return // Already initialized
+    if (rendererInitializedRef.current) return
     
     const initAndLoad = async () => {
       console.log('Initializing character renderer...')
@@ -490,7 +615,6 @@ export default function CameraTestPage() {
         rendererRef.current = renderer
         console.log('Character renderer initialized')
         
-        // Load character if one is selected
         if (selectedCharacterId) {
           console.log('Loading initial character:', selectedCharacterId)
           loadedCharacterRef.current = selectedCharacterId
@@ -505,18 +629,15 @@ export default function CameraTestPage() {
     initAndLoad()
   }, [loading, selectedCharacterId, showStaticPose, loadCharacterIntoRenderer])
 
-  // Load character when selection changes (only after renderer is initialized)
+  // Load character when selection changes
   useEffect(() => {
-    // Skip if renderer not ready or no selection
     if (!rendererRef.current || !selectedCharacterId) return
-    // Skip if already loaded this character
     if (loadedCharacterRef.current === selectedCharacterId) return
     
     console.log('Loading character (selection changed):', selectedCharacterId)
     loadedCharacterRef.current = selectedCharacterId
     loadCharacterIntoRenderer(selectedCharacterId, showStaticPose)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCharacterId])
+  }, [selectedCharacterId, showStaticPose, loadCharacterIntoRenderer])
   
   // Update static pose visibility without reloading character
   useEffect(() => {
@@ -550,7 +671,14 @@ export default function CameraTestPage() {
         <a href="/admin/dashboard" className="btn-back">← 返回首页</a>
         <h1>摄像头测试</h1>
         <div className="header-actions">
-          {/* 预留操作按钮位置 */}
+          <label className="toggle-label" style={{ marginRight: 16 }}>
+            <input
+              type="checkbox"
+              checked={usePipeline}
+              onChange={(e) => setUsePipeline(e.target.checked)}
+            />
+            <span>使用处理管线</span>
+          </label>
         </div>
       </div>
 
@@ -679,36 +807,6 @@ export default function CameraTestPage() {
               <button className="btn-secondary btn-small" onClick={handleResetPose}>
                 🔄 重置姿势
               </button>
-              {!isCalibrated ? (
-                <>
-                  <button 
-                    className="btn-primary btn-small" 
-                    onClick={handleCalibrate}
-                    disabled={isCalibrating || !poseDetected}
-                    style={{ marginTop: '8px' }}
-                  >
-                    {isCalibrating ? '校准中...' : '📐 手动校准'}
-                  </button>
-                  <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
-                    {poseDetected 
-                      ? `自动校准中... (${calibrationProgress}/30 帧)` 
-                      : '等待检测人体姿态...'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <button 
-                    className="btn-secondary btn-small" 
-                    onClick={handleClearCalibration}
-                    style={{ marginTop: '8px' }}
-                  >
-                    ✓ {autoCalibrated ? '自动校准完成' : '手动校准完成'} (点击重置)
-                  </button>
-                  <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
-                    校准完成，现在可以自由移动
-                  </p>
-                </>
-              )}
             </div>
           )}
 
@@ -729,6 +827,10 @@ export default function CameraTestPage() {
             <div className="status-item">
               <span className={`status-dot ${characterLoaded ? 'active' : ''}`}></span>
               <span>人物加载: {characterLoaded ? '已加载' : '未加载'}</span>
+            </div>
+            <div className="status-item">
+              <span className={`status-dot ${usePipeline ? 'active' : ''}`}></span>
+              <span>处理管线: {usePipeline ? '启用' : '禁用'}</span>
             </div>
             {cameraActive && (
               <div className="status-item fps">
@@ -795,8 +897,23 @@ export default function CameraTestPage() {
         )}
       </div>
 
-      {/* Debug Panel */}
-      {showDebugPanel && currentPose && (
+      {/* Debug Panel - Motion Capture */}
+      {showDebugPanel && usePipeline && (
+        <div className="debug-panel-container">
+          <MotionCaptureDebugPanel
+            config={pipelineConfig}
+            onConfigChange={handleConfigChange}
+            processedPose={processedPose}
+            onCalibrate={handleCalibrate}
+            onClearCalibration={handleClearCalibration}
+            onExportConfig={handleExportConfig}
+            onImportConfig={handleImportConfig}
+          />
+        </div>
+      )}
+
+      {/* Legacy Debug Panel - Raw Pose Data */}
+      {showDebugPanel && !usePipeline && currentPose && (
         <div className="debug-panel">
           <h3>姿态数据 (关键点)</h3>
           <div className="debug-grid">

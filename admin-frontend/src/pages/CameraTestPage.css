@@ -353,7 +353,25 @@
   font-size: 13px;
 }
 
-/* Debug Panel */
+/* Debug Panel Container - Motion Capture */
+.debug-panel-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 100;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1600px) {
+  .debug-panel-container {
+    position: static;
+    margin-top: 20px;
+    max-height: none;
+  }
+}
+
+/* Legacy Debug Panel */
 .debug-panel {
   margin-top: 20px;
   background: var(--bg-panel);

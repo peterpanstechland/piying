@@ -42,6 +42,7 @@ export interface SegmentConfig {
   offset_start?: number[];  // 起始位置 [x, y] 归一化 0-1
   offset_end?: number[];    // 结束位置 [x, y] 归一化 0-1
   path_waypoints?: number[][]; // 路径中间点
+  path_draw_type?: string;  // 路径绘制类型: linear, bezier 等
   // 进场动画配置
   entry_type?: string;
   entry_duration?: number;
@@ -56,6 +57,10 @@ export interface SegmentConfig {
   guidance_image?: string | null;
   // 录制时是否播放音频
   play_audio?: boolean;
+  // 缩放配置
+  scale_mode?: 'auto' | 'manual';  // auto = MediaPipe 自动检测, manual = 手动控制
+  scale_start?: number;  // 起始缩放 (1.0 = 100%)
+  scale_end?: number;    // 结束缩放 (1.0 = 100%)
 }
 
 export interface StateContext {

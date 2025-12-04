@@ -135,7 +135,7 @@ export default function VideoEditorPage() {
             ? JSON.parse(seg.path_waypoints) 
             : seg.path_waypoints
           if (Array.isArray(parsed)) {
-            waypoints = parsed.map((wp: [number, number]) => ({ x: wp[0], y: wp[1] }))
+          waypoints = parsed.map((wp: [number, number]) => ({ x: wp[0], y: wp[1] }))
           }
         } catch {
           waypoints = []
@@ -176,6 +176,14 @@ export default function VideoEditorPage() {
         pathType: (seg.path_draw_type || 'linear') as 'linear' | 'bezier' | 'freehand',
       } : undefined
       
+      // Parse scale configuration
+      const segWithScale = seg as typeof seg & { scale_mode?: string; scale_start?: number; scale_end?: number }
+      const scale = segWithScale.scale_mode ? {
+        mode: (segWithScale.scale_mode || 'auto') as 'auto' | 'manual',
+        start: segWithScale.scale_start ?? 1.0,
+        end: segWithScale.scale_end ?? 1.0,
+      } : undefined
+      
       return {
         id: seg.id || `segment-${index}`,
         index,
@@ -188,6 +196,7 @@ export default function VideoEditorPage() {
         guidanceImage: seg.guidance_image || null,
         playAudio: (seg as any).play_audio || false,
         path,
+        scale,
       }
     })
   }
@@ -249,6 +258,12 @@ export default function VideoEditorPage() {
         waypoints: s.path.waypoints,
         pathType: s.path.pathType,
       } : null,
+      // Include scale in comparison
+      scale: s.scale ? {
+        mode: s.scale.mode,
+        start: s.scale.start,
+        end: s.scale.end,
+      } : null,
     })))
 
     if (segmentsJson === prevSegmentsJson) return
@@ -283,6 +298,10 @@ export default function VideoEditorPage() {
         guidance_text_en: seg.guidanceTextEn || '',
         guidance_image: seg.guidanceImage || null,
         play_audio: seg.playAudio || false,
+        // Scale configuration
+        scale_mode: seg.scale?.mode || 'auto',
+        scale_start: seg.scale?.start || 1.0,
+        scale_end: seg.scale?.end || 1.0,
       }))
 
       if (isCharacterVideo && characterId) {

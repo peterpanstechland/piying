@@ -23,6 +23,12 @@ export interface SegmentPath {
   pathType: 'linear' | 'bezier' | 'freehand'
 }
 
+export interface ScaleConfig {
+  mode: 'auto' | 'manual'  // auto = MediaPipe detection, manual = user controlled
+  start: number  // Starting scale (1.0 = 100%)
+  end: number    // Ending scale (1.0 = 100%)
+}
+
 export interface TimelineSegment {
   id: string
   index: number
@@ -37,6 +43,8 @@ export interface TimelineSegment {
   path?: SegmentPath
   // Audio playback during recording
   playAudio?: boolean
+  // Scale configuration
+  scale?: ScaleConfig
 }
 
 export interface Transition {

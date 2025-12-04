@@ -655,6 +655,10 @@ class CharacterVideoService:
                 "guidance_text_en": seg.guidance_text_en or "",
                 "guidance_image": seg.guidance_image,
                 "play_audio": seg.play_audio or False,
+                # Scale configuration
+                "scale_mode": getattr(seg, 'scale_mode', None) or "auto",
+                "scale_start": getattr(seg, 'scale_start', None) or 1.0,
+                "scale_end": getattr(seg, 'scale_end', None) or 1.0,
             })
         
         return segments
@@ -705,21 +709,12 @@ class CharacterVideoService:
         
         # Add new segments
         import json
-        import logging
-        logger = logging.getLogger(__name__)
         
         for seg in segments:
             # Convert waypoints to JSON string
             waypoints_json = None
             if hasattr(seg, 'path_waypoints') and seg.path_waypoints:
                 waypoints_json = json.dumps(seg.path_waypoints)
-            
-            # Debug logging
-            logger.info(f"Saving segment {seg.index}:")
-            logger.info(f"  offset_start: {seg.offset_start}")
-            logger.info(f"  offset_end: {seg.offset_end}")
-            logger.info(f"  path_waypoints: {getattr(seg, 'path_waypoints', None)}")
-            logger.info(f"  path_draw_type: {getattr(seg, 'path_draw_type', 'linear')}")
             
             new_segment = CharacterVideoSegmentDB(
                 storyline_character_id=assoc.id,
@@ -743,6 +738,10 @@ class CharacterVideoService:
                 guidance_text_en=seg.guidance_text_en or "",
                 guidance_image=seg.guidance_image,
                 play_audio=getattr(seg, 'play_audio', False),
+                # Scale configuration
+                scale_mode=getattr(seg, 'scale_mode', 'auto') or 'auto',
+                scale_start=getattr(seg, 'scale_start', 1.0) or 1.0,
+                scale_end=getattr(seg, 'scale_end', 1.0) or 1.0,
             )
             db.add(new_segment)
         

@@ -17,6 +17,10 @@ interface PathConfig {
   exit_type?: string;       // 退场动画类型
   exit_duration?: number;   // 退场动画时长
   exit_delay?: number;      // 退场动画延迟
+  // 缩放配置
+  scale_mode?: 'auto' | 'manual';  // auto = MediaPipe 自动检测, manual = 手动控制
+  scale_start?: number;  // 起始缩放 (1.0 = 100%)
+  scale_end?: number;    // 结束缩放 (1.0 = 100%)
 }
 
 interface RecordingPageProps {
@@ -294,6 +298,18 @@ export const RecordingPage = ({
       // 应用位置和透明度
       renderer.setPosition(position.x, position.y);
       renderer.setOpacity(opacity);
+      
+      // 应用缩放 - 仅在手动模式下
+      if (pathConfig.scale_mode === 'manual') {
+        const scaleStart = pathConfig.scale_start ?? 1.0;
+        const scaleEnd = pathConfig.scale_end ?? 1.0;
+        
+        // 根据整体进度计算当前缩放
+        const overallProgress = elapsedTime / segmentDuration;
+        const currentScale = scaleStart + (scaleEnd - scaleStart) * Math.min(1, Math.max(0, overallProgress));
+        
+        renderer.setScale(currentScale);
+      }
     }
   }, [elapsedTime, isCalibrated, pathConfig, segmentDuration]);
 

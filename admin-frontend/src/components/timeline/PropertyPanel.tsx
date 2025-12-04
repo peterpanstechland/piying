@@ -4,6 +4,7 @@ import AnimationConfigEditor from './AnimationConfigEditor'
 import TransitionEditor from './TransitionEditor'
 import GuidanceEditor from './GuidanceEditor'
 import PathEditorPanel, { PathTool } from './PathEditorPanel'
+import ScaleConfigEditor from './ScaleConfigEditor'
 import './PropertyPanel.css'
 
 interface PropertyPanelProps {
@@ -216,6 +217,15 @@ export default function PropertyPanel({
               />
               <span>录制时播放音频 / Play audio during recording</span>
             </label>
+          </div>
+
+          {/* Scale Configuration */}
+          <div className="property-panel__section">
+            <h4 className="property-panel__section-title">缩放设置 / Scale Settings</h4>
+            <ScaleConfigEditor
+              config={selectedSegment.scale || { mode: 'auto', start: 1.0, end: 1.0 }}
+              onChange={(config) => handleSegmentUpdate({ scale: config })}
+            />
           </div>
         </div>
       </div>

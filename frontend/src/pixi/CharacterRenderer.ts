@@ -159,6 +159,9 @@ export class CharacterRenderer {
   private referencePose: PoseLandmarks | null = null
   private useReferencePose = false
 
+  // External position control flag - when true, updatePose won't override position
+  private useExternalPosition = false
+
   /**
    * Initialize the PixiJS application
    */
@@ -492,6 +495,16 @@ export class CharacterRenderer {
     
     this.container.x = x * screenWidth
     this.container.y = y * screenHeight
+    
+    // Mark that we're using external position control
+    this.useExternalPosition = true
+  }
+  
+  /**
+   * Reset to auto-center mode (position controlled by updatePose)
+   */
+  resetPositionControl(): void {
+    this.useExternalPosition = false
   }
 
   /**
@@ -626,12 +639,16 @@ export class CharacterRenderer {
       return
     }
 
-    // Keep the character centered and at a fixed scale
+    // Keep the character at a fixed scale
     // Don't move/scale based on body position - just rotate the parts
     const canvasWidth = this.app.screen.width
     const canvasHeight = this.app.screen.height
-    this.container.x = canvasWidth / 2
-    this.container.y = canvasHeight / 2
+    
+    // Only set position if not controlled externally (via setPosition)
+    if (!this.useExternalPosition) {
+      this.container.x = canvasWidth / 2
+      this.container.y = canvasHeight / 2
+    }
     // Use the global scale from resetPose, don't change it based on detection
     // this.container.scale is already set in resetPose()
 

@@ -30,6 +30,7 @@ import type {
   PoseLandmarks,
   FrameData,
 } from './types'
+import type { ProcessedPose, PartAngles, Facing } from '../pose/types'
 
 // Extended frame data with assembly info and animation config
 interface FrameDataWithAssembly extends FrameData {
@@ -159,6 +160,10 @@ export class CharacterRenderer {
   private referencePose: PoseLandmarks | null = null
   private useReferencePose = false
 
+  // Bone mapping for handling facing direction
+  // Maps PoseProcessor part names (user perspective) to Character part names
+  private boneMap: Record<string, string> = {}
+
   /**
    * Initialize the PixiJS application
    */
@@ -234,10 +239,21 @@ export class CharacterRenderer {
       throw new Error('Failed to load character config')
     }
 
+    console.log('=== Loaded Character Config ===')
+    console.log('defaultFacing:', this.config.defaultFacing)
+    console.log('restPoseOffsets:', this.config.restPoseOffsets)
+    
     // 设置角色默认朝向
     if (this.config.defaultFacing) {
       this.defaultFacing = this.config.defaultFacing as CharacterFacing
+      console.log('Set defaultFacing to:', this.defaultFacing)
+    } else {
+      console.warn('No defaultFacing in config, using default:', this.defaultFacing)
     }
+    
+    // 更新骨骼映射
+    this.updateBoneMap()
+    console.log('Bone Map updated:', this.boneMap)
 
     // Load spritesheet JSON
     const sheetResponse = await fetch(this.config.spritesheet)
@@ -763,6 +779,238 @@ export class CharacterRenderer {
   private isFlying: boolean = false
 
   /**
+   * Update character pose from processed pipeline data
+   * This is the preferred method when using PoseProcessor
+   * 
+   * @param processedPose The processed pose data from PoseProcessor
+   */
+  updatePoseFromProcessed(processedPose: ProcessedPose): void {
+    this.frameCount++
+    const shouldLog = this.frameCount % 120 === 0
+
+    if (!this.config || !this.app || !this.spritesheetData || !this.container) {
+      return
+    }
+
+    // If no landmarks, show/hide based on showStaticPose setting
+    if (!processedPose.filteredLandmarks) {
+      this.container.visible = this.showStaticPose
+      return
+    }
+
+    // Always show container when we have pose data
+    this.container.visible = true
+
+    // Apply part angles from pipeline
+    this.applyPartAngles(processedPose.partAngles, processedPose.isCalibrated, shouldLog)
+
+    // Update foot positions based on leg state
+    if (processedPose.legState) {
+      this.updateFootFromLegState(processedPose)
+    }
+
+    // Update child positions to follow parent rotation
+    this.updateChildPositions(shouldLog)
+
+    if (shouldLog) {
+      console.log('[updatePoseFromProcessed] Applied', Object.keys(processedPose.partAngles).length, 'angles, calibrated:', processedPose.isCalibrated)
+    }
+  }
+
+  /**
+   * Update bone mapping based on default facing
+   * 
+   * 建立从 PoseProcessor 标准输出（用户视角）到 Character 具体部件的映射。
+   * 
+   * 映射逻辑：
+   * 1. 面向左的角色（defaultFacing = 'left'）：
+   *    - 用户左手（画面右侧） -> 控制皮影左手（画面右侧/胸前）
+   *    - 用户右手（画面左侧） -> 控制皮影右手（画面左侧/背后）
+   *    - 映射：left->left, right->right
+   * 
+   * 2. 面向右的角色（defaultFacing = 'right'）：
+   *    - 用户左手（画面右侧） -> 控制皮影右手（画面右侧/胸前）
+   *    - 用户右手（画面左侧） -> 控制皮影左手（画面左侧/背后）
+   *    - 映射：left->right, right->left
+   * 
+   * 通过这种映射，我们可以使用统一的动捕数据驱动不同朝向的角色，
+   * 而无需在 PoseProcessor 中根据角色进行特殊处理。
+   */
+  private updateBoneMap(): void {
+    this.boneMap = {}
+    
+    // Standard parts that might need swapping
+    const standardParts = [
+      'left-arm', 'right-arm',
+      'left-hand', 'right-hand',
+      'left-thigh', 'right-thigh',
+      'left-foot', 'right-foot',
+      'left-leg', 'right-leg'
+    ]
+
+    // Default mapping (Identity)
+    for (const part of standardParts) {
+      this.boneMap[part] = part
+    }
+
+    // If facing right, swap sides to match visual position
+    if (this.defaultFacing === 'right') {
+      for (const part of standardParts) {
+        if (part.startsWith('left-')) {
+          const rightPart = part.replace('left-', 'right-')
+          this.boneMap[part] = rightPart
+          this.boneMap[rightPart] = part
+        }
+      }
+    }
+  }
+
+  /**
+   * Map a source part name (from PoseProcessor) to a target part name (on Character)
+   */
+  private mapPartName(sourceName: string): string {
+    return this.boneMap[sourceName] || sourceName
+  }
+
+  /**
+   * Apply part angles directly (for manual control or external pipeline)
+   * 
+   * PoseProcessor 现在始终返回相对角度（相对于参考姿势的变化量）
+   * 公式统一为：finalRotation = restPoseOffset + angle + rotationOffset
+   * 
+   * @param angles Record of part name to angle (in radians) - 相对角度
+   * @param _isCalibrated 保留参数但不再使用（角度现在始终是相对的）
+   * @param shouldLog Whether to log debug info
+   */
+  applyPartAngles(angles: PartAngles, _isCalibrated: boolean = false, shouldLog: boolean = false): void {
+    // 每 120 帧记录一次映射详情
+    const logMapping = this.frameCount % 120 === 1
+    
+    if (logMapping) {
+      console.log('=== applyPartAngles Mapping Debug ===')
+      console.log('defaultFacing:', this.defaultFacing)
+      console.log('boneMap:', this.boneMap)
+      console.log('Input angles:', Object.keys(angles))
+    }
+    
+    for (const [sourcePartName, angle] of Object.entries(angles)) {
+      // 使用映射逻辑获取目标部件名
+      // 这解决了面向不同方向角色的左右手对应问题
+      const targetPartName = this.mapPartName(sourcePartName)
+      
+      if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
+        console.log(`  Mapping: ${sourcePartName} -> ${targetPartName}, angle=${(angle * 180 / Math.PI).toFixed(1)}°`)
+      }
+
+      const sprite = this.parts.get(targetPartName)
+      if (!sprite) continue
+
+      // Get rest pose offset (the sprite's default rotation in the character)
+      const restPoseOffset = this.getRestPoseOffset(targetPartName)
+      // Get rotation offset from spritesheet config (sprite orientation compensation)
+      const rotationOffset = this.getRotationOffset(targetPartName)
+      
+      // 根据角色朝向调整角度方向
+      // 注意：不需要根据 facingLeft 取反，因为 PoseProcessor 计算的是物理角度
+      // 无论角色朝向哪边，"向前抬手"在局部坐标系下都是逆时针旋转（负值）
+      const adjustedAngle = angle
+      
+      // 角度现在始终是相对值（相对于参考姿势的变化量）
+      // 当 angle = 0 时，sprite 保持 restPoseOffset（默认姿势）
+      const finalRotation = restPoseOffset + adjustedAngle + rotationOffset
+
+      // Apply rotation limits if defined
+      const limits = CharacterRenderer.ROTATION_LIMITS[targetPartName]
+      if (limits) {
+        const [minAngle, maxAngle] = limits
+        sprite.rotation = Math.max(minAngle, Math.min(maxAngle, finalRotation))
+      } else {
+        sprite.rotation = finalRotation
+      }
+
+      if (shouldLog) {
+        console.log(`  ${targetPartName} (src:${sourcePartName}): angle=${(angle * 180 / Math.PI).toFixed(1)}° adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° offset=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(sprite.rotation * 180 / Math.PI).toFixed(1)}°`)
+      }
+    }
+  }
+
+  /**
+   * Update foot positions based on leg state from pipeline
+   */
+  private updateFootFromLegState(processedPose: ProcessedPose): void {
+    const { legState } = processedPose
+    if (!legState) return
+
+    const leftFootContainer = this.partContainers.get('left-foot')
+    const rightFootContainer = this.partContainers.get('right-foot')
+
+    if (!leftFootContainer || !rightFootContainer) return
+    if (!this.initialPositions.has('left-foot') || !this.initialPositions.has('right-foot')) return
+
+    const leftInitialPos = this.initialPositions.get('left-foot')!
+    const rightInitialPos = this.initialPositions.get('right-foot')!
+
+    // Update flying state from pipeline
+    this.isFlying = legState.isFlying
+
+    if (legState.isFlying) {
+      // Flying state: both feet raised
+      const flyingOffset = 80
+      leftFootContainer.y = leftInitialPos.y - flyingOffset
+      rightFootContainer.y = rightInitialPos.y - flyingOffset
+    } else if (legState.left.isLifted || legState.right.isLifted) {
+      // Walking state: one foot lifted
+      if (legState.left.isLifted && !legState.right.isLifted) {
+        const yOffset = legState.left.ankleHeightDelta * 2000
+        leftFootContainer.y = leftInitialPos.y - Math.max(0, yOffset)
+        rightFootContainer.y = rightInitialPos.y
+      } else if (legState.right.isLifted && !legState.left.isLifted) {
+        const yOffset = legState.right.ankleHeightDelta * 2000
+        rightFootContainer.y = rightInitialPos.y - Math.max(0, yOffset)
+        leftFootContainer.y = leftInitialPos.y
+      } else {
+        // Both lifted but not flying (shouldn't happen often)
+        leftFootContainer.y = leftInitialPos.y
+        rightFootContainer.y = rightInitialPos.y
+      }
+    } else {
+      // Standing state: restore initial positions
+      leftFootContainer.y = leftInitialPos.y
+      rightFootContainer.y = rightInitialPos.y
+    }
+  }
+
+  /**
+   * Set character facing direction (called from PoseProcessor turn state)
+   * 
+   * @param facing 'left' or 'right'
+   * @param animated Whether to animate the turn
+   * @param duration Animation duration in milliseconds
+   */
+  setFacingDirection(facing: Facing, animated: boolean = false, duration: number = 300): void {
+    if (!this.container) return
+
+    // Determine if we need to be in flipped state (scale.x < 0)
+    // If default facing is 'left':
+    //   target 'left'  -> not flipped (scale.x > 0)
+    //   target 'right' -> flipped (scale.x < 0)
+    // If default facing is 'right':
+    //   target 'right' -> not flipped (scale.x > 0)
+    //   target 'left'  -> flipped (scale.x < 0)
+    
+    const shouldBeFlipped = facing !== this.defaultFacing
+    const currentlyFlipped = this.container.scale.x < 0
+
+    if (currentlyFlipped === shouldBeFlipped) return
+
+    if (animated) {
+      this.turnAroundAnimated(duration)
+    } else {
+      this.turnAround()
+    }
+  }
+
+  /**
    * Update foot positions based on ankle height changes
    * State machine:
    * - Standing → Jump detected → Flying (stays flying)
@@ -1052,22 +1300,6 @@ export class CharacterRenderer {
 
       childContainer.position.set(newChildX, newChildY)
 
-      // 让子部件（手）继承父部件（手臂）的旋转变化
-      // 这样手会自然地跟随手臂摆动
-      if (childSprite && (childName === 'left-hand' || childName === 'right-hand')) {
-        // 获取手臂的 rest pose offset（静止时的角度）
-        const parentRestOffset = this.getRestPoseOffset(parentName)
-        // 计算手臂相对于静止姿势的旋转变化量
-        const parentRotationDelta = parentRotation - parentRestOffset
-        
-        // 获取手的当前 rest pose offset
-        const childRestOffset = this.getRestPoseOffset(childName)
-        
-        // 手的新旋转 = 手的静止角度 + 手臂的旋转变化量
-        // 手完全跟随手臂旋转，不需要额外的继承系数
-        childSprite.rotation = childRestOffset + parentRotationDelta
-      }
-
       if (shouldLog) {
         console.log(`${childName}: parentJoint=${parentJoint.name}(${parentJoint.position.x.toFixed(2)},${parentJoint.position.y.toFixed(2)}), childJoint=${childJoint.name}, parentRot=${(parentRotation * 180 / Math.PI).toFixed(1)}°, newPos=(${newChildX.toFixed(1)}, ${newChildY.toFixed(1)})`)
       }
@@ -1137,8 +1369,8 @@ export class CharacterRenderer {
       }
     }
     
-    // 2. 使用默认值（已针对嫦娥素材调整）
-    return DEFAULT_ROTATION_OFFSETS[partName] ?? Math.PI / 2
+    // 2. 使用默认值（0 表示不做额外旋转补偿）
+    return DEFAULT_ROTATION_OFFSETS[partName] ?? 0
   }
 
   /**

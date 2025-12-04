@@ -89,13 +89,22 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                         # Load character-specific video segments
                         logger.info(f"[SceneConfig] Loading {len(storyline_character.segments)} character-specific video segments for {character_id}")
                         for seg in sorted(storyline_character.segments, key=lambda x: x.index):
+                            # Parse waypoints from JSON
+                            waypoints = []
+                            if seg.path_waypoints:
+                                try:
+                                    waypoints = json.loads(seg.path_waypoints) if isinstance(seg.path_waypoints, str) else seg.path_waypoints
+                                except (json.JSONDecodeError, TypeError):
+                                    waypoints = []
+                            
                             segment_configs.append(SegmentConfig(
+                                start_time=seg.start_time or 0.0,  # Key fix: Include start_time!
                                 duration=seg.duration,
                                 path_type=seg.path_type or "static",
                                 offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
                                 offset_end=[int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
-                                path_waypoints=[],
-                                path_draw_type="linear",
+                                path_waypoints=waypoints,
+                                path_draw_type=seg.path_draw_type or "linear",
                                 entry_type=seg.entry_type or "instant",
                                 entry_duration=seg.entry_duration or 1.0,
                                 entry_delay=seg.entry_delay or 0.0,
@@ -115,12 +124,12 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                     waypoints = []
                     if seg.path_waypoints:
                         try:
-                            import json
-                            waypoints = json.loads(seg.path_waypoints)
+                            waypoints = json.loads(seg.path_waypoints) if isinstance(seg.path_waypoints, str) else seg.path_waypoints
                         except (json.JSONDecodeError, TypeError):
                             waypoints = []
                     
                     segment_configs.append(SegmentConfig(
+                        start_time=seg.start_time or 0.0,  # Include start_time
                         duration=seg.duration,
                         path_type=seg.path_type or "static",
                         offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],

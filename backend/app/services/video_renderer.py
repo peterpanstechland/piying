@@ -311,7 +311,8 @@ class VideoRenderer:
                 
                 if char_video_path:
                     # Character-specific video exists
-                    # Path format: "storylines/{id}/videos/{char_id}.mp4"
+                    # Path format from DB: "storylines/{id}/videos/{char_id}.mp4"
+                    # Actual file location: {project_root}/backend/data/storylines/{id}/videos/{char_id}.mp4
                     base_video_path = self.project_root / "backend" / "data" / char_video_path
                     logger.info(f"Using character-specific video: {base_video_path}")
             except Exception as e:
@@ -869,12 +870,21 @@ class VideoRenderer:
                 loop.close()
                 
                 if char_video_path:
+                    # Path format from DB: "storylines/{id}/videos/{char_id}.mp4"
+                    # Actual file location: {project_root}/backend/data/storylines/{id}/videos/{char_id}.mp4
                     base_video_path = self.project_root / "backend" / "data" / char_video_path
+                    logger.info(f"Character-specific video path: {base_video_path}")
+                    
+                    if not base_video_path.exists():
+                        logger.warning(f"Character-specific video not found at {base_video_path}")
+                        base_video_path = None
             except Exception as e:
                 logger.warning(f"Failed to load character-specific video path: {e}")
         
         if base_video_path is None or not base_video_path.exists():
+            # scene_config.base_video_path is already prefixed with "backend/data/" in sessions.py
             base_video_path = self.project_root / self.scene_config.base_video_path
+            logger.info(f"Using base video from scene config: {base_video_path}")
         
         if not base_video_path.exists():
             raise ValueError(f"Base video not found: {base_video_path}")

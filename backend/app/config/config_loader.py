@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 class SegmentConfig(BaseModel):
     """Configuration for a single segment"""
+    start_time: float = Field(default=0.0, ge=0, description="Start time in video (seconds)")
     duration: float = Field(..., gt=0, description="Segment duration in seconds")
-    path_type: str = Field(..., description="Movement path type")
-    offset_start: list[int] = Field(..., description="Starting offset [x, y]")
-    offset_end: list[int] = Field(..., description="Ending offset [x, y]")
+    path_type: str = Field(default="static", description="Movement path type")
+    offset_start: list[int] = Field(default_factory=lambda: [0, 0], description="Starting offset [x, y]")
+    offset_end: list[int] = Field(default_factory=lambda: [0, 0], description="Ending offset [x, y]")
     
     # Path configuration
     path_waypoints: list[list[int]] = Field(default_factory=list, description="Path waypoints [[x1,y1], [x2,y2], ...]")
