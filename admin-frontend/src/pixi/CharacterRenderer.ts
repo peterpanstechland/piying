@@ -134,6 +134,80 @@ const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
   // 所有部件默认为 0，由用户通过编辑器设置具体值
 }
 
+/**
+ * 皮影部件默认 Z-Index 层级系统
+ * 
+ * 皮影戏的层级逻辑（从后到前）- 三明治结构：
+ * 
+ *   【前面的手臂/手】 - 最顶层
+ *         ↓
+ *   【背后的手臂/手】 - 也在头部前面！
+ *         ↓
+ *       【头部】
+ *         ↓
+ *       【身体】
+ *         ↓
+ *     【腿/脚】 - 最底层
+ * 
+ * 关键点：所有手臂都在头部前面，这样无论哪只手举起来都不会被头"穿模"
+ * 
+ * "背后"和"前面"取决于角色的朝向：
+ * - 面朝右：左侧肢体在背后，右侧在前面
+ * - 面朝左：右侧肢体在背后，左侧在前面
+ */
+const Z_INDEX_LAYERS = {
+  BACK_LEG: -20,    // 背后的腿/脚
+  FRONT_LEG: -15,   // 前面的腿/脚（也在身体后面）
+  BODY: 0,          // 身体
+  HEAD: 10,         // 头部
+  BACK_ARM: 15,     // 背后的手臂（在头部前面！）
+  BACK_HAND: 16,    // 背后的手
+  FRONT_ARM: 20,    // 前面的手臂（最顶层）
+  FRONT_HAND: 22,   // 前面的手
+}
+
+/**
+ * 根据角色朝向计算部件的 z-index
+ * 这是一个通用函数，适用于所有皮影角色
+ * 
+ * 三明治结构：
+ * - 所有手臂/手都在头部前面（避免举手时穿模）
+ * - 前面的手臂在背后的手臂前面（保持前后关系）
+ * - 腿/脚在身体后面
+ */
+function calculatePartZIndex(partName: string, defaultFacing: CharacterFacing): number {
+  // 判断是否为"背后"部件
+  // 面朝右：左侧是背后；面朝左：右侧是背后
+  const isBackSide = (defaultFacing === 'right' && partName.startsWith('left-')) ||
+                     (defaultFacing === 'left' && partName.startsWith('right-'))
+  
+  // 根据部件类型和前后位置返回 z-index
+  if (partName === 'head') {
+    return Z_INDEX_LAYERS.HEAD
+  }
+  if (partName === 'body') {
+    return Z_INDEX_LAYERS.BODY
+  }
+  // 手臂：都在头部前面，但前面的手臂在背后的手臂前面
+  if (partName.includes('arm')) {
+    return isBackSide ? Z_INDEX_LAYERS.BACK_ARM : Z_INDEX_LAYERS.FRONT_ARM
+  }
+  if (partName.includes('hand')) {
+    return isBackSide ? Z_INDEX_LAYERS.BACK_HAND : Z_INDEX_LAYERS.FRONT_HAND
+  }
+  // 腿部：都在身体后面
+  if (partName.includes('thigh') || partName.includes('leg') || partName === 'skirt') {
+    return isBackSide ? Z_INDEX_LAYERS.BACK_LEG : Z_INDEX_LAYERS.FRONT_LEG
+  }
+  if (partName.includes('foot')) {
+    // 脚在大腿后面一点
+    return isBackSide ? Z_INDEX_LAYERS.BACK_LEG - 2 : Z_INDEX_LAYERS.FRONT_LEG - 2
+  }
+  
+  // 默认：与身体同层
+  return Z_INDEX_LAYERS.BODY
+}
+
 // 角色朝向类型
 export type CharacterFacing = 'left' | 'right'
 
@@ -242,7 +316,7 @@ export class CharacterRenderer {
     console.log('=== Loaded Character Config ===')
     console.log('defaultFacing:', this.config.defaultFacing)
     console.log('restPoseOffsets:', this.config.restPoseOffsets)
-    
+
     // 设置角色默认朝向
     if (this.config.defaultFacing) {
       this.defaultFacing = this.config.defaultFacing as CharacterFacing
@@ -293,16 +367,14 @@ export class CharacterRenderer {
       const partContainer = new Container()
       partContainer.addChild(sprite)
       
-      // 【关键修复 3】应用 Z-Index
-      let zIndex = frameData.zIndex || 0
+      // 应用 Z-Index：使用通用的层级计算函数
+      // 如果配置中有指定 zIndex，优先使用配置值；否则使用自动计算的值
+      const configZIndex = frameData.zIndex
+      const calculatedZIndex = calculatePartZIndex(partName, this.defaultFacing)
+      const zIndex = configZIndex !== undefined ? configZIndex : calculatedZIndex
       
-      // 确保层级顺序正确：脚应该在裙子/大腿后面
-      if (partName === 'left-foot' || partName === 'right-foot') {
-        // 脚的 z-index 应该比裙子/大腿低
-        zIndex = Math.min(zIndex, -10)
-      } else if (partName === 'skirt' || partName === 'left-thigh' || partName === 'right-thigh') {
-        // 裙子/大腿的 z-index 应该比脚高
-        zIndex = Math.max(zIndex, -5)
+      if (partName.includes('arm') || partName.includes('hand') || partName === 'head') {
+        console.log(`  Z-Index: ${partName} = ${zIndex} (config: ${configZIndex}, calculated: ${calculatedZIndex}, facing: ${this.defaultFacing})`)
       }
       
       partContainer.zIndex = zIndex
@@ -883,43 +955,49 @@ export class CharacterRenderer {
    * @param shouldLog Whether to log debug info
    */
   applyPartAngles(angles: PartAngles, _isCalibrated: boolean = false, shouldLog: boolean = false): void {
-    // 每 120 帧记录一次映射详情
-    const logMapping = this.frameCount % 120 === 1
+    // 每 60 帧记录一次详细日志
+    const logMapping = this.frameCount % 60 === 1
     
     if (logMapping) {
-      console.log('=== applyPartAngles Mapping Debug ===')
+      console.log('=== applyPartAngles Debug ===')
       console.log('defaultFacing:', this.defaultFacing)
-      console.log('boneMap:', this.boneMap)
-      console.log('Input angles:', Object.keys(angles))
     }
     
     for (const [sourcePartName, angle] of Object.entries(angles)) {
       // 使用映射逻辑获取目标部件名
-      // 这解决了面向不同方向角色的左右手对应问题
       const targetPartName = this.mapPartName(sourcePartName)
       
+      // 详细日志：每次映射
       if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
-        console.log(`  Mapping: ${sourcePartName} -> ${targetPartName}, angle=${(angle * 180 / Math.PI).toFixed(1)}°`)
+        console.log(`  MAP: "${sourcePartName}" -> "${targetPartName}"`)
       }
 
       const sprite = this.parts.get(targetPartName)
-      if (!sprite) continue
+      if (!sprite) {
+        if (logMapping) console.log(`  SKIP: sprite not found for "${targetPartName}"`)
+        continue
+      }
 
-      // Get rest pose offset (the sprite's default rotation in the character)
       const restPoseOffset = this.getRestPoseOffset(targetPartName)
-      // Get rotation offset from spritesheet config (sprite orientation compensation)
       const rotationOffset = this.getRotationOffset(targetPartName)
       
-      // 根据角色朝向调整角度方向
-      // 注意：不需要根据 facingLeft 取反，因为 PoseProcessor 计算的是物理角度
-      // 无论角色朝向哪边，"向前抬手"在局部坐标系下都是逆时针旋转（负值）
-      const adjustedAngle = angle
+      // 根据角色朝向决定是否取反角度
+      // 
+      // 原理：
+      // - PoseProcessor 输出的角度变化（抬起时）是正值
+      // - 面朝左的角色：向前抬 = 顺时针 = 正值 -> 不需要取反
+      // - 面朝右的角色：向前抬 = 逆时针 = 负值 -> 需要取反
+      // 
+      // 这是因为两个朝向的角色在屏幕上是镜像的，它们的"向前"方向相反
+      const needsInversion = this.defaultFacing === 'right'
+      const adjustedAngle = needsInversion ? -angle : angle
       
-      // 角度现在始终是相对值（相对于参考姿势的变化量）
-      // 当 angle = 0 时，sprite 保持 restPoseOffset（默认姿势）
+      if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
+        console.log(`  APPLY: target="${targetPartName}" needsInversion=${needsInversion} angle=${(angle * 180 / Math.PI).toFixed(1)}° -> adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}°`)
+      }
+      
       const finalRotation = restPoseOffset + adjustedAngle + rotationOffset
 
-      // Apply rotation limits if defined
       const limits = CharacterRenderer.ROTATION_LIMITS[targetPartName]
       if (limits) {
         const [minAngle, maxAngle] = limits

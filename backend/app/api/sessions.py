@@ -89,22 +89,13 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                         # Load character-specific video segments
                         logger.info(f"[SceneConfig] Loading {len(storyline_character.segments)} character-specific video segments for {character_id}")
                         for seg in sorted(storyline_character.segments, key=lambda x: x.index):
-                            # Parse waypoints from JSON
-                            waypoints = []
-                            if seg.path_waypoints:
-                                try:
-                                    waypoints = json.loads(seg.path_waypoints) if isinstance(seg.path_waypoints, str) else seg.path_waypoints
-                                except (json.JSONDecodeError, TypeError):
-                                    waypoints = []
-                            
                             segment_configs.append(SegmentConfig(
-                                start_time=seg.start_time or 0.0,  # Key fix: Include start_time!
                                 duration=seg.duration,
                                 path_type=seg.path_type or "static",
                                 offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
                                 offset_end=[int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
-                                path_waypoints=waypoints,
-                                path_draw_type=seg.path_draw_type or "linear",
+                                path_waypoints=[],
+                                path_draw_type="linear",
                                 entry_type=seg.entry_type or "instant",
                                 entry_duration=seg.entry_duration or 1.0,
                                 entry_delay=seg.entry_delay or 0.0,
@@ -124,12 +115,12 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                     waypoints = []
                     if seg.path_waypoints:
                         try:
-                            waypoints = json.loads(seg.path_waypoints) if isinstance(seg.path_waypoints, str) else seg.path_waypoints
+                            import json
+                            waypoints = json.loads(seg.path_waypoints)
                         except (json.JSONDecodeError, TypeError):
                             waypoints = []
                     
                     segment_configs.append(SegmentConfig(
-                        start_time=seg.start_time or 0.0,  # Include start_time
                         duration=seg.duration,
                         path_type=seg.path_type or "static",
                         offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
@@ -240,16 +231,22 @@ async def get_session_status(session_id: str):
 async def upload_segment(
     session_id: str, 
     segment_index: int, 
-    segment_data: str = Form(...),
+    segment: Optional[Segment] = None,
+    segment_data: Optional[str] = Form(None),
     video: Optional[UploadFile] = File(None)
 ):
     """
-    Upload segment data for a session (multipart form)
+    Upload segment data for a session
+    
+    Supports two modes:
+    1. JSON body (legacy): segment data as JSON body
+    2. Multipart form (new): segment_data as JSON string + video file
     
     Args:
         session_id: Session identifier
         segment_index: Segment index (must match segment.index)
-        segment_data: Segment data as JSON string
+        segment: Segment data with frames (JSON body mode)
+        segment_data: Segment data as JSON string (form mode)
         video: Optional recorded video file from frontend canvas
         
     Returns:
@@ -266,22 +263,28 @@ async def upload_segment(
             detail=f"Session {session_id} not found"
         )
     
-    # Parse segment data from form
-    try:
-        data = json.loads(segment_data)
-        segment = Segment(
-            index=data["index"],
-            duration=data["duration"],
-            frames=[PoseFrame(
-                timestamp=f["timestamp"],
-                landmarks=f["landmarks"]
-            ) for f in data.get("frames", [])]
-        )
-    except (json.JSONDecodeError, KeyError, TypeError) as e:
-        logger.error(f"Failed to parse segment_data: {e}, data type: {type(segment_data)}")
+    # Parse segment data from either JSON body or form data
+    if segment is None and segment_data is not None:
+        try:
+            data = json.loads(segment_data)
+            segment = Segment(
+                index=data["index"],
+                duration=data["duration"],
+                frames=[PoseFrame(
+                    timestamp=f["timestamp"],
+                    landmarks=f["landmarks"]
+                ) for f in data.get("frames", [])]
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid segment data: {e}"
+            )
+    
+    if segment is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid segment data: {e}"
+            detail="No segment data provided"
         )
     
     # Verify segment index matches URL parameter
@@ -505,6 +508,5 @@ async def trigger_render(session_id: str, background_tasks: BackgroundTasks):
         "status": "processing",
         "message": "Rendering started"
     }
-
 
 
