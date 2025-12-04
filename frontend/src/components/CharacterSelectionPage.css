@@ -1,12 +1,28 @@
-/* CharacterSelectionPage - 皮影戏风格角色选择 */
+/* CharacterSelectionPage - 皮影戏风格角色选择 - 美化版 */
 
+/* ========== 页面容器 ========== */
 .character-selection-page {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  background: #0a0505;
   isolation: isolate;
+}
+
+/* 皮影戏舞台背景 */
+.character-selection-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/background-stage.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
 }
 
 /* 视频背景层 */
@@ -19,7 +35,8 @@
   object-fit: cover;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.5;
+  filter: blur(2px);
 }
 
 /* UI覆盖层 */
@@ -33,12 +50,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at center, rgba(45, 24, 16, 0.7) 0%, rgba(26, 10, 10, 0.9) 100%);
+  /* 透明遮罩，让舞台背景清晰可见 */
+  background: radial-gradient(ellipse 70% 50% at center, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.45) 100%);
   padding: 40px;
   z-index: 10;
 }
 
-/* 幕布边框光晕 */
+/* 幕布边框光晕 - 增强 */
+.character-selection-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 180, 100, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255, 150, 80, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
 .character-selection-overlay::after {
   content: '';
   position: absolute;
@@ -46,7 +77,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  box-shadow: inset 0 0 200px rgba(255, 150, 50, 0.12);
+  box-shadow: inset 0 0 250px rgba(255, 150, 50, 0.15);
   pointer-events: none;
 }
 
@@ -61,98 +92,179 @@
   pointer-events: none;
 }
 
-/* 标题区域 */
+/* ========== 标题区域 ========== */
 .character-selection-header {
-  margin-bottom: 40px;
+  margin-bottom: 50px;
   text-align: center;
   position: relative;
   z-index: 10;
+  animation: header-slide-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes header-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .character-selection-header h1 {
   font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
-  font-size: 48px;
+  font-size: 56px;
   color: #f5e6d3;
-  letter-spacing: 0.2em;
-  margin: 0 0 10px 0;
+  letter-spacing: 0.25em;
+  margin: 0 0 12px 0;
   text-shadow: 
-    2px 2px 4px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(255, 180, 80, 0.4);
+    2px 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 60px rgba(255, 180, 80, 0.5),
+    0 0 120px rgba(255, 150, 50, 0.3);
+  animation: title-pulse 3s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+  0%, 100% {
+    text-shadow: 
+      2px 2px 4px rgba(0, 0, 0, 0.9),
+      0 0 60px rgba(255, 180, 80, 0.5),
+      0 0 120px rgba(255, 150, 50, 0.3);
+  }
+  50% {
+    text-shadow: 
+      2px 2px 4px rgba(0, 0, 0, 0.9),
+      0 0 80px rgba(255, 180, 80, 0.6),
+      0 0 150px rgba(255, 150, 50, 0.4);
+  }
 }
 
 .character-selection-scene {
   font-family: 'Noto Sans SC', sans-serif;
-  font-size: 24px;
-  color: rgba(212, 175, 55, 0.9);
-  margin: 0 0 10px 0;
-  letter-spacing: 0.1em;
+  font-size: 26px;
+  color: rgba(212, 175, 55, 0.95);
+  margin: 0 0 12px 0;
+  letter-spacing: 0.15em;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .character-selection-hint {
   font-family: 'Noto Sans SC', sans-serif;
   font-size: 18px;
-  color: rgba(245, 230, 211, 0.7);
-  letter-spacing: 0.05em;
+  color: rgba(245, 230, 211, 0.75);
+  letter-spacing: 0.08em;
   margin: 0;
+  animation: hint-fade-in 0.6s ease-out 0.4s forwards;
+  opacity: 0;
 }
 
-/* 角色卡片容器 */
+@keyframes hint-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ========== 角色卡片容器 ========== */
 .character-cards-container {
   display: flex;
-  gap: 40px;
+  gap: 50px;
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  max-width: 1200px;
+  max-width: 1400px;
   width: 100%;
   position: relative;
   z-index: 2;
+  padding: 20px;
 }
 
-/* 角色卡片 */
+/* ========== 角色卡片 - 高级版 ========== */
 .character-card {
-  width: 180px;
-  height: 220px;
-  border-radius: 16px;
+  width: 280px;
+  height: 360px;
+  border-radius: 24px;
   text-align: center;
-  transition: transform 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   position: relative;
   overflow: visible;
   z-index: 1;
   isolation: isolate;
-  will-change: transform;
+  will-change: transform, box-shadow;
+  
+  /* 入场动画 */
+  animation: card-float-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
 }
 
-/* SVG边框容器 */
+.character-card:nth-child(1) { animation-delay: 0.1s; }
+.character-card:nth-child(2) { animation-delay: 0.2s; }
+.character-card:nth-child(3) { animation-delay: 0.3s; }
+.character-card:nth-child(4) { animation-delay: 0.4s; }
+.character-card:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes card-float-in {
+  0% {
+    opacity: 0;
+    transform: translateY(60px) scale(0.9) rotateX(20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0);
+  }
+}
+
+/* SVG边框容器 - 进度边框 */
 .character-card-border {
   position: absolute;
-  top: -10px;
-  left: -10px;
-  width: calc(100% + 20px);
-  height: calc(100% + 20px);
+  top: -14px;
+  left: -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 28px);
   pointer-events: none;
-  z-index: 1;
+  z-index: 10;
   overflow: visible;
 }
 
-/* 卡片背景 */
+/* 卡片背景 - 高级渐变 */
 .character-card-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 50%, #d4c4b0 100%);
-  border: 3px solid #8b4513;
-  border-radius: 16px;
+  background: 
+    linear-gradient(145deg, 
+      rgba(255, 248, 235, 0.95) 0%, 
+      rgba(245, 230, 210, 0.9) 30%,
+      rgba(230, 210, 180, 0.85) 70%,
+      rgba(210, 190, 160, 0.9) 100%);
+  border: 4px solid rgba(139, 90, 43, 0.7);
+  border-radius: 20px;
   box-shadow: 
-    0 0 20px rgba(255, 180, 80, 0.2),
-    0 8px 25px rgba(0, 0, 0, 0.5),
-    inset 0 0 30px rgba(139, 69, 19, 0.15);
+    0 0 30px rgba(255, 180, 80, 0.25),
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    inset 0 0 40px rgba(139, 69, 19, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   z-index: 2;
-  transition: all 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+}
+
+/* 卡片背景纹理 */
+.character-card-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 5 L25 15 L35 15 L27 22 L30 32 L20 26 L10 32 L13 22 L5 15 L15 15 Z' fill='rgba(139,69,19,0.03)'/%3E%3C/svg%3E");
+  background-size: 40px 40px;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* 角色缩略图 */
@@ -163,21 +275,24 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.9;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0.95;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: contrast(1.05) saturate(1.1);
 }
 
 .character-card:hover .character-thumbnail {
   opacity: 1;
-  transform: scale(1.05);
+  transform: scale(1.08);
+  filter: contrast(1.1) saturate(1.15);
 }
 
 .character-card.hovered .character-thumbnail {
   opacity: 1;
-  transform: scale(1.08);
+  transform: scale(1.12);
+  filter: contrast(1.15) saturate(1.2) brightness(1.05);
 }
 
-/* 占位符 */
+/* 占位符 - 高级版 */
 .character-placeholder {
   position: absolute;
   top: 0;
@@ -187,108 +302,223 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #d4c4b0 0%, #c4b4a0 100%);
+  background: 
+    radial-gradient(ellipse at 30% 30%, rgba(255, 220, 180, 0.4) 0%, transparent 50%),
+    linear-gradient(145deg, #e8d5c0 0%, #d4c0a8 50%, #c0a890 100%);
+}
+
+.character-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 150, 0.3) 0%, transparent 70%);
 }
 
 .character-placeholder-icon {
-  font-size: 64px;
-  opacity: 0.6;
+  font-size: 80px;
+  opacity: 0.7;
+  filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
+  animation: icon-float 3s ease-in-out infinite;
 }
 
-/* 卡片内容层 */
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* 卡片内容层 - 底部渐变 */
 .character-card-content {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 15px 10px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+  padding: 20px 15px;
+  background: linear-gradient(
+    to top, 
+    rgba(0, 0, 0, 0.9) 0%, 
+    rgba(0, 0, 0, 0.7) 40%,
+    rgba(0, 0, 0, 0.3) 70%, 
+    transparent 100%
+  );
   border-radius: 0 0 16px 16px;
   z-index: 4;
 }
 
-/* 角色名称 */
+/* 角色名称 - 高级版 */
 .character-name {
-  font-size: 18px;
+  font-size: 28px;
   font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
   font-weight: 600;
   color: #fff8e1;
   margin: 0;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 25px rgba(255, 200, 150, 0.4);
+  letter-spacing: 0.15em;
 }
 
-/* 推荐标签 */
+/* 推荐标签 - 高级版 */
 .character-default-badge {
   display: inline-block;
-  margin-top: 6px;
-  padding: 2px 10px;
+  margin-top: 8px;
+  padding: 4px 14px;
   font-size: 12px;
   font-family: 'Noto Sans SC', sans-serif;
+  font-weight: 500;
   color: #fff;
-  background: linear-gradient(135deg, #c41e3a 0%, #8b0000 100%);
-  border-radius: 10px;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #e63946 0%, #c41e3a 50%, #9b1b2a 100%);
+  border-radius: 12px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 
+    0 2px 8px rgba(196, 30, 58, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.05em;
+  animation: badge-shine 3s ease-in-out infinite;
 }
 
-/* 悬停状态 */
+@keyframes badge-shine {
+  0%, 100% { box-shadow: 0 2px 8px rgba(196, 30, 58, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+  50% { box-shadow: 0 2px 15px rgba(196, 30, 58, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+}
+
+/* ========== 悬停状态 - 增强 ========== */
 .character-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-12px) scale(1.03);
+  z-index: 5;
 }
 
 .character-card:hover .character-card-bg {
   box-shadow: 
-    0 0 30px rgba(255, 180, 80, 0.4),
-    0 12px 35px rgba(0, 0, 0, 0.6),
-    inset 0 0 25px rgba(139, 69, 19, 0.2);
-  border-color: #d4af37;
+    0 0 50px rgba(255, 180, 80, 0.45),
+    0 25px 50px rgba(0, 0, 0, 0.6),
+    0 10px 20px rgba(0, 0, 0, 0.4),
+    inset 0 0 30px rgba(139, 69, 19, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(212, 175, 55, 0.9);
 }
 
+/* 选中进度悬停 */
 .character-card.hovered {
-  transform: scale(1.1);
+  transform: translateY(-16px) scale(1.08);
+  z-index: 10;
 }
 
 .character-card.hovered .character-card-bg {
-  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 50%, #ffcc80 100%);
+  background: 
+    linear-gradient(145deg, 
+      rgba(255, 255, 245, 1) 0%, 
+      rgba(255, 248, 230, 0.98) 30%,
+      rgba(255, 235, 200, 0.95) 70%,
+      rgba(255, 220, 170, 0.98) 100%);
   box-shadow: 
-    0 0 40px rgba(212, 175, 55, 0.6),
-    0 15px 45px rgba(0, 0, 0, 0.6),
-    inset 0 0 25px rgba(255, 160, 0, 0.3);
-  border-color: #c41e3a;
+    0 0 80px rgba(255, 180, 80, 0.6),
+    0 30px 60px rgba(0, 0, 0, 0.6),
+    0 15px 30px rgba(0, 0, 0, 0.4),
+    inset 0 0 40px rgba(255, 200, 100, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5);
+  border-color: #e63946;
 }
 
 /* 默认角色高亮 */
 .character-card.default .character-card-bg {
-  border-color: #d4af37;
+  border-color: rgba(212, 175, 55, 0.8);
+  box-shadow: 
+    0 0 35px rgba(212, 175, 55, 0.3),
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    inset 0 0 40px rgba(212, 175, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* 进度条边框 */
+/* 进度条边框 - 增强发光效果（金色，与场景选择一致） */
 .character-card-border rect {
-  stroke-linecap: square;
-  filter: drop-shadow(0 0 12px #c41e3a);
-  stroke: #c41e3a;
-  will-change: stroke-dashoffset;
+  stroke-linecap: round;
+  stroke: #ffaa00;
+  /* 多层发光效果，营造深度感 */
+  filter: 
+    drop-shadow(0 0 8px rgba(255, 180, 0, 1))
+    drop-shadow(0 0 20px rgba(255, 140, 0, 0.9))
+    drop-shadow(0 0 40px rgba(255, 100, 0, 0.6))
+    drop-shadow(0 0 80px rgba(255, 80, 0, 0.3));
+  /* GPU 加速，避免卡顿 */
+  will-change: stroke-dashoffset, opacity;
+  transform: translateZ(0);
+  /* 平滑的 dashoffset 变化 */
+  transition: stroke-dashoffset 0.05s linear;
 }
 
-/* 响应式 */
-@media (max-width: 900px) {
+/* 进度条发光动画 */
+.character-card.hovered .character-card-border rect {
+  animation: character-progress-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes character-progress-glow {
+  0%, 100% {
+    filter: 
+      drop-shadow(0 0 8px rgba(255, 180, 0, 1))
+      drop-shadow(0 0 20px rgba(255, 140, 0, 0.9))
+      drop-shadow(0 0 40px rgba(255, 100, 0, 0.6))
+      drop-shadow(0 0 80px rgba(255, 80, 0, 0.3));
+  }
+  50% {
+    filter: 
+      drop-shadow(0 0 12px rgba(255, 200, 50, 1))
+      drop-shadow(0 0 30px rgba(255, 160, 0, 1))
+      drop-shadow(0 0 60px rgba(255, 120, 0, 0.8))
+      drop-shadow(0 0 100px rgba(255, 80, 0, 0.5));
+  }
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 1200px) {
   .character-cards-container {
-    gap: 25px;
+    gap: 40px;
   }
   .character-card {
-    width: 150px;
-    height: 190px;
+    width: 240px;
+    height: 320px;
+  }
+  .character-selection-header h1 {
+    font-size: 44px;
+  }
+}
+
+@media (max-width: 900px) {
+  .character-cards-container {
+    gap: 32px;
+  }
+  .character-card {
+    width: 200px;
+    height: 270px;
   }
   .character-selection-header h1 {
     font-size: 36px;
+  }
+  .character-name {
+    font-size: 24px;
   }
 }
 
 @media (max-width: 600px) {
   .character-cards-container {
-    gap: 20px;
+    gap: 24px;
   }
   .character-card {
-    width: 130px;
-    height: 170px;
+    width: 160px;
+    height: 220px;
+  }
+  .character-selection-header h1 {
+    font-size: 28px;
+  }
+  .character-name {
+    font-size: 20px;
+  }
+  .character-placeholder-icon {
+    font-size: 50px;
   }
 }

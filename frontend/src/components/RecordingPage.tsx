@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MotionCaptureRecorder } from '../services/motion-capture';
 import { CanvasRecorder } from '../services/canvas-recorder';
 import { CharacterRenderer } from '../pixi/CharacterRenderer';
+import { PoseProcessor, DEFAULT_CONFIG, type ProcessedPose } from '../pose';
 import type { PoseLandmarks } from '../pixi/types';
 import './RecordingPage.css';
 
@@ -121,22 +122,37 @@ export const RecordingPage = ({
   const poseDetectionCountRef = useRef(0);
   const canvasRecorderRef = useRef<CanvasRecorder | null>(null);
   const recordedVideoBlobRef = useRef<Blob | null>(null);
+  
+  // 动捕管线相关
+  const poseProcessorRef = useRef<PoseProcessor | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_processedPose, setProcessedPose] = useState<ProcessedPose | null>(null);
+  const mirrorMode = true; // 镜像模式（摄像头默认是镜像的）
 
-  // 初始化 CharacterRenderer
+  // 初始化 CharacterRenderer 和 PoseProcessor（与 CameraTestPage 保持一致）
   useEffect(() => {
     if (!characterCanvasRef.current || !characterId) return;
 
     const initRenderer = async () => {
       try {
         const renderer = new CharacterRenderer();
+        // 使用全屏尺寸初始化，让动捕效果正常
         await renderer.init(characterCanvasRef.current!, window.innerWidth, window.innerHeight);
         
         // 加载角色（使用管理后台的 API）
         const configUrl = `/api/admin/characters/${characterId}/config.json`;
         await renderer.loadCharacter(configUrl);
         
+        // 重置到默认姿态（与 CameraTestPage 一致）
+        renderer.resetPose();
+        
         rendererRef.current = renderer;
-        console.log('Character renderer initialized');
+        console.log('Character renderer initialized (matching CameraTestPage)');
+        
+        // 初始化 PoseProcessor（与 CameraTestPage 相同配置）
+        const processor = new PoseProcessor(DEFAULT_CONFIG);
+        poseProcessorRef.current = processor;
+        console.log('PoseProcessor initialized');
       } catch (err) {
         console.error('Failed to init character renderer:', err);
       }
@@ -146,6 +162,7 @@ export const RecordingPage = ({
 
     return () => {
       rendererRef.current?.destroy();
+      poseProcessorRef.current = null;
     };
   }, [characterId]);
 
@@ -313,48 +330,58 @@ export const RecordingPage = ({
     }
   }, [elapsedTime, isCalibrated, pathConfig, segmentDuration]);
 
-  // 处理姿态检测和自动校准
+  // 处理姿态检测 - 使用 PoseProcessor 管线
+  const handlePose = useCallback((landmarks: PoseLandmarks) => {
+    const processor = poseProcessorRef.current;
+    const renderer = rendererRef.current;
+    
+    if (!processor || !renderer) return;
+    
+    // 处理管线输入（根据镜像模式翻转 X 坐标）
+    const processLandmarks: PoseLandmarks = mirrorMode
+      ? landmarks.map((lm) => ({ ...lm, x: 1 - lm.x }))
+      : landmarks;
+    
+    // 使用 PoseProcessor 处理姿态数据
+    const processed = processor.process(processLandmarks);
+    setProcessedPose(processed);
+    
+    // 使用处理后的数据更新角色
+    renderer.updatePoseFromProcessed(processed);
+    
+    // 更新校准状态
+    if (processor.isCalibrated() && !isCalibrated) {
+      setIsCalibrated(true);
+      setCalibrationProgress(30);
+      console.log('✓ Auto-calibrated via PoseProcessor');
+    }
+    
+    // 更新校准进度（自动校准进行中）
+    if (!processor.isCalibrated()) {
+      poseDetectionCountRef.current++;
+      if (poseDetectionCountRef.current % 5 === 0) {
+        setCalibrationProgress(Math.min(poseDetectionCountRef.current, 29));
+      }
+    }
+
+    // 录制姿态数据
+    if (isRecording) {
+      // 转换类型：确保 visibility 是必需的
+      const recordLandmarks = landmarks.map(lm => ({
+        x: lm.x,
+        y: lm.y,
+        z: lm.z,
+        visibility: lm.visibility ?? 1.0, // 默认为 1.0 如果未定义
+      }));
+      recorder.addFrame(recordLandmarks);
+    }
+  }, [isCalibrated, isRecording, recorder, mirrorMode]);
+
+  // 注册姿态检测回调
   useEffect(() => {
     if (!onPoseDetected) return;
-
-    const handlePose = (landmarks: PoseLandmarks) => {
-      // 自动校准
-      if (!isCalibrated) {
-        poseDetectionCountRef.current++;
-        if (poseDetectionCountRef.current % 5 === 0) {
-          setCalibrationProgress(poseDetectionCountRef.current);
-        }
-        
-        if (poseDetectionCountRef.current === 30) {
-          if (rendererRef.current) {
-            rendererRef.current.setReferencePose(landmarks);
-            setIsCalibrated(true);
-            setCalibrationProgress(30);
-            console.log('✓ Auto-calibrated');
-          }
-        }
-      }
-
-      // 更新皮影姿态
-      if (rendererRef.current) {
-        rendererRef.current.updatePose(landmarks);
-      }
-
-      // 录制姿态数据
-      if (isRecording) {
-        // 转换类型：确保 visibility 是必需的
-        const recordLandmarks = landmarks.map(lm => ({
-          x: lm.x,
-          y: lm.y,
-          z: lm.z,
-          visibility: lm.visibility ?? 1.0, // 默认为 1.0 如果未定义
-        }));
-        recorder.addFrame(recordLandmarks);
-      }
-    };
-
     onPoseDetected(handlePose);
-  }, [onPoseDetected, isCalibrated, isRecording, recorder]);
+  }, [onPoseDetected, handlePose]);
 
   // 初始化摄像头视频
   useEffect(() => {

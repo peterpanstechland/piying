@@ -10,6 +10,7 @@ interface RenderWaitPageProps {
     getSessionStatus: (sessionId: string) => Promise<{
       status: string;
       output_path?: string;
+      video_url?: string;
     }>;
     getVideoUrl: (sessionId: string) => string;
   };
@@ -80,7 +81,8 @@ export const RenderWaitPage = ({
           }
           
           console.log('Status is done, calling onComplete');
-          const videoUrl = apiClientRef.current.getVideoUrl(sessionId);
+          // Use S3 URL if available, otherwise fall back to local URL
+          const videoUrl = response.video_url || apiClientRef.current.getVideoUrl(sessionId);
           console.log('Video URL:', videoUrl);
           onCompleteRef.current(videoUrl);
         } else if (response.status === 'failed') {

@@ -129,13 +129,17 @@ export default function CharacterOverlay({
     container.position.set(x, y)
     container.scale.set(currentScale * (renderer.isFlipped() ? -1 : 1), currentScale)
 
-    // Update bounds
-    // Using getBounds() gets the bounds in global coordinates of the renderer stage
-    // Since the container is a child of stage, and stage is at (0,0), this should be correct relative to canvas
-    const pixiBounds = container.getBounds()
+    // Update bounds - calculate based on character position and size
+    // The container.position is the CENTER of the character
+    // We need to get the actual rendered size from the container's local bounds
+    const localBounds = container.getLocalBounds()
     
-    // If bounds are empty or invalid, use a fallback size based on scale
-    if (pixiBounds.width === 0 || pixiBounds.height === 0) {
+    // Calculate the actual width/height considering scale
+    const actualWidth = localBounds.width * Math.abs(currentScale)
+    const actualHeight = localBounds.height * Math.abs(currentScale)
+    
+    // If bounds are empty or invalid, use a fallback size
+    if (actualWidth === 0 || actualHeight === 0 || !isFinite(actualWidth) || !isFinite(actualHeight)) {
         // Fallback: assume a standard size (e.g. 200x400) scaled
         const fallbackW = 200 * currentScale
         const fallbackH = 400 * currentScale
@@ -146,11 +150,14 @@ export default function CharacterOverlay({
             height: fallbackH
         })
     } else {
+        // Calculate the top-left corner based on center position
+        // The local bounds give us the offset from the container's origin
+        // Since pivot is usually at center (0,0 in local space maps to container.position in world space)
         setBounds({
-            x: pixiBounds.x,
-            y: pixiBounds.y,
-            width: pixiBounds.width,
-            height: pixiBounds.height
+            x: x + localBounds.x * currentScale,
+            y: y + localBounds.y * currentScale,
+            width: actualWidth,
+            height: actualHeight
         })
     }
   }, [isLoaded, playhead, segment, containerWidth, containerHeight, getScale])

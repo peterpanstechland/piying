@@ -55,6 +55,7 @@ export interface SessionStatusResponse {
   scene_id: string;
   status: SessionStatus;
   output_path?: string;
+  video_url?: string;
   segment_count: number;
 }
 

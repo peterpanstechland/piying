@@ -123,6 +123,11 @@ function App() {
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [availableCharacters, setAvailableCharacters] = useState<CharacterOption[]>([]);
   
+  // 页面过渡状态
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  const [displayedState, setDisplayedState] = useState<AppState>(AppState.IDLE);
+  const previousStateRef = useRef<AppState>(AppState.IDLE);
+  
   const { toasts, showError, showWarning, closeToast } = useToast();
   
   // Performance monitoring
@@ -169,7 +174,25 @@ function App() {
     
     // Listen to state changes and track transition timing
     stateMachineRef.current.addListener((state) => {
+      const prevState = previousStateRef.current;
       setCurrentState(state);
+      
+      // 页面过渡动画：仅在IDLE->SCENE_SELECT时使用平滑过渡
+      if (prevState === AppState.IDLE && state === AppState.SCENE_SELECT) {
+        // 触发退出动画
+        setIsTransitioning(true);
+        
+        // 等待退出动画完成后更新显示状态
+        setTimeout(() => {
+          setDisplayedState(state);
+          setIsTransitioning(false);
+        }, 300);
+      } else {
+        // 其他状态直接切换
+        setDisplayedState(state);
+      }
+      
+      previousStateRef.current = state;
       
       // Record state transition duration for performance monitoring
       const transitionDuration = stateMachineRef.current?.getLastTransitionDuration() || 0;
@@ -778,19 +801,28 @@ function App() {
   const renderCurrentPage = () => {
     const context = stateMachineRef.current?.getContext();
     
-    switch (currentState) {
+    // 使用displayedState来渲染页面，配合过渡动画
+    const stateToRender = displayedState;
+    
+    switch (stateToRender) {
       case AppState.IDLE:
-        return <IdlePage videoElement={videoElement} />;
+        return (
+          <div className={`page-transition-wrapper ${isTransitioning ? 'exiting' : ''}`}>
+            <IdlePage videoElement={videoElement} />
+          </div>
+        );
       
       case AppState.SCENE_SELECT:
         return (
-          <SceneSelectionPage
-            scenes={scenes}
-            videoElement={videoElement}
-            handPosition={handPosition}
-            onSceneSelect={handleSceneSelect}
-            apiBaseUrl={apiClientRef.current.getBaseUrl()}
-          />
+          <div className="page-transition-wrapper">
+            <SceneSelectionPage
+              scenes={scenes}
+              videoElement={videoElement}
+              handPosition={handPosition}
+              onSceneSelect={handleSceneSelect}
+              apiBaseUrl={apiClientRef.current.getBaseUrl()}
+            />
+          </div>
         );
       
       case AppState.CHARACTER_SELECT:
@@ -813,6 +845,7 @@ function App() {
             totalSegments={context?.totalSegments || 3}
             videoElement={videoElement}
             currentPose={currentPose} // Pass pose data
+            characterId={context?.characterId} // 传递角色ID用于皮影人物渲染
             onGuidanceComplete={handleGuidanceComplete}
           />
         );

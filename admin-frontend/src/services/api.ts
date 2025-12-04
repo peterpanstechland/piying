@@ -771,6 +771,10 @@ class AdminApiClient {
       guidance_text_en: string
       guidance_image: string | null
       play_audio?: boolean
+      // Scale configuration
+      scale_mode?: string
+      scale_start?: number
+      scale_end?: number
     }>
   }> {
     const response = await this.client.get(
@@ -797,6 +801,10 @@ class AdminApiClient {
       guidance_text_en?: string
       guidance_image?: string | null
       play_audio?: boolean
+      // Scale configuration
+      scale_mode?: string
+      scale_start?: number
+      scale_end?: number
     }>
   ): Promise<{ message: string }> {
     const response = await this.client.put(

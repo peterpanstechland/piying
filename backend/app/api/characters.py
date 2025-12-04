@@ -182,3 +182,69 @@ async def get_character_spritesheet(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to load spritesheet: {str(e)}"
         )
+
+
+@router.get("/{character_id}/thumbnail.png")
+async def get_character_thumbnail(
+    character_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Get the character thumbnail image.
+    
+    This is a public endpoint that allows the frontend to load character
+    thumbnails for display in character selection UI.
+    
+    Returns the PNG thumbnail for the character.
+    """
+    from fastapi.responses import FileResponse
+    from pathlib import Path
+    import os
+    
+    try:
+        # Get character to verify it exists
+        character = await character_service.get_character_by_id(db, character_id)
+        if not character:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Character not found: {character_id}"
+            )
+        
+        # Construct thumbnail path
+        thumbnail_path = Path(f"data/characters/{character_id}/thumbnail.png")
+        
+        # If thumbnail exists, return it
+        if thumbnail_path.exists():
+            return FileResponse(
+                path=str(thumbnail_path),
+                media_type="image/png",
+                headers={
+                    "Cache-Control": "public, max-age=3600",
+                }
+            )
+        
+        # Try to generate thumbnail if it doesn't exist
+        generated_path = await character_service.generate_thumbnail(db, character_id)
+        if generated_path:
+            full_path = Path(f"data/{generated_path}")
+            if full_path.exists():
+                return FileResponse(
+                    path=str(full_path),
+                    media_type="image/png",
+                    headers={
+                        "Cache-Control": "public, max-age=3600",
+                    }
+                )
+        
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Thumbnail not found for character: {character_id}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading thumbnail: {character_id}, error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load thumbnail: {str(e)}"
+        )

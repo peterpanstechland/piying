@@ -393,9 +393,10 @@ export const SceneSelectionPage = ({
               ? (scene.synopsis || scene.description) 
               : (scene.synopsis_en || scene.description_en);
             
-            // Get cover image URL (prefer medium size for cards)
+            // Get cover image URL using public API endpoint (prefer medium size for cards)
+            // Use the public storyline cover API instead of direct file path
             const coverImageUrl = scene.cover_image?.medium_path 
-              ? `${apiBaseUrl}${scene.cover_image.medium_path.startsWith('/') ? '' : '/'}${scene.cover_image.medium_path}`
+              ? `${apiBaseUrl}/api/storylines/${scene.id}/cover/medium`
               : null;
             
             const dims = cardDimensions.get(scene.id) || { width: 0, height: 0 };
@@ -458,13 +459,12 @@ export const SceneSelectionPage = ({
                     rx={pathRadius}
                     ry={pathRadius}
                     fill="none"
-                    stroke="#ff6f00"
                     strokeWidth={strokeWidth}
                     strokeDasharray={perimeter}
                     strokeDashoffset={dashOffset}
                     style={{
                       opacity: isHovered ? 1 : 0,
-                      transition: isHovered ? 'none' : 'opacity 0.3s',
+                      transition: 'opacity 0.2s ease-out',
                     }}
                   />
                 </svg>

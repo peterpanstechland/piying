@@ -528,6 +528,10 @@ class TimelineSegment(BaseModel):
     guidance_text_en: str = Field(default="", description="English guidance text")
     guidance_image: Optional[str] = Field(default=None, description="Path to guidance image")
     play_audio: bool = Field(default=False, description="Whether to play audio during recording")
+    # Scale configuration (Requirements 11.6)
+    scale_mode: str = Field(default="auto", description="Scale mode: 'auto' or 'manual'")
+    scale_start: float = Field(default=1.0, ge=0.1, le=3.0, description="Starting scale (1.0 = 100%)")
+    scale_end: float = Field(default=1.0, ge=0.1, le=3.0, description="Ending scale (1.0 = 100%)")
 
     @field_validator('path_type')
     @classmethod

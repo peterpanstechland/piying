@@ -582,3 +582,94 @@ async def get_character_video_path(
             video_path=base_video_path,
             is_character_specific=False,
         )
+
+
+@router.get("/{storyline_id}/cover/{size}")
+async def get_storyline_cover_image(
+    storyline_id: str,
+    size: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Get cover image file by size for a published storyline.
+    
+    This is a public endpoint that allows the frontend to load cover images
+    for display in scene selection UI.
+    
+    Args:
+        storyline_id: Storyline ID
+        size: Image size - 'thumbnail', 'medium', 'large', or 'original'
+    
+    Returns:
+        FileResponse with the cover image
+    
+    Raises:
+        404: Storyline not found or cover image not available
+    """
+    import os
+    from fastapi.responses import FileResponse
+    
+    # Get storyline to verify it exists and is published
+    storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
+    
+    if storyline is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Check if storyline is published
+    if storyline.status != StorylineStatus.PUBLISHED.value:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storyline with ID '{storyline_id}' not found",
+        )
+    
+    # Get the appropriate cover path based on size
+    cover_path = None
+    if size == "thumbnail":
+        cover_path = getattr(storyline, 'cover_thumbnail', None)
+    elif size == "medium":
+        cover_path = getattr(storyline, 'cover_medium', None)
+    elif size == "large":
+        cover_path = getattr(storyline, 'cover_large', None)
+    elif size == "original":
+        cover_path = getattr(storyline, 'cover_original', None)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid size: {size}. Must be 'thumbnail', 'medium', 'large', or 'original'",
+        )
+    
+    if not cover_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cover image ({size}) not found for storyline",
+        )
+    
+    # Build full path - data directory is at backend/data
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    data_dir = os.path.join(backend_dir, "data")
+    full_path = os.path.join(data_dir, cover_path)
+    
+    if not os.path.exists(full_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cover image file not found on disk",
+        )
+    
+    # Determine media type based on file extension
+    ext = os.path.splitext(full_path)[1].lower()
+    media_type = "image/jpeg"
+    if ext == ".png":
+        media_type = "image/png"
+    elif ext == ".webp":
+        media_type = "image/webp"
+    
+    return FileResponse(
+        full_path,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "public, max-age=3600",
+        }
+    )

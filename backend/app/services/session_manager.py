@@ -7,6 +7,8 @@ import logging
 from typing import Optional, List
 from ..models import Session, Segment, SessionStatus
 from .storage_manager import StorageManager
+from .s3_service import S3Service
+from ..config.config_loader import ConfigLoader
 from ..utils.logger import log_session_event
 
 logger = logging.getLogger(__name__)
@@ -138,6 +140,28 @@ class SessionManager:
         session.status = status
         if output_path is not None:
             session.output_path = output_path
+        
+        # =====================================================
+        # S3 UPLOAD - DO NOT DELETE THIS BLOCK
+        # =====================================================
+        if status == SessionStatus.DONE and session.output_path:
+            config_loader = ConfigLoader()
+            settings = config_loader.load_settings()
+            current_s3_service = S3Service(settings.storage)
+            
+            logger.info(f"S3 Enabled: {current_s3_service.enabled}, Mode: {settings.storage.mode}")
+            
+            if current_s3_service.enabled:
+                logger.info(f"Uploading to S3 for session {session_id}")
+                object_name = f"videos/{session_id}.mp4"
+                video_url = current_s3_service.upload_file(session.output_path, object_name)
+                if video_url:
+                    session.video_url = video_url
+                    logger.info(f"S3 upload OK: {video_url}")
+                else:
+                    logger.warning(f"S3 upload FAILED for {session_id}")
+        # =====================================================
+        
         session.updated_at = time.time()
         self.storage_manager.save_session(session)
         
@@ -157,7 +181,8 @@ class SessionManager:
             scene_id=session.scene_id,
             old_status=old_status.value,
             new_status=status.value,
-            output_path=output_path
+            output_path=output_path,
+            video_url=getattr(session, 'video_url', None)
         )
     
     def mark_cancelled(self, session_id: str) -> None:

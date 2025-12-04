@@ -307,11 +307,11 @@ export const CharacterSelectionPage = ({
     };
   }, [getScreenCoordinates]);
 
-  // Get thumbnail URL
-  const getThumbnailUrl = (path: string | null): string | null => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    return `${apiBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  // Get thumbnail URL - use the public character thumbnail API endpoint
+  const getThumbnailUrl = (characterId: string, _path: string | null): string | null => {
+    // Always use the public API endpoint for character thumbnails
+    // This ensures consistent access regardless of the stored path format
+    return `${apiBaseUrl}/api/characters/${characterId}/thumbnail.png`;
   };
 
 
@@ -331,12 +331,13 @@ export const CharacterSelectionPage = ({
         <div className="character-cards-container" ref={cardsContainerRef}>
           {sortedCharacters.map((character) => {
             const isHovered = hoveredCharacterId === character.id;
-            const thumbnailUrl = getThumbnailUrl(character.thumbnail_path);
+            const thumbnailUrl = getThumbnailUrl(character.id, character.thumbnail_path);
             
             const dims = cardDimensions.get(character.id) || { width: 0, height: 0 };
             
-            const strokeWidth = 20;
-            const expansion = 10;
+            // 进度条参数 - 与场景选择页面一致
+            const strokeWidth = 24;
+            const expansion = 12;
             const shadowOffset = 3;
             
             const pathWidth = dims.width + (expansion * 2);
@@ -346,10 +347,10 @@ export const CharacterSelectionPage = ({
             const progress = isHovered ? hoverProgress : 0;
             const dashOffset = perimeter * (1 - progress);
             
-            const pathRadius = 50 + expansion; // Circular cards
+            const pathRadius = 24 + expansion; // 圆角卡片
             
-            const rectX = 10;
-            const rectY = 10 + shadowOffset;
+            const rectX = 12;
+            const rectY = 12 + shadowOffset;
 
             return (
               <div
@@ -383,13 +384,12 @@ export const CharacterSelectionPage = ({
                     rx={pathRadius}
                     ry={pathRadius}
                     fill="none"
-                    stroke="#ff6f00"
                     strokeWidth={strokeWidth}
                     strokeDasharray={perimeter}
                     strokeDashoffset={dashOffset}
                     style={{
                       opacity: isHovered ? 1 : 0,
-                      transition: isHovered ? 'none' : 'opacity 0.3s',
+                      transition: 'opacity 0.2s ease-out',
                     }}
                   />
                 </svg>

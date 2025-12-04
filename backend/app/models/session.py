@@ -62,6 +62,7 @@ class Session(BaseModel):
     status: SessionStatus = Field(default=SessionStatus.PENDING, description="Current session status")
     segments: List[Segment] = Field(default_factory=list, description="Recorded segments")
     output_path: Optional[str] = Field(default=None, description="Path to rendered video file")
+    video_url: Optional[str] = Field(default=None, description="Public URL to rendered video (e.g. S3)")
     created_at: float = Field(default_factory=time.time, description="Creation timestamp (Unix time)")
     updated_at: float = Field(default_factory=time.time, description="Last update timestamp (Unix time)")
 
@@ -117,6 +118,7 @@ class SessionStatusResponse(BaseModel):
     scene_id: str = Field(..., description="Scene ID")
     status: SessionStatus = Field(..., description="Current status")
     output_path: Optional[str] = Field(default=None, description="Video output path if available")
+    video_url: Optional[str] = Field(default=None, description="Public URL to video if available (e.g. S3)")
     segment_count: int = Field(..., description="Number of uploaded segments")
 
     class Config:

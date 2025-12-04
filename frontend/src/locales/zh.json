@@ -3,11 +3,11 @@
     "back": "返回"
   },
   "idle": {
-    "waiting": "等待用户..."
+    "waiting": "等待体验者..."
   },
   "sceneSelection": {
     "title": "选择你的场景",
-    "hover": "悬停选择"
+    "hover": "请用左手食指拖动光标选择场景"
   },
   "guidance": {
     "title": "准备开始",

@@ -223,6 +223,7 @@ async def get_session_status(session_id: str):
         scene_id=session.scene_id,
         status=session.status,
         output_path=session.output_path,
+        video_url=getattr(session, 'video_url', None),
         segment_count=len(session.segments)
     )
 

@@ -176,13 +176,13 @@ export default function VideoEditorPage() {
         pathType: (seg.path_draw_type || 'linear') as 'linear' | 'bezier' | 'freehand',
       } : undefined
       
-      // Parse scale configuration
+      // Parse scale configuration - always include scale data
       const segWithScale = seg as typeof seg & { scale_mode?: string; scale_start?: number; scale_end?: number }
-      const scale = segWithScale.scale_mode ? {
+      const scale = {
         mode: (segWithScale.scale_mode || 'auto') as 'auto' | 'manual',
         start: segWithScale.scale_start ?? 1.0,
         end: segWithScale.scale_end ?? 1.0,
-      } : undefined
+      }
       
       return {
         id: seg.id || `segment-${index}`,

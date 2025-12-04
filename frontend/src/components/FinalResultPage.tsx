@@ -87,20 +87,19 @@ export const FinalResultPage = ({
 
   // Auto-reset timer
   useEffect(() => {
-    let hasReset = false;
     const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1 && !hasReset) {
-          hasReset = true;
-          onReset();
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeRemaining((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [onReset]);
+  }, []);
+
+  // Trigger reset when timer reaches 0
+  useEffect(() => {
+    if (timeRemaining === 0) {
+      onReset();
+    }
+  }, [timeRemaining, onReset]);
 
   // Auto-play video when loaded
   useEffect(() => {
