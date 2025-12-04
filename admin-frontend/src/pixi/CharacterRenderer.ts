@@ -139,17 +139,19 @@ const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
  * 
  * 皮影戏的层级逻辑（从后到前）- 三明治结构：
  * 
- *   【前面的手臂/手】 - 最顶层
+ *   【前面的手臂/手】 - 最顶层（在头部前面）
  *         ↓
- *   【背后的手臂/手】 - 也在头部前面！
+ *       【头部】 - 中间层
  *         ↓
- *       【头部】
+ *   【背后的手臂/手】 - 在头部后面
  *         ↓
  *       【身体】
  *         ↓
  *     【腿/脚】 - 最底层
  * 
- * 关键点：所有手臂都在头部前面，这样无论哪只手举起来都不会被头"穿模"
+ * 关键点：
+ * - 前面的手臂/手在头部前面（可以遮挡头部）
+ * - 背后的手臂/手在头部后面（被头部遮挡）
  * 
  * "背后"和"前面"取决于角色的朝向：
  * - 面朝右：左侧肢体在背后，右侧在前面
@@ -157,13 +159,13 @@ const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
  */
 const Z_INDEX_LAYERS = {
   BACK_LEG: -20,    // 背后的腿/脚
-  FRONT_LEG: -15,   // 前面的腿/脚（也在身体后面）
+  FRONT_LEG: -15,   // 前面的腿/脚
+  BACK_ARM: -10,    // 背后的手臂（在头部后面）
+  BACK_HAND: -8,    // 背后的手（在头部后面）
   BODY: 0,          // 身体
   HEAD: 10,         // 头部
-  BACK_ARM: 15,     // 背后的手臂（在头部前面！）
-  BACK_HAND: 16,    // 背后的手
-  FRONT_ARM: 20,    // 前面的手臂（最顶层）
-  FRONT_HAND: 22,   // 前面的手
+  FRONT_ARM: 15,    // 前面的手臂（在头部前面）
+  FRONT_HAND: 18,   // 前面的手（在头部前面）
 }
 
 /**
@@ -171,8 +173,8 @@ const Z_INDEX_LAYERS = {
  * 这是一个通用函数，适用于所有皮影角色
  * 
  * 三明治结构：
- * - 所有手臂/手都在头部前面（避免举手时穿模）
- * - 前面的手臂在背后的手臂前面（保持前后关系）
+ * - 前面的手臂/手在头部前面（z-index > HEAD）
+ * - 背后的手臂/手在头部后面（z-index < HEAD）
  * - 腿/脚在身体后面
  */
 function calculatePartZIndex(partName: string, defaultFacing: CharacterFacing): number {
@@ -367,14 +369,17 @@ export class CharacterRenderer {
       const partContainer = new Container()
       partContainer.addChild(sprite)
       
-      // 应用 Z-Index：使用通用的层级计算函数
-      // 如果配置中有指定 zIndex，优先使用配置值；否则使用自动计算的值
+      // 应用 Z-Index：始终使用计算值来保证三明治层级结构
+      // 这样可以确保：前手 > 头 > 背手，无论 spritesheet.json 中的 zIndex 是什么
       const configZIndex = frameData.zIndex
       const calculatedZIndex = calculatePartZIndex(partName, this.defaultFacing)
-      const zIndex = configZIndex !== undefined ? configZIndex : calculatedZIndex
+      const zIndex = calculatedZIndex  // 始终使用计算值
       
-      if (partName.includes('arm') || partName.includes('hand') || partName === 'head') {
-        console.log(`  Z-Index: ${partName} = ${zIndex} (config: ${configZIndex}, calculated: ${calculatedZIndex}, facing: ${this.defaultFacing})`)
+      // 调试：显示所有关键部件的 z-index
+      const isBackSide = (this.defaultFacing === 'right' && partName.startsWith('left-')) || 
+                         (this.defaultFacing === 'left' && partName.startsWith('right-'))
+      if (partName.includes('arm') || partName.includes('hand') || partName === 'head' || partName === 'body') {
+        console.log(`  Z-Index: ${partName} = ${zIndex} (config ignored: ${configZIndex}, facing: ${this.defaultFacing}, isBack: ${isBackSide})`)
       }
       
       partContainer.zIndex = zIndex
@@ -402,6 +407,10 @@ export class CharacterRenderer {
       console.log('Added', partName, 'to root')
     }
     console.log('Container children AFTER adding:', this.container.children.length)
+    
+    // 手动触发 z-index 排序，确保层级正确
+    this.container.sortChildren()
+    console.log('Container sortChildren() called')
 
     // Position parts in default pose with hierarchy
     this.resetPose()
