@@ -11,9 +11,8 @@ interface SegmentGuidancePageProps {
   totalSegments: number;
   videoElement?: HTMLVideoElement | null;
   currentPose?: PoseLandmark[] | null;
-  characterId?: string; // 新增：角色ID
+  characterId?: string;
   onGuidanceComplete?: () => void;
-  onCalibrationComplete?: () => void; // 新增：校准完成回调
 }
 
 /**
@@ -28,22 +27,19 @@ export const SegmentGuidancePage = ({
   currentPose,
   characterId,
   onGuidanceComplete,
-  onCalibrationComplete,
 }: SegmentGuidancePageProps) => {
   const { t } = useTranslation();
   const [isInBox, setIsInBox] = useState(false);
   const [isStableInBox, setIsStableInBox] = useState(false); // Debounced state
   const [countdown, setCountdown] = useState<number | null>(null);
   
-  // 校准相关状态
-  const [isCalibrated, setIsCalibrated] = useState(false);
-  const [calibrationProgress, setCalibrationProgress] = useState(0);
+  // 校准状态 - 默认已校准（上一步已完成校准）
+  const isCalibrated = true;
   
   // 皮影人物渲染相关
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CharacterRenderer | null>(null);
   const poseProcessorRef = useRef<PoseProcessor | null>(null);
-  const poseDetectionCountRef = useRef(0);
   
   // Config: Detection Box Area (Normalized 0-1)
   const BOX_CONFIG = {
@@ -179,7 +175,7 @@ export const SegmentGuidancePage = ({
     };
   }, [characterId]);
 
-  // 处理姿态检测 - 更新皮影人物和校准
+  // 处理姿态检测 - 更新皮影人物
   const handlePoseUpdate = useCallback((pose: PoseLandmark[]) => {
     const renderer = rendererRef.current;
     const processor = poseProcessorRef.current;
@@ -199,23 +195,7 @@ export const SegmentGuidancePage = ({
     
     // 更新皮影人物
     renderer.updatePoseFromProcessed(processed);
-    
-    // 更新校准状态
-    if (processor.isCalibrated() && !isCalibrated) {
-      setIsCalibrated(true);
-      setCalibrationProgress(30);
-      console.log('[SegmentGuidance] ✓ Auto-calibrated via PoseProcessor');
-      onCalibrationComplete?.();
-    }
-    
-    // 更新校准进度
-    if (!processor.isCalibrated()) {
-      poseDetectionCountRef.current++;
-      if (poseDetectionCountRef.current % 5 === 0) {
-        setCalibrationProgress(Math.min(poseDetectionCountRef.current, 29));
-      }
-    }
-  }, [isCalibrated, onCalibrationComplete]);
+  }, []);
 
   // 当有姿态数据时，更新皮影人物（始终处理，与 CameraTestPage 保持一致）
   useEffect(() => {
@@ -228,19 +208,15 @@ export const SegmentGuidancePage = ({
   const onGuidanceCompleteRef = useRef(onGuidanceComplete);
   onGuidanceCompleteRef.current = onGuidanceComplete;
 
-  // Handle countdown logic based on STABLE state AND calibration
+  // Handle countdown logic - 站在框内即开始倒计时
   useEffect(() => {
     let timer: number;
 
-    console.log('[SegmentGuidance] Countdown effect:', { isStableInBox, isCalibrated, countdown });
-
-    // 只有在站在框内且校准完成后才开始倒计时
-    if (isStableInBox && isCalibrated) {
+    if (isStableInBox) {
       if (countdown === null) {
         console.log('[SegmentGuidance] Starting countdown from 3');
         setCountdown(3); // Start 3s countdown
       } else if (countdown > 0) {
-        console.log('[SegmentGuidance] Countdown tick:', countdown);
         timer = window.setTimeout(() => setCountdown(countdown - 1), 1000);
       } else if (countdown === 0) {
         // Complete!
@@ -250,15 +226,12 @@ export const SegmentGuidancePage = ({
         }
       }
     } else {
-      // Reset only when stable state is lost or not calibrated
-      if (countdown !== null) {
-        console.log('[SegmentGuidance] Resetting countdown (left box or not calibrated)');
-      }
+      // Reset when user leaves box
       setCountdown(null);
     }
 
     return () => clearTimeout(timer);
-  }, [isStableInBox, isCalibrated, countdown]); // Added isCalibrated to deps
+  }, [isStableInBox, countdown]);
 
   // Video ref to prevent repeated play() calls
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -301,36 +274,17 @@ export const SegmentGuidancePage = ({
       )}
 
       <div className="guidance-overlay">
-        {/* 校准状态显示 */}
+        {/* 简化的标题 */}
         <div className="guidance-header">
-          {!isCalibrated ? (
-            <>
-              <div className="calibration-status">
-                <div className="calibration-text">
-                  请保持静止，正在识别您的姿态...
-                </div>
-                <div className="calibration-progress-bar">
-                  <div 
-                    className="calibration-progress-fill" 
-                    style={{ width: `${(calibrationProgress / 30) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <h1>{t('guidance.title')}</h1>
-              <p className="segment-counter">
-                {t('guidance.segment', { current: segmentIndex + 1, total: totalSegments })}
-              </p>
-            </>
-          )}
+          <h1>{t('guidance.title')}</h1>
+          <p className="segment-counter">
+            {t('guidance.segment', { current: segmentIndex + 1, total: totalSegments })}
+          </p>
         </div>
 
         {/* Detection Box Visualization */}
-        {/* Use isStableInBox for visual feedback so it doesn't flicker */}
         <div 
-          className={`detection-box ${isStableInBox ? 'active' : ''} ${isCalibrated ? 'calibrated' : ''}`}
+          className={`detection-box ${isStableInBox ? 'active' : ''} calibrated`}
           style={{
             left: `${BOX_CONFIG.x * 100}%`,
             top: `${BOX_CONFIG.y * 100}%`,
@@ -346,10 +300,8 @@ export const SegmentGuidancePage = ({
           
           {/* Countdown or Prompt */}
           <div className="box-status">
-            {isStableInBox && isCalibrated ? (
+            {isStableInBox ? (
               <div key={countdown} className="countdown-number">{countdown}</div>
-            ) : isStableInBox && !isCalibrated ? (
-              <div className="calibrating-prompt">校准中...</div>
             ) : (
               <div className="stand-here-prompt">请站在这里</div>
             )}
@@ -357,7 +309,6 @@ export const SegmentGuidancePage = ({
         </div>
 
         <div className="guidance-content">
-          {/* Only show text content, rely on box for positioning */}
           <h2 className="guidance-action">
             {t(`guidance.segment${segmentIndex + 1}.action`)}
           </h2>
