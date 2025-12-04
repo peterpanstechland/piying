@@ -271,7 +271,7 @@ export class CharacterRenderer {
       canvas,
       width,
       height,
-      backgroundColor: 0x1a1a2e,
+      backgroundAlpha: 0, // 透明背景
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
