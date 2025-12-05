@@ -268,18 +268,14 @@ export class CharacterRenderer {
     
     console.log('Calling app.init...')
     
-    // 绿幕模式：录制时使用绿色背景（用于 FFmpeg chromakey）
-    // 预览模式：使用透明背景
-    const useGreenScreen = options.useGreenScreen === true
-    const bgColor = useGreenScreen ? 0x00ff00 : undefined
-    const bgAlpha = useGreenScreen ? 1 : 0
-    
+    // 始终使用透明背景
+    // 皮影人物作为透明层叠加在背景视频上
+    // FFmpeg 使用 WebM VP9 的 alpha 通道进行 overlay
     await app.init({
       canvas,
       width,
       height,
-      backgroundColor: bgColor,
-      backgroundAlpha: bgAlpha,
+      backgroundAlpha: 0, // 透明背景
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
