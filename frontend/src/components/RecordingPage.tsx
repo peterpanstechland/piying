@@ -498,7 +498,8 @@ export const RecordingPage = ({
       )}
 
       {/* 隐藏的录制专用 Canvas (绿幕) */}
-      {/* 注意：即便隐藏也需要保持尺寸和渲染，用于录制 */}
+      {/* 注意：不能使用 visibility: hidden 或 display: none，否则无法录制 */}
+      {/* 将其移出屏幕外以隐藏 */}
       <canvas 
         ref={recordingCanvasRef}
         className="recording-canvas-hidden"
@@ -507,9 +508,7 @@ export const RecordingPage = ({
         style={{ 
           position: 'absolute', 
           top: 0, 
-          left: 0, 
-          visibility: 'hidden', 
-          pointerEvents: 'none',
+          left: '-9999px', // 移出屏幕外
           zIndex: -999
         }} 
       />

@@ -722,11 +722,10 @@ class VideoRenderer:
             
             # FFmpeg command to overlay with chromakey (green screen removal)
             # Canvas uses green background (0x00ff00) for chromakey
-            # setpts delays the overlay to start at the correct time
-            # The overlay is enabled only during the segment's time window
+            # format=yuva420p ensures alpha channel is preserved after chromakey
             filter_complex = (
-                f"[1:v]chromakey=0x00ff00:0.1:0.2,setpts=PTS+{seg_start_time}/TB[fg];"
-                f"[0:v][fg]overlay=0:0:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
+                f"[1:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg];"
+                f"[0:v][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
             )
             
             cmd = [
@@ -784,13 +783,13 @@ class VideoRenderer:
                 # Apply chromakey and time offset to this segment
                 # Canvas uses green background (0x00ff00) for chromakey
                 filter_parts.append(
-                    f"[{input_idx}:v]chromakey=0x00ff00:0.1:0.2,setpts=PTS+{seg_start_time}/TB[fg{i}]"
+                    f"[{input_idx}:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg{i}]"
                 )
                 
                 # Overlay at the correct time
                 output_stream = f"[tmp{i}]" if i < len(sorted_segments) - 1 else "[out]"
                 filter_parts.append(
-                    f"{current_stream}[fg{i}]overlay=0:0:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
+                    f"{current_stream}[fg{i}]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
                 )
                 current_stream = f"[tmp{i}]"
             
