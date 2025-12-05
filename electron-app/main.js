@@ -81,6 +81,8 @@ async function startBackend() {
     const possiblePaths = [
       // 开发环境
       { python: path.join(appPath, 'venv', 'Scripts', 'python.exe'), cwd: appPath },
+      // 打包后 - PyInstaller Backend Exe (优先)
+      { exe: path.join(resourcesPath, 'backend', 'backend.exe'), cwd: path.join(resourcesPath, 'backend') },
       // 打包后 - 嵌入式 Python
       { python: path.join(resourcesPath, 'python', 'python.exe'), cwd: resourcesPath },
       // 打包后 - venv
@@ -88,10 +90,17 @@ async function startBackend() {
     ];
     
     let pythonPath = null;
+    let exePath = null;
     let workingDir = null;
     
     for (const p of possiblePaths) {
-      if (fs.existsSync(p.python)) {
+      if (p.exe && fs.existsSync(p.exe)) {
+        exePath = p.exe;
+        workingDir = p.cwd;
+        log(`Found Backend Executable at: ${exePath}`);
+        break;
+      }
+      if (p.python && fs.existsSync(p.python)) {
         pythonPath = p.python;
         workingDir = p.cwd;
         log(`Found Python at: ${pythonPath}`);
@@ -99,7 +108,7 @@ async function startBackend() {
       }
     }
     
-    if (!pythonPath) {
+    if (!pythonPath && !exePath) {
       // 尝试系统 Python
       pythonPath = 'python';
       workingDir = appPath;
@@ -114,16 +123,26 @@ async function startBackend() {
     };
 
     // 启动后端
-    backendProcess = spawn(pythonPath, [
-      '-m', 'uvicorn',
-      'backend.app.main:app',
-      '--host', '0.0.0.0',
-      '--port', '8000'
-    ], {
-      cwd: workingDir,
-      env: env,
-      windowsHide: true
-    });
+    if (exePath) {
+        // 启动编译后的 EXE
+        backendProcess = spawn(exePath, [], {
+            cwd: workingDir,
+            env: env,
+            windowsHide: true
+        });
+    } else {
+        // 启动 Python 脚本
+        backendProcess = spawn(pythonPath, [
+        '-m', 'uvicorn',
+        'backend.app.main:app',
+        '--host', '0.0.0.0',
+        '--port', '8000'
+        ], {
+        cwd: workingDir,
+        env: env,
+        windowsHide: true
+        });
+    }
 
     let startupComplete = false;
 
@@ -375,8 +394,12 @@ app.whenReady().then(async () => {
     // 等待后端完全启动
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // 创建启动器窗口
-    createLauncherWindow();
+    // 默认直接进入体验界面 (Kiosk模式)
+    log('Auto-launching Main Window (Interactive Interface)...');
+    createMainWindow('http://localhost:8000');
+
+    // 创建启动器窗口 (作为后台/隐藏窗口，或者只在需要时创建)
+    // createLauncherWindow(); 
 
     // 创建系统托盘
     createTray();

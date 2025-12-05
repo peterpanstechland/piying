@@ -231,12 +231,25 @@ async def get_session_status(session_id: str):
             detail=f"Session {session_id} not found"
         )
     
+    video_url = getattr(session, 'video_url', None)
+    
+    # If no video URL (e.g. local storage), generate one using LAN IP
+    if not video_url and session.status == SessionStatus.DONE and session.output_path:
+        try:
+            from ..services.admin.settings_service import settings_service
+            lan_ip_resp = settings_service.get_lan_ip()
+            settings = settings_service.get_settings()
+            port = settings.qr_code.port or 8000
+            video_url = f"http://{lan_ip_resp.ip}:{port}/api/videos/{session.id}"
+        except Exception as e:
+            logger.warning(f"Failed to generate local video URL: {e}")
+    
     return SessionStatusResponse(
         id=session.id,
         scene_id=session.scene_id,
         status=session.status,
         output_path=session.output_path,
-        video_url=getattr(session, 'video_url', None),
+        video_url=video_url,
         segment_count=len(session.segments)
     )
 
@@ -313,7 +326,8 @@ async def upload_segment(
     if video is not None:
         try:
             # Create session videos directory
-            project_root = Path(__file__).parent.parent.parent.parent
+            from ..utils.path import get_project_root
+            project_root = get_project_root()
             videos_dir = project_root / "data" / "session_videos" / session_id
             videos_dir.mkdir(parents=True, exist_ok=True)
             

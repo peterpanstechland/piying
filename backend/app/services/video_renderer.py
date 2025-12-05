@@ -201,7 +201,8 @@ class VideoRenderer:
         self.character_id = character_id
         
         # Get project root directory
-        self.project_root = Path(__file__).parent.parent.parent.parent
+        from ..utils.path import get_project_root
+        self.project_root = get_project_root()
         
         # Set output directory relative to project root
         if output_dir:
@@ -287,43 +288,7 @@ class VideoRenderer:
             self._init_puppet_renderer(session.character_id)
         
         # Determine which video to use as base
-        # If session has character_id, try to load character-specific video
-        base_video_path = None
-        
-        if session.character_id:
-            # Try to get character-specific video path from database
-            try:
-                from ..services.admin.character_video_service import character_video_service
-                from ..database import async_session_maker
-                import asyncio
-                
-                async def get_char_video():
-                    async with async_session_maker() as db:
-                        return await character_video_service.get_character_video_path(
-                            db, session.scene_id, session.character_id
-                        )
-                
-                # Run async function in sync context
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                char_video_path = loop.run_until_complete(get_char_video())
-                loop.close()
-                
-                if char_video_path:
-                    # Character-specific video exists
-                    # Path format from DB: "storylines/{id}/videos/{char_id}.mp4"
-                    # Actual file location: {project_root}/backend/data/storylines/{id}/videos/{char_id}.mp4
-                    base_video_path = self.project_root / "backend" / "data" / char_video_path
-                    logger.info(f"Using character-specific video: {base_video_path}")
-            except Exception as e:
-                logger.warning(f"Failed to load character-specific video path: {e}")
-        
-        # Fallback to base video from scene config
-        if base_video_path is None or not base_video_path.exists():
-            if base_video_path:
-                logger.warning(f"Character-specific video not found: {base_video_path}, falling back to base video")
-            base_video_path = self.project_root / self.scene_config.base_video_path
-            logger.info(f"Using base video from scene config: {base_video_path}")
+        base_video_path = self._get_base_video_path(session)
         
         if not base_video_path.exists():
             error_msg = f"Video file not found: {base_video_path}"
@@ -723,9 +688,11 @@ class VideoRenderer:
             # FFmpeg command to overlay with chromakey (green screen removal)
             # Canvas uses green background (0x00ff00) for chromakey
             # format=yuva420p ensures alpha channel is preserved after chromakey
+            # scale2ref ensures the overlay matches the base video resolution
             filter_complex = (
-                f"[1:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg];"
-                f"[0:v][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
+                f"[1:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_key];"
+                f"[fg_key][0:v]scale2ref[fg][bg];"
+                f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
             )
             
             cmd = [
@@ -783,14 +750,20 @@ class VideoRenderer:
                 # Apply chromakey and time offset to this segment
                 # Canvas uses green background (0x00ff00) for chromakey
                 filter_parts.append(
-                    f"[{input_idx}:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg{i}]"
+                    f"[{input_idx}:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[key{i}]"
+                )
+                
+                # Scale to match current stream (background)
+                filter_parts.append(
+                    f"[key{i}]{current_stream}scale2ref[fg{i}][bg{i}]"
                 )
                 
                 # Overlay at the correct time
                 output_stream = f"[tmp{i}]" if i < len(sorted_segments) - 1 else "[out]"
                 filter_parts.append(
-                    f"{current_stream}[fg{i}]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
+                    f"[bg{i}][fg{i}]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
                 )
+                current_stream = output_stream
                 current_stream = f"[tmp{i}]"
             
             filter_complex = ";".join(filter_parts)
@@ -853,6 +826,16 @@ class VideoRenderer:
         """Get the base video path for a session."""
         base_video_path = None
         
+        # 1. Check for character-specific video by file convention (Fast & Robust)
+        if session.character_id:
+            # Check both mp4 and webm
+            for ext in ['.mp4', '.webm']:
+                direct_path = self.project_root / "backend" / "data" / "storylines" / session.scene_id / "videos" / f"{session.character_id}{ext}"
+                if direct_path.exists():
+                    logger.info(f"Found character video by convention: {direct_path}")
+                    return direct_path
+
+        # 2. Try DB lookup
         if session.character_id:
             try:
                 from ..services.admin.character_video_service import character_video_service

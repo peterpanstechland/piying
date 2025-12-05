@@ -94,8 +94,9 @@ app.add_middleware(
 )
 
 # Mount static files for config and assets BEFORE routers
-# Get project root (parent of backend directory)
-project_root = Path(__file__).parent.parent.parent
+# Get project root
+from .utils.path import get_project_root
+project_root = get_project_root()
 config_dir = project_root / "config"
 assets_dir = project_root / "assets"
 

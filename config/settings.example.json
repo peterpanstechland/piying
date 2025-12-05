@@ -36,7 +36,7 @@
   "qr_code": {
     "auto_detect_ip": false,
     "manual_ip": "192.168.1.200",
-    "port": 8080
+    "port": 8000
   },
   "interaction": {
     "hover_selection_duration_seconds": 5,

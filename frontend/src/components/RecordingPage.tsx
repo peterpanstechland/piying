@@ -145,7 +145,7 @@ export const RecordingPage = ({
         // 创建一个离屏 canvas 如果 ref 不存在 (虽然我们在 JSX 中渲染了 hidden canvas)
         const recordingRenderer = new CharacterRenderer();
         if (recordingCanvasRef.current) {
-          await recordingRenderer.init(recordingCanvasRef.current, 1280, 720, {
+          await recordingRenderer.init(recordingCanvasRef.current, 1920, 1080, {
             useGreenScreen: true, // 强制绿幕
           });
         }
@@ -333,19 +333,20 @@ export const RecordingPage = ({
       
       // 应用位置和透明度 - 同步更新两个渲染器
       if (renderer) {
-        renderer.setPosition(position.x, position.y);
-        renderer.setOpacity(opacity);
+      renderer.setPosition(position.x, position.y);
+      renderer.setOpacity(opacity);
       }
       if (recordingRenderer) {
         recordingRenderer.setPosition(position.x, position.y);
         recordingRenderer.setOpacity(opacity);
       }
       
-      // 应用缩放 - 仅在手动模式下
-      if (pathConfig.scale_mode === 'manual') {
+      // 应用缩放 - 自动检测是否需要缩放（手动模式 或 设置了自定义缩放值）
         const scaleStart = pathConfig.scale_start ?? 1.0;
         const scaleEnd = pathConfig.scale_end ?? 1.0;
+      const hasCustomScale = Math.abs(scaleStart - 1.0) > 0.01 || Math.abs(scaleEnd - 1.0) > 0.01;
         
+      if (pathConfig.scale_mode === 'manual' || hasCustomScale) {
         // 根据整体进度计算当前缩放
         const overallProgress = elapsedTime / segmentDuration;
         const currentScale = scaleStart + (scaleEnd - scaleStart) * Math.min(1, Math.max(0, overallProgress));
@@ -503,8 +504,8 @@ export const RecordingPage = ({
       <canvas 
         ref={recordingCanvasRef}
         className="recording-canvas-hidden"
-        width={1280}
-        height={720}
+        width={1920}
+        height={1080}
         style={{ 
           position: 'absolute', 
           top: 0, 

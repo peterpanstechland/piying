@@ -37,17 +37,16 @@
       "splash.html",
       "build/**/*"
     ],
+    "extraFiles": [
+      {
+        "from": "../setup-auto-startup.bat",
+        "to": "."
+      }
+    ],
     "extraResources": [
       {
-        "from": "../backend",
-        "to": "backend",
-        "filter": [
-          "**/*",
-          "!**/__pycache__/**",
-          "!**/tests/**",
-          "!**/*.pyc",
-          "!**/.pytest_cache/**"
-        ]
+        "from": "resources/backend",
+        "to": "backend"
       },
       {
         "from": "../frontend/dist",
@@ -72,16 +71,6 @@
       {
         "from": "../.env",
         "to": ".env"
-      },
-      {
-        "from": "../venv",
-        "to": "venv",
-        "filter": [
-          "**/*",
-          "!**/__pycache__/**",
-          "!**/pip/**",
-          "!**/setuptools/**"
-        ]
       }
     ],
     "win": {

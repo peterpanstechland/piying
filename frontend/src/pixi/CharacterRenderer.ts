@@ -268,14 +268,21 @@ export class CharacterRenderer {
     
     console.log('Calling app.init...')
     
-    // 始终使用透明背景
-    // 皮影人物作为透明层叠加在背景视频上
-    // FFmpeg 使用 WebM VP9 的 alpha 通道进行 overlay
+    // 绿幕模式：录制时使用绿色背景（用于 FFmpeg chromakey）
+    // 预览模式：使用透明背景
+    // 检查 options 中的 useGreenScreen 参数
+    const useGreenScreen = options.useGreenScreen === true
+    const bgColor = useGreenScreen ? 0x00ff00 : undefined
+    const bgAlpha = useGreenScreen ? 1 : 0
+    
+    console.log('CharacterRenderer config:', { useGreenScreen, bgColor, bgAlpha })
+
     await app.init({
       canvas,
       width,
       height,
-      backgroundAlpha: 0, // 透明背景
+      backgroundColor: bgColor,
+      backgroundAlpha: bgAlpha,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
@@ -750,10 +757,10 @@ export class CharacterRenderer {
     // Don't move/scale based on body position - just rotate the parts
     // Only set position if not controlled externally (via setPosition)
     if (!this.useExternalPosition) {
-      const canvasWidth = this.app.screen.width
-      const canvasHeight = this.app.screen.height
-      this.container.x = canvasWidth / 2
-      this.container.y = canvasHeight / 2
+    const canvasWidth = this.app.screen.width
+    const canvasHeight = this.app.screen.height
+    this.container.x = canvasWidth / 2
+    this.container.y = canvasHeight / 2
     }
     // Use the global scale from resetPose, don't change it based on detection
     // this.container.scale is already set in resetPose()
@@ -1585,8 +1592,8 @@ export class CharacterRenderer {
     this.app.renderer.resize(width, height)
     // Only reset position if not using external control
     if (!this.useExternalPosition) {
-      this.container.x = width / 2
-      this.container.y = height / 2
+    this.container.x = width / 2
+    this.container.y = height / 2
     }
   }
 

@@ -5,6 +5,7 @@ Handles system settings CRUD operations, S3 connection testing, and LAN IP detec
 import json
 import os
 import socket
+import sys
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -23,8 +24,11 @@ from ...models.admin.settings import (
 )
 
 
-# Default settings file path
-SETTINGS_FILE_PATH = Path("config/settings.json")
+# Determine project root and settings file path
+from ...utils.path import get_project_root
+
+PROJECT_ROOT = get_project_root()
+SETTINGS_FILE_PATH = PROJECT_ROOT / "config" / "settings.json"
 
 
 class SettingsService:

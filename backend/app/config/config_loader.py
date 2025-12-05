@@ -3,6 +3,7 @@ Configuration loader for scene and system settings
 """
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Dict, Optional, Any
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -142,8 +143,9 @@ class ConfigLoader:
         if config_dir:
             self.config_dir = Path(config_dir)
         else:
-            # Default to project root's config directory
-            project_root = Path(__file__).parent.parent.parent.parent
+            # Determine project root
+            from ..utils.path import get_project_root
+            project_root = get_project_root()
             self.config_dir = project_root / "config"
         
         self.scenes_file = self.config_dir / "scenes.json"
@@ -334,4 +336,3 @@ class ConfigLoader:
         }
         
         return default_scenes
-

@@ -295,14 +295,14 @@ export const SegmentGuidancePage = ({
         {/* 标题 - 显示校准状态或标题 */}
         <div className="guidance-header">
           {!isCalibrated ? (
-            <div className="calibration-status">
-              <div className="calibration-text">
+              <div className="calibration-status">
+                <div className="calibration-text">
                 正在校准姿态... ({calibrationProgress}/30)
-              </div>
+                </div>
               <div className="calibration-hint">
                 请站在摄像头前保持静止
+                </div>
               </div>
-            </div>
           ) : (
             <>
               <h1>{t('guidance.title')}</h1>
