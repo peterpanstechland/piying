@@ -264,14 +264,19 @@ export class CharacterRenderer {
     const app = new Application()
     
     console.log('Calling app.init...')
+    
+    // 绿幕模式：录制时使用绿色背景（用于 FFmpeg chromakey）
+    // 预览模式：使用透明背景
+    const useGreenScreen = options.useGreenScreen === true
+    const bgColor = useGreenScreen ? 0x00ff00 : undefined
+    const bgAlpha = useGreenScreen ? 1 : 0
+    
     await app.init({
       canvas,
       width,
       height,
-      // 使用绿幕背景 (用于 FFmpeg chromakey 去背)
-      // 浏览器 MediaRecorder 不支持 alpha 通道录制
-      backgroundColor: 0x00ff00,
-      backgroundAlpha: 1,
+      backgroundColor: bgColor,
+      backgroundAlpha: bgAlpha,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,

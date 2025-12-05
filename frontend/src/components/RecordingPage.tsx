@@ -136,8 +136,10 @@ export const RecordingPage = ({
     const initRenderer = async () => {
       try {
         const renderer = new CharacterRenderer();
-        // 使用全屏尺寸初始化，让动捕效果正常
-        await renderer.init(characterCanvasRef.current!, window.innerWidth, window.innerHeight);
+        // 使用全屏尺寸初始化，启用绿幕模式（用于录制后 FFmpeg chromakey 去背）
+        await renderer.init(characterCanvasRef.current!, window.innerWidth, window.innerHeight, {
+          useGreenScreen: true,  // 录制时使用绿幕背景
+        });
         
         // 加载角色（使用管理后台的 API）
         const configUrl = `/api/admin/characters/${characterId}/config.json`;
@@ -147,7 +149,7 @@ export const RecordingPage = ({
         renderer.resetPose();
         
         rendererRef.current = renderer;
-        console.log('Character renderer initialized (matching CameraTestPage)');
+        console.log('Character renderer initialized with green screen for recording');
         
         // 初始化 PoseProcessor（与 CameraTestPage 相同配置）
         const processor = new PoseProcessor(DEFAULT_CONFIG);
