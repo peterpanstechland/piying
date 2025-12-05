@@ -49,3 +49,7 @@ data/logs/
 *.temp
 data/session_videos/
 data/admin.db
+
+# Configuration
+config/settings.json
+backend/config/settings.json
