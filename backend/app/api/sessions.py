@@ -89,13 +89,23 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                         # Load character-specific video segments
                         logger.info(f"[SceneConfig] Loading {len(storyline_character.segments)} character-specific video segments for {character_id}")
                         for seg in sorted(storyline_character.segments, key=lambda x: x.index):
+                            # Parse waypoints if available
+                            waypoints = []
+                            if seg.path_waypoints:
+                                try:
+                                    import json
+                                    waypoints = json.loads(seg.path_waypoints)
+                                except (json.JSONDecodeError, TypeError):
+                                    waypoints = []
+                            
                             segment_configs.append(SegmentConfig(
+                                start_time=seg.start_time or 0.0,  # 关键：包含 start_time
                                 duration=seg.duration,
                                 path_type=seg.path_type or "static",
-                                offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
-                                offset_end=[int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
-                                path_waypoints=[],
-                                path_draw_type="linear",
+                                offset_start=[int(seg.offset_start_x * 100) if seg.offset_start_x else 0, int(seg.offset_start_y * 100) if seg.offset_start_y else 0],
+                                offset_end=[int(seg.offset_end_x * 100) if seg.offset_end_x else 0, int(seg.offset_end_y * 100) if seg.offset_end_y else 0],
+                                path_waypoints=waypoints,
+                                path_draw_type=seg.path_draw_type or "linear",
                                 entry_type=seg.entry_type or "instant",
                                 entry_duration=seg.entry_duration or 1.0,
                                 entry_delay=seg.entry_delay or 0.0,
@@ -103,6 +113,7 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                                 exit_duration=seg.exit_duration or 1.0,
                                 exit_delay=seg.exit_delay or 0.0,
                             ))
+                            logger.info(f"[SceneConfig] Loaded segment {seg.index}: start_time={seg.start_time}, duration={seg.duration}")
                         logger.info(f"[SceneConfig] Character-specific segments loaded: {len(segment_configs)} configs")
                 except Exception as e:
                     logger.warning(f"[SceneConfig] Failed to load character-specific segments: {e}")
@@ -121,6 +132,7 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                             waypoints = []
                     
                     segment_configs.append(SegmentConfig(
+                        start_time=seg.start_time or 0.0,  # 包含 start_time
                         duration=seg.duration,
                         path_type=seg.path_type or "static",
                         offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
@@ -134,6 +146,7 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                         exit_duration=seg.exit_duration or 1.0,
                         exit_delay=seg.exit_delay or 0.0,
                     ))
+                    logger.info(f"[SceneConfig] Loaded base segment {seg.index}: start_time={seg.start_time}, duration={seg.duration}")
                 logger.info(f"[SceneConfig] Base storyline segments loaded: {len(segment_configs)} configs")
             
             # If still no segments, create a default one based on video duration

@@ -720,13 +720,13 @@ class VideoRenderer:
             
             logger.info(f"Single segment overlay at start_time={seg_start_time}")
             
-            # FFmpeg command to overlay with alpha channel support
-            # WebM/VP9 from canvas recording supports alpha channel
-            # Using format=yuva420p to preserve alpha, then overlay with shortest=0
+            # FFmpeg command to overlay with chromakey (green screen removal)
+            # Canvas uses green background (0x00ff00) for chromakey
+            # setpts delays the overlay to start at the correct time
             # The overlay is enabled only during the segment's time window
             filter_complex = (
-                f"[1:v]format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg];"
-                f"[0:v][fg]overlay=0:0:format=auto:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
+                f"[1:v]chromakey=0x00ff00:0.1:0.2,setpts=PTS+{seg_start_time}/TB[fg];"
+                f"[0:v][fg]overlay=0:0:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
             )
             
             cmd = [
@@ -781,16 +781,16 @@ class VideoRenderer:
                 
                 input_idx = i + 1  # Input index (0 is base video)
                 
-                # Apply alpha channel format and time offset to this segment
-                # WebM/VP9 from canvas recording supports alpha channel
+                # Apply chromakey and time offset to this segment
+                # Canvas uses green background (0x00ff00) for chromakey
                 filter_parts.append(
-                    f"[{input_idx}:v]format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg{i}]"
+                    f"[{input_idx}:v]chromakey=0x00ff00:0.1:0.2,setpts=PTS+{seg_start_time}/TB[fg{i}]"
                 )
                 
-                # Overlay at the correct time with alpha support
+                # Overlay at the correct time
                 output_stream = f"[tmp{i}]" if i < len(sorted_segments) - 1 else "[out]"
                 filter_parts.append(
-                    f"{current_stream}[fg{i}]overlay=0:0:format=auto:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
+                    f"{current_stream}[fg{i}]overlay=0:0:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
                 )
                 current_stream = f"[tmp{i}]"
             

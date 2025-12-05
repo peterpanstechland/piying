@@ -271,7 +271,10 @@ export class CharacterRenderer {
       canvas,
       width,
       height,
-      backgroundAlpha: 0, // 透明背景
+      // 使用绿幕背景 (用于 FFmpeg chromakey 去背)
+      // 浏览器 MediaRecorder 不支持 alpha 通道录制
+      backgroundColor: 0x00ff00,
+      backgroundAlpha: 1,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,

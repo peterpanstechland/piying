@@ -33,6 +33,7 @@ class S3Service:
                 )
                 logger.info(f"S3 Service initialized successfully for bucket: {self.bucket_name}")
             except Exception as e:
+                
                 logger.error(f"Failed to initialize S3 client: {e}")
                 self.enabled = False
         else:
