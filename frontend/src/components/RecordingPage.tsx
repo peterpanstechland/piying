@@ -117,7 +117,9 @@ export const RecordingPage = ({
   
   const recordingStartedRef = useRef(false);
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
+  const recordingCanvasRef = useRef<HTMLCanvasElement>(null); // 隐藏的录制 Canvas (绿幕)
   const rendererRef = useRef<CharacterRenderer | null>(null);
+  const recordingRendererRef = useRef<CharacterRenderer | null>(null); // 录制渲染器
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRecorderRef = useRef<CanvasRecorder | null>(null);
@@ -135,21 +137,36 @@ export const RecordingPage = ({
 
     const initRenderer = async () => {
       try {
+        // 1. 初始化显示渲染器 (透明背景)
         const renderer = new CharacterRenderer();
-        // 使用全屏尺寸初始化，透明背景（皮影叠加在背景视频上）
         await renderer.init(characterCanvasRef.current!, window.innerWidth, window.innerHeight);
+        
+        // 2. 初始化录制渲染器 (绿幕背景 - 用于录制)
+        // 创建一个离屏 canvas 如果 ref 不存在 (虽然我们在 JSX 中渲染了 hidden canvas)
+        const recordingRenderer = new CharacterRenderer();
+        if (recordingCanvasRef.current) {
+          await recordingRenderer.init(recordingCanvasRef.current, 1280, 720, {
+            useGreenScreen: true, // 强制绿幕
+          });
+        }
         
         // 加载角色（使用管理后台的 API）
         const configUrl = `/api/admin/characters/${characterId}/config.json`;
         await renderer.loadCharacter(configUrl);
+        if (recordingCanvasRef.current) {
+          await recordingRenderer.loadCharacter(configUrl);
+        }
         
-        // 重置到默认姿态（与 CameraTestPage 一致）
+        // 重置到默认姿态
         renderer.resetPose();
+        recordingRenderer.resetPose();
         
         rendererRef.current = renderer;
-        console.log('Character renderer initialized with transparent background');
+        recordingRendererRef.current = recordingRenderer;
         
-        // 初始化 PoseProcessor（与 CameraTestPage 相同配置）
+        console.log('Renderers initialized: Display(Transparent), Recording(GreenScreen)');
+        
+        // 初始化 PoseProcessor
         const processor = new PoseProcessor(DEFAULT_CONFIG);
         poseProcessorRef.current = processor;
         console.log('PoseProcessor initialized');
@@ -162,13 +179,14 @@ export const RecordingPage = ({
 
     return () => {
       rendererRef.current?.destroy();
+      recordingRendererRef.current?.destroy();
       poseProcessorRef.current = null;
     };
   }, [characterId]);
 
   // 开始录制
   useEffect(() => {
-    if (!recordingStartedRef.current && isCalibrated && characterCanvasRef.current) {
+    if (!recordingStartedRef.current && isCalibrated && characterCanvasRef.current && recordingCanvasRef.current) {
       recordingStartedRef.current = true;
       
       try {
@@ -177,16 +195,16 @@ export const RecordingPage = ({
           setElapsedTime(elapsed);
         });
         
-        // 启动 Canvas 视频录制
+        // 启动 Canvas 视频录制 - 录制绿幕 Canvas
         const canvasRecorder = new CanvasRecorder();
-        canvasRecorder.startRecording(characterCanvasRef.current, {
+        canvasRecorder.startRecording(recordingCanvasRef.current, {
           frameRate: 30,
           videoBitsPerSecond: 8000000, // 8 Mbps for good quality
         });
         canvasRecorderRef.current = canvasRecorder;
         
         setIsRecording(true);
-        console.log(`Started recording segment ${segmentIndex} for ${segmentDuration}s (with canvas video)`);
+        console.log(`Started recording segment ${segmentIndex} for ${segmentDuration}s (Green Screen Canvas)`);
       } catch (error) {
         console.error('Failed to start recording:', error);
       }
@@ -237,6 +255,7 @@ export const RecordingPage = ({
     if (!rendererRef.current || !pathConfig) return;
     
     const renderer = rendererRef.current;
+    const recordingRenderer = recordingRendererRef.current;
     const startPos = pathConfig.offset_start || [0.5, 0.5];
     const endPos = pathConfig.offset_end || [0.5, 0.5];
     const waypoints = pathConfig.path_waypoints;
@@ -312,9 +331,15 @@ export const RecordingPage = ({
         );
       }
       
-      // 应用位置和透明度
-      renderer.setPosition(position.x, position.y);
-      renderer.setOpacity(opacity);
+      // 应用位置和透明度 - 同步更新两个渲染器
+      if (renderer) {
+        renderer.setPosition(position.x, position.y);
+        renderer.setOpacity(opacity);
+      }
+      if (recordingRenderer) {
+        recordingRenderer.setPosition(position.x, position.y);
+        recordingRenderer.setOpacity(opacity);
+      }
       
       // 应用缩放 - 仅在手动模式下
       if (pathConfig.scale_mode === 'manual') {
@@ -325,7 +350,8 @@ export const RecordingPage = ({
         const overallProgress = elapsedTime / segmentDuration;
         const currentScale = scaleStart + (scaleEnd - scaleStart) * Math.min(1, Math.max(0, overallProgress));
         
-        renderer.setScale(currentScale);
+        if (renderer) renderer.setScale(currentScale);
+        if (recordingRenderer) recordingRenderer.setScale(currentScale);
       }
     }
   }, [elapsedTime, isCalibrated, pathConfig, segmentDuration]);
@@ -334,6 +360,7 @@ export const RecordingPage = ({
   const handlePose = useCallback((landmarks: PoseLandmarks) => {
     const processor = poseProcessorRef.current;
     const renderer = rendererRef.current;
+    const recordingRenderer = recordingRendererRef.current;
     
     if (!processor || !renderer) return;
     
@@ -346,8 +373,11 @@ export const RecordingPage = ({
     const processed = processor.process(processLandmarks);
     setProcessedPose(processed);
     
-    // 使用处理后的数据更新角色
+    // 使用处理后的数据更新角色 - 同步更新两个渲染器
     renderer.updatePoseFromProcessed(processed);
+    if (recordingRenderer) {
+      recordingRenderer.updatePoseFromProcessed(processed);
+    }
 
     // 录制姿态数据
     if (isRecording) {
@@ -467,7 +497,24 @@ export const RecordingPage = ({
         />
       )}
 
-      {/* 主区域：皮影人物动捕 */}
+      {/* 隐藏的录制专用 Canvas (绿幕) */}
+      {/* 注意：即便隐藏也需要保持尺寸和渲染，用于录制 */}
+      <canvas 
+        ref={recordingCanvasRef}
+        className="recording-canvas-hidden"
+        width={1280}
+        height={720}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          visibility: 'hidden', 
+          pointerEvents: 'none',
+          zIndex: -999
+        }} 
+      />
+
+      {/* 主区域：皮影人物动捕 (透明背景) */}
       <canvas 
         ref={characterCanvasRef}
         className="character-canvas"
