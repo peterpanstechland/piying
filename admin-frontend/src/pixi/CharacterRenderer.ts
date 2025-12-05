@@ -236,6 +236,9 @@ export class CharacterRenderer {
   private referencePose: PoseLandmarks | null = null
   private useReferencePose = false
 
+  // Flag for external position control (used by RecordingPage for path-based movement)
+  private useExternalPosition = false
+
   // Bone mapping for handling facing direction
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
@@ -592,6 +595,64 @@ export class CharacterRenderer {
     this.isFlying = false // 重置飞行状态
   }
 
+  /**
+   * Set the container position (normalized 0-1 coordinates)
+   * Used for path-based movement during recording
+   * @param x - X position (0 = left edge, 1 = right edge)
+   * @param y - Y position (0 = top edge, 1 = bottom edge)
+   */
+  setPosition(x: number, y: number): void {
+    if (!this.container || !this.app) return
+    
+    const screenWidth = this.app.screen.width
+    const screenHeight = this.app.screen.height
+    
+    this.container.x = x * screenWidth
+    this.container.y = y * screenHeight
+    
+    // Mark that we're using external position control
+    this.useExternalPosition = true
+  }
+
+  /**
+   * Reset to auto-center mode (position controlled by updatePose)
+   */
+  resetPositionControl(): void {
+    this.useExternalPosition = false
+  }
+
+  /**
+   * Get current container position (normalized 0-1 coordinates)
+   */
+  getPosition(): { x: number; y: number } {
+    if (!this.container || !this.app) return { x: 0.5, y: 0.5 }
+    
+    return {
+      x: this.container.x / this.app.screen.width,
+      y: this.container.y / this.app.screen.height
+    }
+  }
+
+  /**
+   * Set container opacity (for fade in/out animations)
+   * @param alpha - Alpha value (0 = transparent, 1 = opaque)
+   */
+  setOpacity(alpha: number): void {
+    if (!this.container) return
+    this.container.alpha = Math.max(0, Math.min(1, alpha))
+  }
+
+  /**
+   * Set container scale (for entry/exit scale animations)
+   * @param scale - Scale value
+   */
+  setScale(scale: number): void {
+    if (!this.container) return
+    // Preserve the flip state (negative scale means flipped)
+    const flipSign = this.container.scale.x < 0 ? -1 : 1
+    this.container.scale.set(scale * flipSign, scale)
+  }
+
   // Default rotation bindings for parts (MediaPipe Pose landmarks)
   // Maps part name to [startLandmark, endLandmark] for rotation calculation
   // 0: nose, 11: left_shoulder, 12: right_shoulder, 13: left_elbow, 14: right_elbow
@@ -694,10 +755,13 @@ export class CharacterRenderer {
 
     // Keep the character centered and at a fixed scale
     // Don't move/scale based on body position - just rotate the parts
+    // Only set position if not controlled externally (via setPosition)
+    if (!this.useExternalPosition) {
     const canvasWidth = this.app.screen.width
     const canvasHeight = this.app.screen.height
     this.container.x = canvasWidth / 2
     this.container.y = canvasHeight / 2
+    }
     // Use the global scale from resetPose, don't change it based on detection
     // this.container.scale is already set in resetPose()
 
@@ -1526,8 +1590,11 @@ export class CharacterRenderer {
     if (!this.app || !this.container) return
 
     this.app.renderer.resize(width, height)
+    // Only reset position if not using external control
+    if (!this.useExternalPosition) {
     this.container.x = width / 2
     this.container.y = height / 2
+    }
   }
 
   /**

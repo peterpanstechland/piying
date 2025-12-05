@@ -3,6 +3,8 @@
  * Handles API base URL configuration for different environments
  */
 
+import { APP_CONFIG } from './constants';
+
 /**
  * Get API base URL from environment or use default
  * In production, this should be set to the actual server IP/domain
@@ -13,7 +15,7 @@ export function getApiBaseUrl(): string {
   
   // In development, use localhost
   if (isDevelopment) {
-    return 'http://localhost:8000';
+    return `http://localhost:${APP_CONFIG.API.DEFAULT_PORT}`;
   }
   
   // In production, try to get from environment variable
@@ -22,10 +24,10 @@ export function getApiBaseUrl(): string {
     return envApiUrl;
   }
   
-  // Fallback: use current host with port 8000
+  // Fallback: use current host with configured port
   // This works when frontend and backend are on the same machine
   const currentHost = window.location.hostname;
-  return `http://${currentHost}:8000`;
+  return `http://${currentHost}:${APP_CONFIG.API.DEFAULT_PORT}`;
 }
 
 /**
