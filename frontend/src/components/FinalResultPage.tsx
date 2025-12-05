@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import './FinalResultPage.css';
 
 interface FinalResultPageProps {
   videoUrl: string;
+  sessionId?: string;
   onReset: () => void;
   inactivityTimeoutSeconds?: number;
   cursorPosition?: { x: number; y: number } | null;
@@ -18,6 +19,7 @@ interface FinalResultPageProps {
  */
 export const FinalResultPage = ({
   videoUrl,
+  sessionId,
   onReset,
   inactivityTimeoutSeconds = 30,
   cursorPosition,
@@ -30,6 +32,35 @@ export const FinalResultPage = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [hoverProgress, setHoverProgress] = useState(0);
   const hoverStartTimeRef = useRef<number | null>(null);
+
+  // Compute player URL
+  // If sessionId is provided, prefer using the standard API path for local playback
+  // This avoids CORS/mixed-content issues with absolute URLs using IP addresses
+  const playerUrl = useMemo(() => {
+    console.log('[FinalResultPage] Computing playerUrl', { videoUrl, sessionId });
+    
+    if (sessionId) {
+      const relativeUrl = `/api/videos/${sessionId}`;
+      console.log('[FinalResultPage] Using relative URL from sessionId:', relativeUrl);
+      return relativeUrl;
+    }
+    
+    if (!videoUrl) return '';
+    
+    try {
+      const url = new URL(videoUrl);
+      // Check if it's an API video URL
+      if (url.pathname.startsWith('/api/videos/')) {
+        const relativePath = url.pathname + url.search;
+        console.log('[FinalResultPage] Converted to relative path:', relativePath);
+        return relativePath; // Preserve query params if any
+      }
+    } catch (e) {
+      // Ignore invalid URLs or already relative paths
+    }
+    return videoUrl;
+  }, [videoUrl, sessionId]);
+
   const animationFrameRef = useRef<number | null>(null);
   const hasTriggeredRef = useRef(false);
 
@@ -156,7 +187,7 @@ export const FinalResultPage = ({
         <div className="video-container">
           <video
             ref={videoRef}
-            src={videoUrl}
+            src={playerUrl}
             controls
             loop
             className="result-video"

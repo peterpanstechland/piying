@@ -944,6 +944,7 @@ function App() {
         return (
           <FinalResultPage
             videoUrl={videoUrl || context?.videoUrl || ''}
+            sessionId={context?.sessionId}
             onReset={handleReset}
             inactivityTimeoutSeconds={autoResetSeconds}
             cursorPosition={handPosition}
