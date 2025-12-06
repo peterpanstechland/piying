@@ -563,8 +563,10 @@ export class CharacterRenderer {
       sprite.scale.set(globalPos.scaleX, globalPos.scaleY)
       sprite.position.set(0, 0)  // Sprite at container origin
       // 应用初始姿势偏移量（使用 getRestPoseOffset 以支持默认值）
+      // 同时应用素材朝向偏移量（rotationOffset）
       const restOffset = this.getRestPoseOffset(partName)
-      sprite.rotation = restOffset
+      const rotationOffset = this.getRotationOffset(partName)
+      sprite.rotation = restOffset + rotationOffset
 
       // Use global position directly (flat structure)
       container.position.set(globalPos.x, globalPos.y)
@@ -1664,7 +1666,8 @@ export class CharacterRenderer {
     const sprite = this.parts.get(partName)
     if (sprite) {
       const offset = absolute ? 0 : this.getRestPoseOffset(partName)
-      sprite.rotation = rotation + offset
+      const rotationOffset = this.getRotationOffset(partName)
+      sprite.rotation = rotation + offset + rotationOffset
       // Update child positions after rotation change
       this.updateChildPositions(false)
     }
@@ -1678,7 +1681,8 @@ export class CharacterRenderer {
     const sprite = this.parts.get(partName)
     if (!sprite) return 0
     const offset = absolute ? 0 : this.getRestPoseOffset(partName)
-    return sprite.rotation - offset
+    const rotationOffset = this.getRotationOffset(partName)
+    return sprite.rotation - offset - rotationOffset
   }
 
   /**
@@ -1697,7 +1701,8 @@ export class CharacterRenderer {
       const sprite = this.parts.get(partName)
       if (sprite) {
         const offset = this.getRestPoseOffset(partName)
-        sprite.rotation = rotation + offset
+        const rotationOffset = this.getRotationOffset(partName)
+        sprite.rotation = rotation + offset + rotationOffset
       }
     }
     // Update child positions after all rotations are set
@@ -1710,7 +1715,8 @@ export class CharacterRenderer {
   resetToDefaultPose(): void {
     for (const [partName, sprite] of this.parts) {
       const offset = this.getRestPoseOffset(partName)
-      sprite.rotation = offset
+      const rotationOffset = this.getRotationOffset(partName)
+      sprite.rotation = offset + rotationOffset
     }
     this.updateChildPositions(false)
   }
@@ -1757,9 +1763,10 @@ export class CharacterRenderer {
         const currentRelativeRotation = startRotation + (targetRotation - startRotation) * eased
         // 加上偏移量得到绝对角度
         const offset = this.getRestPoseOffset(partName)
+        const rotationOffset = this.getRotationOffset(partName)
         const sprite = this.parts.get(partName)
         if (sprite) {
-          sprite.rotation = currentRelativeRotation + offset
+          sprite.rotation = currentRelativeRotation + offset + rotationOffset
         }
       }
       
