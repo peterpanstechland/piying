@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { APP_CONFIG } from '../config/constants';
 import './RenderWaitPage.css';
 
 interface RenderWaitPageProps {
@@ -112,7 +113,7 @@ export const RenderWaitPage = ({
     const initialTimeout = setTimeout(pollStatus, 500);
 
     // Set up polling interval (2 seconds)
-    pollInterval = setInterval(pollStatus, 2000);
+    pollInterval = setInterval(pollStatus, APP_CONFIG.API.RENDER_POLL_INTERVAL_MS);
 
     return () => {
       console.log('RenderWaitPage cleanup - stopping polling');

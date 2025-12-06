@@ -30,7 +30,7 @@ import { errorLogger, setupGlobalErrorHandling } from './utils/error-logger';
 import { performanceMonitor } from './utils/performance-monitor';
 import './App.css';
 
-// Load scenes from API (published storylines) or fallback to static config
+// Load scenes from API (published storylines)
 const loadScenes = async (apiClient: APIClient): Promise<Scene[]> => {
   try {
     // First try to fetch from the storylines API (published only)
@@ -57,54 +57,11 @@ const loadScenes = async (apiClient: APIClient): Promise<Scene[]> => {
       }));
     }
     
-    // Fallback to static config if no published storylines
-    console.log('No published storylines found, falling back to static config');
-    return loadScenesFromConfig();
+    console.warn('No published storylines found');
+    return [];
   } catch (error) {
     console.error('Failed to load storylines from API:', error);
-    // Fallback to static config
-    return loadScenesFromConfig();
-  }
-};
-
-// Load scenes from static config file (fallback)
-const loadScenesFromConfig = async (): Promise<Scene[]> => {
-  try {
-    const response = await fetch('/config/scenes.json');
-    const data = await response.json();
-    return Object.values(data.scenes);
-  } catch (error) {
-    console.error('Failed to load scenes from config:', error);
-    // Return default scenes if loading fails
-    return [
-      {
-        id: 'sceneA',
-        name: '时间迷途',
-        name_en: 'Lost in Time',
-        description: '跨越古代与未来的皮影故事，展现嫦娥与宇航员在月球相遇的动人瞬间。',
-        description_en: 'A shadow-play journey across time, portraying the encounter between Chang’e and a modern astronaut on the moon.',
-        icon: '🌕',
-        segments: [],
-      },
-      {
-        id: 'sceneB',
-        name: '来自五百年前的梦',
-        name_en: 'Dance Performance',
-        description: '以皮影光影呈现从宇宙大爆炸到现代科技的史诗旅程，生命起源化作猿猴影子，与当代人物在光中重叠，完成跨越万年的梦境回响。',
-        description_en: 'Show your dance moves',
-        icon: '🌌',
-        segments: [],
-      },
-      {
-        id: 'sceneC',
-        name: '淘金者',
-        name_en: 'Story Performance',
-        description: '以皮影光影讲述一位孤独淘金者在荒漠中寻找希望的旅程。风沙、木桥与影子的摇曳构成命运的考验，直到一束金色微光穿透镂空皮影，他在风暴中抓住属于自己的希望。',
-        description_en: 'Tell your story',
-        icon: '⛏️',
-        segments: [],
-      },
-    ];
+    throw error;
   }
 };
 
@@ -209,12 +166,20 @@ function App() {
   // Load scenes from API (only once on mount)
   useEffect(() => {
     loadScenes(apiClientRef.current)
-      .then(setScenes)
+      .then((scenes) => {
+        if (scenes.length === 0) {
+          showWarning(
+            '没有可用的场景',
+            '请在管理后台发布至少一个剧本。'
+          );
+        }
+        setScenes(scenes);
+      })
       .catch((error) => {
         errorLogger.log(error, 'medium' as any, 'config');
         showWarning(
           '场景加载失败',
-          '使用默认场景配置。部分功能可能受限。'
+          '无法连接到服务器或加载剧本列表。'
         );
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps

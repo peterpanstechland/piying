@@ -45,6 +45,22 @@ class PublicSegmentInfo(BaseModel):
     """Simplified segment info for public API."""
     index: int = Field(..., description="Segment index")
     duration: float = Field(..., description="Duration in seconds")
+    start_time: float = Field(default=0.0, description="Start time in video")
+    path_type: str = Field(default="static", description="Movement type")
+    offset_start: List[float] = Field(default_factory=lambda: [0.1, 0.5], description="Start offset [x, y]")
+    offset_end: List[float] = Field(default_factory=lambda: [0.9, 0.5], description="End offset [x, y]")
+    path_waypoints: Optional[List[List[float]]] = Field(default=None, description="Path waypoints")
+    path_draw_type: str = Field(default="linear", description="Path draw type")
+    entry_type: str = Field(default="instant", description="Entry animation type")
+    entry_duration: float = Field(default=1.0, description="Entry duration")
+    entry_delay: float = Field(default=0.0, description="Entry delay")
+    exit_type: str = Field(default="instant", description="Exit animation type")
+    exit_duration: float = Field(default=1.0, description="Exit duration")
+    exit_delay: float = Field(default=0.0, description="Exit delay")
+    play_audio: bool = Field(default=False, description="Play audio")
+    scale_mode: str = Field(default="auto", description="Scale mode")
+    scale_start: float = Field(default=1.0, description="Start scale")
+    scale_end: float = Field(default=1.0, description="End scale")
     guidance_text: str = Field(default="", description="Guidance text (Chinese)")
     guidance_text_en: str = Field(default="", description="Guidance text (English)")
     guidance_image: Optional[str] = Field(default=None, description="Guidance image path")
@@ -232,10 +248,35 @@ async def get_published_storyline(
     # Build simplified segment info
     segments = []
     if storyline.segments:
+        import json as json_module
         for seg in sorted(storyline.segments, key=lambda x: x.index):
+            # Parse waypoints if available
+            waypoints = []
+            if seg.path_waypoints:
+                try:
+                    waypoints = json_module.loads(seg.path_waypoints) if isinstance(seg.path_waypoints, str) else seg.path_waypoints
+                except (json_module.JSONDecodeError, TypeError):
+                    waypoints = []
+
             segments.append(PublicSegmentInfo(
                 index=seg.index,
                 duration=seg.duration,
+                start_time=seg.start_time or 0.0,
+                path_type=seg.path_type or "static",
+                offset_start=[float(seg.offset_start_x or 0.5), float(seg.offset_start_y or 0.5)],
+                offset_end=[float(seg.offset_end_x or 0.5), float(seg.offset_end_y or 0.5)],
+                path_waypoints=waypoints,
+                path_draw_type=getattr(seg, 'path_draw_type', 'linear') or 'linear',
+                entry_type=seg.entry_type or "instant",
+                entry_duration=seg.entry_duration or 1.0,
+                entry_delay=seg.entry_delay or 0.0,
+                exit_type=seg.exit_type or "instant",
+                exit_duration=seg.exit_duration or 1.0,
+                exit_delay=seg.exit_delay or 0.0,
+                play_audio=getattr(seg, 'play_audio', False),
+                scale_mode=getattr(seg, 'scale_mode', 'auto') or 'auto',
+                scale_start=getattr(seg, 'scale_start', 1.0) or 1.0,
+                scale_end=getattr(seg, 'scale_end', 1.0) or 1.0,
                 guidance_text=seg.guidance_text or "",
                 guidance_text_en=seg.guidance_text_en or "",
                 guidance_image=seg.guidance_image,

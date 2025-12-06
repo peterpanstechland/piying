@@ -130,7 +130,12 @@ export const RecordingPage = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_processedPose, setProcessedPose] = useState<ProcessedPose | null>(null);
   const mirrorMode = true; // 镜像模式（摄像头默认是镜像的）
+import { APP_CONFIG } from '../config/constants';
 
+export const RecordingPage = ({
+  segmentIndex,
+  segmentDuration,
+// ...
   // 初始化 CharacterRenderer 和 PoseProcessor（与 CameraTestPage 保持一致）
   useEffect(() => {
     if (!characterCanvasRef.current || !characterId) return;
@@ -145,7 +150,7 @@ export const RecordingPage = ({
         // 创建一个离屏 canvas 如果 ref 不存在 (虽然我们在 JSX 中渲染了 hidden canvas)
         const recordingRenderer = new CharacterRenderer();
         if (recordingCanvasRef.current) {
-          await recordingRenderer.init(recordingCanvasRef.current, 1920, 1080, {
+          await recordingRenderer.init(recordingCanvasRef.current, APP_CONFIG.RECORDING.WIDTH, APP_CONFIG.RECORDING.HEIGHT, {
             useGreenScreen: true, // 强制绿幕
           });
         }
@@ -504,8 +509,8 @@ export const RecordingPage = ({
       <canvas 
         ref={recordingCanvasRef}
         className="recording-canvas-hidden"
-        width={1920}
-        height={1080}
+        width={APP_CONFIG.RECORDING.WIDTH}
+        height={APP_CONFIG.RECORDING.HEIGHT}
         style={{ 
           position: 'absolute', 
           top: 0, 

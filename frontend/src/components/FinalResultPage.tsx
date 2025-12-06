@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
+import { APP_CONFIG } from '../config/constants';
 import './FinalResultPage.css';
 
 interface FinalResultPageProps {
@@ -21,9 +22,9 @@ export const FinalResultPage = ({
   videoUrl,
   sessionId,
   onReset,
-  inactivityTimeoutSeconds = 30,
+  inactivityTimeoutSeconds = APP_CONFIG.TIMING.RESULT_PAGE_TIMEOUT_SEC,
   cursorPosition,
-  hoverDurationMs = 3000,
+  hoverDurationMs = APP_CONFIG.TIMING.HOVER_TRIGGER_DURATION_MS,
 }: FinalResultPageProps) => {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);

@@ -236,6 +236,9 @@ export class CharacterRenderer {
   private referencePose: PoseLandmarks | null = null
   private useReferencePose = false
 
+  // Flag for external position control (used by RecordingPage for path-based movement)
+  private useExternalPosition = false
+
   // Bone mapping for handling facing direction
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
@@ -560,8 +563,10 @@ export class CharacterRenderer {
       sprite.scale.set(globalPos.scaleX, globalPos.scaleY)
       sprite.position.set(0, 0)  // Sprite at container origin
       // 应用初始姿势偏移量（使用 getRestPoseOffset 以支持默认值）
+      // 同时应用素材朝向偏移量（rotationOffset）
       const restOffset = this.getRestPoseOffset(partName)
-      sprite.rotation = restOffset
+      const rotationOffset = this.getRotationOffset(partName)
+      sprite.rotation = restOffset + rotationOffset
 
       // Use global position directly (flat structure)
       container.position.set(globalPos.x, globalPos.y)
@@ -590,6 +595,64 @@ export class CharacterRenderer {
     this.referencePose = null
     this.useReferencePose = false
     this.isFlying = false // 重置飞行状态
+  }
+
+  /**
+   * Set the container position (normalized 0-1 coordinates)
+   * Used for path-based movement during recording
+   * @param x - X position (0 = left edge, 1 = right edge)
+   * @param y - Y position (0 = top edge, 1 = bottom edge)
+   */
+  setPosition(x: number, y: number): void {
+    if (!this.container || !this.app) return
+    
+    const screenWidth = this.app.screen.width
+    const screenHeight = this.app.screen.height
+    
+    this.container.x = x * screenWidth
+    this.container.y = y * screenHeight
+    
+    // Mark that we're using external position control
+    this.useExternalPosition = true
+  }
+
+  /**
+   * Reset to auto-center mode (position controlled by updatePose)
+   */
+  resetPositionControl(): void {
+    this.useExternalPosition = false
+  }
+
+  /**
+   * Get current container position (normalized 0-1 coordinates)
+   */
+  getPosition(): { x: number; y: number } {
+    if (!this.container || !this.app) return { x: 0.5, y: 0.5 }
+    
+    return {
+      x: this.container.x / this.app.screen.width,
+      y: this.container.y / this.app.screen.height
+    }
+  }
+
+  /**
+   * Set container opacity (for fade in/out animations)
+   * @param alpha - Alpha value (0 = transparent, 1 = opaque)
+   */
+  setOpacity(alpha: number): void {
+    if (!this.container) return
+    this.container.alpha = Math.max(0, Math.min(1, alpha))
+  }
+
+  /**
+   * Set container scale (for entry/exit scale animations)
+   * @param scale - Scale value
+   */
+  setScale(scale: number): void {
+    if (!this.container) return
+    // Preserve the flip state (negative scale means flipped)
+    const flipSign = this.container.scale.x < 0 ? -1 : 1
+    this.container.scale.set(scale * flipSign, scale)
   }
 
   // Default rotation bindings for parts (MediaPipe Pose landmarks)
@@ -694,10 +757,13 @@ export class CharacterRenderer {
 
     // Keep the character centered and at a fixed scale
     // Don't move/scale based on body position - just rotate the parts
+    // Only set position if not controlled externally (via setPosition)
+    if (!this.useExternalPosition) {
     const canvasWidth = this.app.screen.width
     const canvasHeight = this.app.screen.height
     this.container.x = canvasWidth / 2
     this.container.y = canvasHeight / 2
+    }
     // Use the global scale from resetPose, don't change it based on detection
     // this.container.scale is already set in resetPose()
 
@@ -1526,8 +1592,11 @@ export class CharacterRenderer {
     if (!this.app || !this.container) return
 
     this.app.renderer.resize(width, height)
+    // Only reset position if not using external control
+    if (!this.useExternalPosition) {
     this.container.x = width / 2
     this.container.y = height / 2
+    }
   }
 
   /**
@@ -1597,7 +1666,8 @@ export class CharacterRenderer {
     const sprite = this.parts.get(partName)
     if (sprite) {
       const offset = absolute ? 0 : this.getRestPoseOffset(partName)
-      sprite.rotation = rotation + offset
+      const rotationOffset = this.getRotationOffset(partName)
+      sprite.rotation = rotation + offset + rotationOffset
       // Update child positions after rotation change
       this.updateChildPositions(false)
     }
@@ -1611,7 +1681,8 @@ export class CharacterRenderer {
     const sprite = this.parts.get(partName)
     if (!sprite) return 0
     const offset = absolute ? 0 : this.getRestPoseOffset(partName)
-    return sprite.rotation - offset
+    const rotationOffset = this.getRotationOffset(partName)
+    return sprite.rotation - offset - rotationOffset
   }
 
   /**
@@ -1630,7 +1701,8 @@ export class CharacterRenderer {
       const sprite = this.parts.get(partName)
       if (sprite) {
         const offset = this.getRestPoseOffset(partName)
-        sprite.rotation = rotation + offset
+        const rotationOffset = this.getRotationOffset(partName)
+        sprite.rotation = rotation + offset + rotationOffset
       }
     }
     // Update child positions after all rotations are set
@@ -1643,7 +1715,8 @@ export class CharacterRenderer {
   resetToDefaultPose(): void {
     for (const [partName, sprite] of this.parts) {
       const offset = this.getRestPoseOffset(partName)
-      sprite.rotation = offset
+      const rotationOffset = this.getRotationOffset(partName)
+      sprite.rotation = offset + rotationOffset
     }
     this.updateChildPositions(false)
   }
@@ -1690,9 +1763,10 @@ export class CharacterRenderer {
         const currentRelativeRotation = startRotation + (targetRotation - startRotation) * eased
         // 加上偏移量得到绝对角度
         const offset = this.getRestPoseOffset(partName)
+        const rotationOffset = this.getRotationOffset(partName)
         const sprite = this.parts.get(partName)
         if (sprite) {
-          sprite.rotation = currentRelativeRotation + offset
+          sprite.rotation = currentRelativeRotation + offset + rotationOffset
         }
       }
       
