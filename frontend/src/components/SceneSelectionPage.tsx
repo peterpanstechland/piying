@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useLayoutEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../contexts/ThemeContext';
 import { GestureCursorController, SceneCard } from '../services/gesture-cursor';
 import { CoverImage } from '../services/api-client';
 import './SceneSelectionPage.css';
@@ -52,6 +53,13 @@ export const SceneSelectionPage = ({
   apiBaseUrl = '',
 }: SceneSelectionPageProps) => {
   const { t, i18n } = useTranslation();
+  const { theme } = useTheme();
+  
+  useEffect(() => {
+    console.log('Current Theme in SceneSelectionPage:', theme);
+    console.log('document.documentElement data-theme:', document.documentElement.getAttribute('data-theme'));
+  }, [theme]);
+
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const cursorControllerRef = useRef<GestureCursorController>(new GestureCursorController());

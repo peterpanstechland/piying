@@ -30,6 +30,12 @@ export const APP_CONFIG = {
     // Poll interval for render status
     RENDER_POLL_INTERVAL_MS: 2000,
   },
+
+  // Display Configuration
+  DISPLAY: {
+    // Default scale for character in recording view (relative to fit-to-screen)
+    DEFAULT_CHARACTER_SCALE: 0.6,
+  },
 };
 
 
