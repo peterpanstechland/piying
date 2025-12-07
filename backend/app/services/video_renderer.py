@@ -18,6 +18,7 @@ from ..models import Session, Segment, PoseFrame
 from ..config import SceneConfig
 from ..utils.logger import log_render_performance, log_error_with_context
 from .puppet_renderer import PuppetRenderer, PuppetRendererCache
+from .admin.settings_service import settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -672,6 +673,24 @@ class VideoRenderer:
         # Get segment timing info from scene config
         segment_configs = self.scene_config.segments if self.scene_config else []
         
+        # Get rendering settings
+        system_settings = settings_service.get_settings()
+        rendering_settings = system_settings.rendering
+        
+        composition_mode = getattr(rendering_settings, 'composition_mode', 'chromakey')
+        video_encoder = getattr(rendering_settings, 'video_encoder', 'libx264')
+        encoder_preset = getattr(rendering_settings, 'encoder_preset', 'fast')
+        encoder_quality = getattr(rendering_settings, 'encoder_quality', 23)
+        
+        logger.info(f"Rendering with mode={composition_mode}, encoder={video_encoder}, preset={encoder_preset}")
+        
+        # Build encoder flags
+        encoder_flags = ["-c:v", video_encoder, "-preset", encoder_preset]
+        if 'nvenc' in video_encoder:
+            encoder_flags.extend(["-cq", str(encoder_quality)])
+        else:
+            encoder_flags.extend(["-crf", str(encoder_quality)])
+        
         # Build filter complex for all segments
         # Each segment overlay is enabled only during its time range
         if len(session.segments) == 1:
@@ -685,27 +704,42 @@ class VideoRenderer:
             
             logger.info(f"Single segment overlay at start_time={seg_start_time}")
             
-            # FFmpeg command to overlay with chromakey (green screen removal)
-            # Canvas uses green background (0x00ff00) for chromakey
-            # format=yuva420p ensures alpha channel is preserved after chromakey
-            # scale2ref ensures the overlay matches the base video resolution
-            filter_complex = (
-                f"[1:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_key];"
-                f"[fg_key][0:v]scale2ref[fg][bg];"
-                f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
-            )
+            # FFmpeg command based on composition mode
+            if composition_mode == 'side_by_side':
+                # Side-by-Side (Luma Matte) Composition
+                # 1:v is the side-by-side video (Left=Color, Right=Mask)
+                # Crop Left -> fg_rgb
+                # Crop Right -> fg_alpha (convert to grayscale)
+                # Alphamerge -> fg_trans
+                # Scale -> Overlay
+                filter_complex = (
+                    f"[1:v]crop=iw/2:ih:0:0[fg_rgb];"
+                    f"[1:v]crop=iw/2:ih:iw/2:0,format=gray[fg_alpha];"
+                    f"[fg_rgb][fg_alpha]alphamerge,setpts=PTS+{seg_start_time}/TB[fg_trans];"
+                    f"[fg_trans][0:v]scale2ref[fg][bg];"
+                    f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
+                )
+            else:
+                # Chromakey Composition (Legacy)
+                # FFmpeg command to overlay with chromakey (green screen removal)
+                # Canvas uses green background (0x00ff00) for chromakey
+                # format=yuva420p ensures alpha channel is preserved after chromakey
+                # scale2ref ensures the overlay matches the base video resolution
+                filter_complex = (
+                    f"[1:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_key];"
+                    f"[fg_key][0:v]scale2ref[fg][bg];"
+                    f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
+                )
             
             cmd = [
                 ffmpeg_path,
                 "-y",  # Overwrite output
                 "-i", str(base_video_path),  # Base video (full length)
-                "-i", str(overlay_video),  # Overlay video (with green background)
+                "-i", str(overlay_video),  # Overlay video
                 "-filter_complex", filter_complex,
                 "-map", "[out]",
                 "-map", "0:a?",  # Keep audio from base video if exists
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-crf", "23",
+                *encoder_flags,
                 "-c:a", "aac",
                 "-b:a", "128k",
                 str(output_path)
@@ -747,23 +781,30 @@ class VideoRenderer:
                 
                 input_idx = i + 1  # Input index (0 is base video)
                 
-                # Apply chromakey and time offset to this segment
-                # Canvas uses green background (0x00ff00) for chromakey
-                filter_parts.append(
-                    f"[{input_idx}:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[key{i}]"
-                )
+                # Prepare overlay source based on composition mode
+                if composition_mode == 'side_by_side':
+                    # Side-by-Side logic for segment
+                    filter_parts.append(f"[{input_idx}:v]crop=iw/2:ih:0:0[fg_rgb_{i}]")
+                    filter_parts.append(f"[{input_idx}:v]crop=iw/2:ih:iw/2:0,format=gray[fg_alpha_{i}]")
+                    filter_parts.append(f"[fg_rgb_{i}][fg_alpha_{i}]alphamerge,setpts=PTS+{seg_start_time}/TB[fg_{i}]")
+                    overlay_source = f"[fg_{i}]"
+                else:
+                    # Chromakey logic for segment
+                    filter_parts.append(
+                        f"[{input_idx}:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_{i}]"
+                    )
+                    overlay_source = f"[fg_{i}]"
                 
                 # Scale to match current stream (background)
                 filter_parts.append(
-                    f"[key{i}]{current_stream}scale2ref[fg{i}][bg{i}]"
+                    f"{overlay_source}{current_stream}scale2ref[fg_scaled_{i}][bg_scaled_{i}]"
                 )
                 
                 # Overlay at the correct time
                 output_stream = f"[tmp{i}]" if i < len(sorted_segments) - 1 else "[out]"
                 filter_parts.append(
-                    f"[bg{i}][fg{i}]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
+                    f"[bg_scaled_{i}][fg_scaled_{i}]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'{output_stream}"
                 )
-                current_stream = output_stream
                 current_stream = f"[tmp{i}]"
             
             filter_complex = ";".join(filter_parts)
@@ -775,9 +816,7 @@ class VideoRenderer:
                 "-filter_complex", filter_complex,
                 "-map", "[out]",
                 "-map", "0:a?",
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-crf", "23",
+                *encoder_flags,
                 "-c:a", "aac",
                 "-b:a", "128k",
                 str(output_path)

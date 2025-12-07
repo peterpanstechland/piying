@@ -268,6 +268,61 @@ async def set_default_camera(
 
 
 # ============================================================================
+# Folder Browser Endpoint (Task 11.3)
+# ============================================================================
+
+class BrowsePathResponse(BaseModel):
+    path: Optional[str]
+
+@router.post("/browse-path", response_model=BrowsePathResponse)
+async def browse_storage_path(
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+) -> BrowsePathResponse:
+    """
+    Open a native directory selection dialog on the server/host machine.
+    
+    Returns the selected path string, or None if cancelled.
+    Note: This requires a desktop environment (tkinter).
+    """
+    try:
+        # Use tkinter to open directory dialog
+        # We run this in a separate thread to avoid blocking the async loop
+        import tkinter as tk
+        from tkinter import filedialog
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _open_dialog():
+            # Create hidden root window
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)  # Bring to front
+            
+            # Open directory chooser
+            path = filedialog.askdirectory(title="Select Storage Directory")
+            
+            root.destroy()
+            return path
+
+        # Run in thread pool
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as pool:
+            selected_path = await loop.run_in_executor(pool, _open_dialog)
+            
+        return BrowsePathResponse(path=selected_path if selected_path else None)
+        
+    except ImportError:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Directory browser not supported (tkinter not installed)",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to open directory browser: {str(e)}",
+        )
+
+# ============================================================================
 # QR Code / LAN IP Endpoints (Task 11.2)
 # ============================================================================
 

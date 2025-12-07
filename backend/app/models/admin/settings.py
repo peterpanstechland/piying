@@ -10,7 +10,7 @@ import re
 class StorageSettings(BaseModel):
     """Settings for video storage configuration."""
     mode: str = Field(default="local", description="Storage mode: 'local' or 's3'")
-    local_path: str = Field(default="data/outputs", description="Local storage path")
+    local_path: str = Field(default="data", description="Local storage path")
     auto_cleanup_enabled: bool = Field(default=False, description="Enable automatic file cleanup")
     auto_cleanup_threshold: int = Field(default=24, ge=1, description="Cleanup files older than X hours")
     s3_bucket: Optional[str] = Field(default=None, description="S3 bucket name")
@@ -98,6 +98,10 @@ class RenderingSettings(BaseModel):
     target_fps: int = Field(default=30, ge=15, le=60, description="Target frames per second")
     video_codec: str = Field(default="H264", description="Video codec")
     max_render_time_seconds: int = Field(default=20, ge=5, le=120, description="Maximum render time")
+    composition_mode: str = Field(default="side_by_side", description="Video composition mode: 'chromakey' or 'side_by_side'")
+    video_encoder: str = Field(default="h264_nvenc", description="FFmpeg video encoder")
+    encoder_preset: str = Field(default="slow", description="Encoder preset (speed/quality trade-off)")
+    encoder_quality: int = Field(default=19, ge=0, le=51, description="Encoder quality (CQ/CRF)")
 
     @field_validator('video_codec')
     @classmethod
@@ -106,13 +110,25 @@ class RenderingSettings(BaseModel):
         if v not in valid_codecs:
             raise ValueError(f"Video codec must be one of: {valid_codecs}")
         return v
+    
+    @field_validator('composition_mode')
+    @classmethod
+    def validate_composition_mode(cls, v: str) -> str:
+        valid_modes = ['chromakey', 'side_by_side']
+        if v not in valid_modes:
+            raise ValueError(f"Composition mode must be one of: {valid_modes}")
+        return v
 
     class Config:
         json_schema_extra = {
             "example": {
                 "target_fps": 30,
                 "video_codec": "H264",
-                "max_render_time_seconds": 20
+                "max_render_time_seconds": 20,
+                "composition_mode": "side_by_side",
+                "video_encoder": "h264_nvenc",
+                "encoder_preset": "slow",
+                "encoder_quality": 19
             }
         }
 
@@ -232,6 +248,10 @@ class RenderingSettingsUpdate(BaseModel):
     target_fps: Optional[int] = Field(default=None, ge=15, le=60)
     video_codec: Optional[str] = Field(default=None)
     max_render_time_seconds: Optional[int] = Field(default=None, ge=5, le=120)
+    composition_mode: Optional[str] = Field(default=None)
+    video_encoder: Optional[str] = Field(default=None)
+    encoder_preset: Optional[str] = Field(default=None)
+    encoder_quality: Optional[int] = Field(default=None, ge=0, le=51)
 
 
 class CameraSettingsUpdate(BaseModel):

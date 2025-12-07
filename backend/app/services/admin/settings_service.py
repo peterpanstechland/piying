@@ -75,7 +75,7 @@ class SettingsService:
             fallback_language=system.get("fallback_language", "en"),
             storage=StorageSettings(
                 mode=storage.get("mode", "local"),
-                local_path=storage.get("local_path", "data/outputs"),
+                local_path=storage.get("local_path", "data"),
                 auto_cleanup_enabled=storage.get("auto_cleanup_enabled", False),
                 auto_cleanup_threshold=storage.get("auto_cleanup_threshold", 24),
                 s3_bucket=storage.get("s3_bucket"),

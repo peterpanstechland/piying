@@ -18,7 +18,7 @@
   },
   "storage": {
     "mode": "local",
-    "local_path": "data/test_complete",
+    "local_path": "data",
     "s3_bucket": "",
     "s3_region": "",
     "s3_access_key": "",

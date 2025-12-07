@@ -18,7 +18,7 @@
   },
   "storage": {
     "mode": "local",
-    "local_path": "data/outputs",
+    "local_path": "data",
     "s3_bucket": null,
     "s3_region": null,
     "s3_access_key": null,
