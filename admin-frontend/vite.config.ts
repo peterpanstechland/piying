@@ -1,10 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   base: '/admin/',  // Base path for admin panel when served from FastAPI
+  resolve: {
+    alias: {
+      '@pose': path.resolve(__dirname, '../shared/pose'),
+    },
+  },
   server: {
     port: 3001,
     proxy: {

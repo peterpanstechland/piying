@@ -5,7 +5,7 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  background: var(--bg-gradient);
 }
 
 /* 手势光标 - 皮影风格 */
@@ -52,6 +52,14 @@
   );
 }
 
+[data-theme='light'] .review-overlay {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(240, 230, 210, 0.8) 100%
+  );
+}
+
 /* 幕布边框光晕 */
 .review-overlay::after {
   content: '';
@@ -66,7 +74,7 @@
 
 .review-header {
   text-align: center;
-  color: #f5e6d3;
+  color: var(--color-text-primary);
   position: relative;
   z-index: 10;
 }

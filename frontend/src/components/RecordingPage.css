@@ -4,7 +4,7 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  background: var(--bg-gradient);
   overflow: hidden;
 }
 
@@ -88,6 +88,10 @@
   align-items: center;
   gap: 20px;
   background: linear-gradient(to bottom, rgba(26, 10, 10, 0.8) 0%, transparent 100%);
+}
+
+[data-theme='light'] .recording-header {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, transparent 100%);
 }
 
 /* 校准状态 - 美化版 */

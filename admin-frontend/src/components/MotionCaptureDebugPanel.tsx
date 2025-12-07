@@ -5,8 +5,8 @@
  */
 
 import { useState, useCallback } from 'react'
-import type { ProcessorConfig, ProcessedPose, LegIntent } from '../pose/types'
-import { DEFAULT_CONFIG } from '../pose/types'
+import type { ProcessorConfig, ProcessedPose, LegIntent } from '@pose/types'
+import { DEFAULT_CONFIG } from '@pose/types'
 import './MotionCaptureDebugPanel.css'
 
 interface DebugPanelProps {

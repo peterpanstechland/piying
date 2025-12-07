@@ -5,7 +5,7 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  background: var(--bg-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -25,7 +25,7 @@
 
 .render-wait-content {
   text-align: center;
-  color: #f5e6d3;
+  color: var(--color-text-primary);
   animation: fadeIn 0.5s ease-in;
   position: relative;
   z-index: 10;
@@ -45,7 +45,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   border: 3px solid transparent;
-  border-top-color: #d4af37;
+  border-top-color: var(--color-gold);
   border-radius: 50%;
   animation: spin 1.5s linear infinite;
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
@@ -55,13 +55,13 @@
   width: 130px;
   height: 130px;
   animation-duration: 1.5s;
-  border-top-color: #d4af37;
+  border-top-color: var(--color-gold);
 }
 
 .spinner-ring:nth-child(2) {
   width: 100px;
   height: 100px;
-  border-top-color: #c41e3a;
+  border-top-color: var(--color-primary);
   animation-duration: 2s;
   animation-direction: reverse;
 }
@@ -69,7 +69,7 @@
 .spinner-ring:nth-child(3) {
   width: 70px;
   height: 70px;
-  border-top-color: #f5e6d3;
+  border-top-color: var(--color-text-primary);
   animation-duration: 2.5s;
 }
 
@@ -80,10 +80,10 @@
   margin: 0 0 25px 0;
   font-family: 'Noto Serif SC', serif;
   letter-spacing: 0.15em;
-  color: #f5e6d3;
+  color: var(--color-text-primary);
   text-shadow: 
     2px 2px 4px rgba(0, 0, 0, 0.8),
-    0 0 30px rgba(255, 180, 80, 0.3);
+    0 0 30px var(--color-shadow-glow);
 }
 
 .loading-dots {

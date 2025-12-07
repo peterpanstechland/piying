@@ -28,7 +28,16 @@
       "position": "Position yourself in the center",
       "ready": "Get ready to perform"
     },
-    "starting": "Starting soon..."
+    "starting": "Starting soon...",
+    "calibration": {
+      "raiseLeftHand": "Raise Left Hand",
+      "raiseRightHand": "Raise Right Hand",
+      "liftLeftFoot": "Lift Left Foot",
+      "liftRightFoot": "Lift Right Foot",
+      "holdStill": "Hold pose...",
+      "complete": "Calibration Complete!",
+      "step": "Step {{current}}/{{total}}"
+    }
   },
   "countdown": {
     "getReady": "Get Ready!",

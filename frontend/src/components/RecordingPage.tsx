@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { MotionCaptureRecorder } from '../services/motion-capture';
 import { CanvasRecorder } from '../services/canvas-recorder';
 import { CharacterRenderer } from '../pixi/CharacterRenderer';
-import { PoseProcessor, DEFAULT_CONFIG, type ProcessedPose } from '../pose';
+import { PoseProcessor, DEFAULT_CONFIG, type ProcessedPose } from '@pose';
 import type { PoseLandmarks } from '../pixi/types';
+import { APP_CONFIG } from '../config/constants';
 import './RecordingPage.css';
 
 // 路径配置接口
@@ -115,6 +116,7 @@ export const RecordingPage = ({
   // 校准已在上一步完成，直接开始录制
   const isCalibrated = true;
   
+  const [isRendererReady, setIsRendererReady] = useState(false);
   const recordingStartedRef = useRef(false);
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
   const recordingCanvasRef = useRef<HTMLCanvasElement>(null); // 隐藏的录制 Canvas (绿幕)
@@ -130,12 +132,7 @@ export const RecordingPage = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_processedPose, setProcessedPose] = useState<ProcessedPose | null>(null);
   const mirrorMode = true; // 镜像模式（摄像头默认是镜像的）
-import { APP_CONFIG } from '../config/constants';
 
-export const RecordingPage = ({
-  segmentIndex,
-  segmentDuration,
-// ...
   // 初始化 CharacterRenderer 和 PoseProcessor（与 CameraTestPage 保持一致）
   useEffect(() => {
     if (!characterCanvasRef.current || !characterId) return;
@@ -175,6 +172,9 @@ export const RecordingPage = ({
         const processor = new PoseProcessor(DEFAULT_CONFIG);
         poseProcessorRef.current = processor;
         console.log('PoseProcessor initialized');
+
+        // Mark renderer as ready to trigger initial positioning
+        setIsRendererReady(true);
       } catch (err) {
         console.error('Failed to init character renderer:', err);
       }
@@ -257,7 +257,7 @@ export const RecordingPage = ({
 
   // 路径动画 - 根据录制进度更新皮影位置
   useEffect(() => {
-    if (!rendererRef.current || !pathConfig) return;
+    if (!rendererRef.current || !pathConfig || !isRendererReady) return;
     
     const renderer = rendererRef.current;
     const recordingRenderer = recordingRendererRef.current;
@@ -346,21 +346,20 @@ export const RecordingPage = ({
         recordingRenderer.setOpacity(opacity);
       }
       
-      // 应用缩放 - 自动检测是否需要缩放（手动模式 或 设置了自定义缩放值）
-        const scaleStart = pathConfig.scale_start ?? 1.0;
-        const scaleEnd = pathConfig.scale_end ?? 1.0;
-      const hasCustomScale = Math.abs(scaleStart - 1.0) > 0.01 || Math.abs(scaleEnd - 1.0) > 0.01;
-        
-      if (pathConfig.scale_mode === 'manual' || hasCustomScale) {
-        // 根据整体进度计算当前缩放
-        const overallProgress = elapsedTime / segmentDuration;
-        const currentScale = scaleStart + (scaleEnd - scaleStart) * Math.min(1, Math.max(0, overallProgress));
-        
-        if (renderer) renderer.setScale(currentScale);
-        if (recordingRenderer) recordingRenderer.setScale(currentScale);
-      }
+      // 应用缩放 - 始终根据配置或默认值进行缩放
+      const scaleStart = pathConfig.scale_start ?? APP_CONFIG.DISPLAY.DEFAULT_CHARACTER_SCALE;
+      const scaleEnd = pathConfig.scale_end ?? APP_CONFIG.DISPLAY.DEFAULT_CHARACTER_SCALE;
+      
+      // 无论 scale_mode 是什么，只要有值（包括默认值）就应用
+      // 这样确保了默认 0.6 生效，也确保了用户设置的 1.0 生效（如果用户真想满屏）
+      // 也修复了用户设置了值但因为某些逻辑判断没生效的问题
+      const overallProgress = elapsedTime / segmentDuration;
+      const currentScale = scaleStart + (scaleEnd - scaleStart) * Math.min(1, Math.max(0, overallProgress));
+      
+      if (renderer) renderer.setScale(currentScale);
+      if (recordingRenderer) recordingRenderer.setScale(currentScale);
     }
-  }, [elapsedTime, isCalibrated, pathConfig, segmentDuration]);
+  }, [elapsedTime, isCalibrated, pathConfig, segmentDuration, isRendererReady]);
 
   // 处理姿态检测 - 使用 PoseProcessor 管线
   const handlePose = useCallback((landmarks: PoseLandmarks) => {

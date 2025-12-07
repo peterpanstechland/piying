@@ -24,6 +24,7 @@ from ...models.admin.character import (
 from ...models.admin import TokenPayload
 from ...services.admin.character_service import character_service
 from .auth import get_current_user
+from ...utils.path import get_user_data_dir
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Character Management"])
 
@@ -531,10 +532,7 @@ async def get_character_preview(
     
     # Check if thumbnail exists
     if character.thumbnail_path:
-        thumbnail_full_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "data", character.thumbnail_path
-        )
+        thumbnail_full_path = str(get_user_data_dir() / character.thumbnail_path)
         if os.path.exists(thumbnail_full_path):
             # Add cache control headers to prevent browser caching
             import time
@@ -553,10 +551,7 @@ async def get_character_preview(
     # Generate thumbnail if it doesn't exist
     thumbnail_path = await character_service.generate_thumbnail(db, character_id)
     if thumbnail_path:
-        thumbnail_full_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "data", thumbnail_path
-        )
+        thumbnail_full_path = str(get_user_data_dir() / thumbnail_path)
         if os.path.exists(thumbnail_full_path):
             return FileResponse(
                 thumbnail_full_path,
@@ -605,10 +600,7 @@ async def get_character_part_image(
         )
     
     # Get the file path
-    part_full_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-        "data", part.file_path
-    )
+    part_full_path = str(get_user_data_dir() / part.file_path)
     
     if not os.path.exists(part_full_path):
         raise HTTPException(
@@ -744,10 +736,7 @@ async def get_spritesheet_png(
             detail=f"Character with ID '{character_id}' not found",
         )
     
-    spritesheet_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-        "data", "characters", character_id, "spritesheet.png"
-    )
+    spritesheet_path = str(get_user_data_dir() / "characters" / character_id / "spritesheet.png")
     
     if not os.path.exists(spritesheet_path):
         raise HTTPException(
@@ -782,10 +771,7 @@ async def get_spritesheet_json(
             detail=f"Character with ID '{character_id}' not found",
         )
     
-    json_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-        "data", "characters", character_id, "spritesheet.json"
-    )
+    json_path = str(get_user_data_dir() / "characters" / character_id / "spritesheet.json")
     
     if not os.path.exists(json_path):
         raise HTTPException(

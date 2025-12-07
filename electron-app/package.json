@@ -27,7 +27,7 @@
     "productName": "皮影互动系统",
     "copyright": "Copyright © 2024",
     "directories": {
-      "output": "dist",
+      "output": "dist_v4",
       "buildResources": "build"
     },
     "files": [
@@ -74,10 +74,13 @@
       }
     ],
     "win": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "artifactName": "${productName}-Setup-${version}.${ext}"
@@ -90,11 +93,26 @@
       "shortcutName": "皮影互动系统",
       "license": "build/license.txt",
       "runAfterFinish": true,
-      "installerLanguages": ["zh_CN", "en_US"],
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ],
       "language": "2052"
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "s3",
+        "bucket": "your-s3-bucket-name",
+        "region": "your-s3-region"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.6.2",
+    "tree-kill": "^1.2.2"
   }
 }

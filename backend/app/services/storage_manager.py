@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import logging
 
 from ..models import Session
+from ..utils.path import get_user_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class StorageManager:
         Initialize StorageManager
         
         Args:
-            base_path: Base directory for all data storage (default: project_root/data)
+            base_path: Base directory for all data storage (default: user_data_dir)
             max_age_days: Maximum age of files before cleanup (default: 7 days)
             min_disk_space_gb: Minimum disk space threshold for warnings
             emergency_threshold_gb: Disk space threshold for emergency cleanup
@@ -38,9 +39,8 @@ class StorageManager:
         if base_path:
             self.base_path = Path(base_path)
         else:
-            # Default to project root's data directory
-            project_root = Path(__file__).parent.parent.parent.parent
-            self.base_path = project_root / "data"
+            # Default to user data directory for persistence
+            self.base_path = get_user_data_dir()
         
         self.sessions_path = self.base_path / "sessions"
         self.outputs_path = self.base_path / "outputs"
@@ -125,17 +125,24 @@ class StorageManager:
         
         return deleted
     
-    def cleanup_old_files(self) -> Dict[str, int]:
+    def cleanup_old_files(self, max_age_hours: Optional[float] = None) -> Dict[str, int]:
         """
-        Clean up files older than max_age_days
+        Clean up files older than max_age_hours (or max_age_days if None)
         
+        Args:
+            max_age_hours: Override for max age in hours. If None, uses max_age_days.
+            
         Returns:
             Dictionary with cleanup metrics: {
                 'files_deleted': int,
                 'space_freed_mb': int
             }
         """
-        cutoff_time = time.time() - (self.max_age_days * 24 * 60 * 60)
+        if max_age_hours is not None:
+            cutoff_time = time.time() - (max_age_hours * 60 * 60)
+        else:
+            cutoff_time = time.time() - (self.max_age_days * 24 * 60 * 60)
+            
         files_deleted = 0
         space_freed = 0
         
@@ -164,7 +171,7 @@ class StorageManager:
                 space_freed += file_size
         
         space_freed_mb = space_freed // (1024 * 1024)
-        logger.info(f"Cleanup completed: {files_deleted} files deleted, {space_freed_mb} MB freed")
+        logger.info(f"Cleanup completed: {files_deleted} files deleted, {space_freed_mb} MB freed (older than {max_age_hours if max_age_hours is not None else self.max_age_days * 24} hours)")
         
         return {
             'files_deleted': files_deleted,
@@ -282,4 +289,3 @@ class StorageManager:
             'total_size_mb': total_size_mb,
             'available_space_gb': available_space_gb
         }
-

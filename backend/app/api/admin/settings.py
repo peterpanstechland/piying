@@ -20,6 +20,8 @@ from ...models.admin.settings import (
     CameraListResponse,
     CameraDevice,
 )
+from pydantic import BaseModel, Field
+from typing import Optional
 from ...models.admin import TokenPayload
 from ...services.admin.settings_service import settings_service
 from .auth import get_current_user
@@ -162,6 +164,33 @@ async def update_storage_settings(
             )
     
     return settings_service.update_storage_settings(update_data)
+
+
+class CleanupRequest(BaseModel):
+    older_than_hours: Optional[float] = Field(default=0, description="Delete files older than X hours. Default 0 (delete all).")
+
+
+@router.post("/storage/cleanup")
+async def cleanup_storage(
+    request: CleanupRequest,
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+) -> dict:
+    """
+    Trigger manual cleanup of generated files.
+    
+    - **older_than_hours**: Delete files older than this many hours. 
+                           If 0 (default), deletes ALL generated files.
+    
+    Returns cleanup metrics.
+    """
+    from ...services.storage_manager import StorageManager
+    # We create a new instance, which will use default paths (user data dir)
+    storage = StorageManager()
+    
+    # Run cleanup
+    metrics = storage.cleanup_old_files(max_age_hours=request.older_than_hours)
+    
+    return metrics
 
 
 @router.post("/storage/test", response_model=S3ConnectionTestResponse)

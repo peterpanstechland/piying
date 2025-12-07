@@ -4,6 +4,7 @@
  */
 
 :root {
+  /* Default Dark Theme (preserving existing) */
   /* 主色调 - 传统中国红与金色 */
   --color-primary: #c41e3a;           /* 中国红 */
   --color-primary-light: #e74c3c;     /* 浅红 */
@@ -50,6 +51,41 @@
   --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   --transition-fast: all 0.2s ease;
+}
+
+/* Light Theme Overrides */
+[data-theme='light'] {
+  /* Backgrounds - Rice Paper / Warm Light */
+  --color-bg-dark: #F7F4EB;           /* 宣纸白 */
+  --color-bg-medium: #EBE6D8;         /* 稍深的宣纸色 */
+  --color-bg-light: #FFFDF5;          /* 亮白 */
+
+  /* Text - Dark Brown / Ink */
+  --color-text-primary: #3E342E;      /* 墨茶色 */
+  --color-text-secondary: rgba(62, 52, 46, 0.8);
+  --color-text-accent: #B83B3B;       /* 朱砂红 as accent text */
+
+  /* Primary Colors - Adjusted for Light Mode */
+  --color-primary: #B83B3B;           /* 朱砂红 */
+  --color-primary-light: #D64545;
+  --color-primary-dark: #9E3232;
+
+  --color-gold: #D4A024;              /* 藤黄 */
+  --color-gold-light: #F2D7A0;
+  --color-gold-dark: #B8860b;
+
+  /* Borders */
+  --color-border: #3E342E;            /* 墨茶色边框 */
+  --color-border-accent: #B83B3B;
+
+  /* Shadows - Colored Shadows for "Translucency" */
+  --shadow-glow: 0 0 25px rgba(184, 59, 59, 0.2);
+  --shadow-glow-intense: 0 0 40px rgba(184, 59, 59, 0.3);
+  --shadow-soft: 4px 4px 0px rgba(184, 59, 59, 0.1);
+  --shadow-deep: 8px 8px 0px rgba(62, 52, 46, 0.1);
+  
+  /* Specific overrides for gradients/backgrounds */
+  --bg-gradient: radial-gradient(circle, var(--color-bg-light) 0%, var(--color-bg-dark) 100%);
 }
 
 /* ========== 全局背景 - 皮影幕布效果 ========== */

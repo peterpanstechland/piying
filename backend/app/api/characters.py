@@ -104,6 +104,7 @@ async def get_character_spritesheet_json(
     """
     from pathlib import Path
     from fastapi.responses import FileResponse
+    from ..utils.path import get_user_data_dir
     
     try:
         # Generate spritesheet if needed
@@ -111,7 +112,8 @@ async def get_character_spritesheet_json(
         await spritesheet_service.generate_spritesheet(db, character_id)
         
         # Return spritesheet JSON
-        spritesheet_json_path = Path(f"data/characters/{character_id}/spritesheet.json")
+        data_dir = get_user_data_dir()
+        spritesheet_json_path = data_dir / "characters" / character_id / "spritesheet.json"
         
         if not spritesheet_json_path.exists():
             raise HTTPException(
@@ -148,10 +150,11 @@ async def get_character_spritesheet(
     """
     from fastapi.responses import FileResponse
     from pathlib import Path
+    from ..utils.path import get_user_data_dir
     
     try:
         # Get character to find spritesheet path
-        character = await character_service.get_character(db, character_id)
+        character = await character_service.get_character_by_id(db, character_id)
         if not character:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -159,7 +162,8 @@ async def get_character_spritesheet(
             )
         
         # Construct spritesheet path
-        spritesheet_path = Path(f"data/characters/{character_id}/spritesheet.png")
+        data_dir = get_user_data_dir()
+        spritesheet_path = data_dir / "characters" / character_id / "spritesheet.png"
         
         if not spritesheet_path.exists():
             raise HTTPException(
@@ -200,6 +204,7 @@ async def get_character_thumbnail(
     from fastapi.responses import FileResponse
     from pathlib import Path
     import os
+    from ..utils.path import get_user_data_dir
     
     try:
         # Get character to verify it exists
@@ -211,7 +216,8 @@ async def get_character_thumbnail(
             )
         
         # Construct thumbnail path
-        thumbnail_path = Path(f"data/characters/{character_id}/thumbnail.png")
+        data_dir = get_user_data_dir()
+        thumbnail_path = data_dir / "characters" / character_id / "thumbnail.png"
         
         # If thumbnail exists, return it
         if thumbnail_path.exists():
@@ -226,7 +232,8 @@ async def get_character_thumbnail(
         # Try to generate thumbnail if it doesn't exist
         generated_path = await character_service.generate_thumbnail(db, character_id)
         if generated_path:
-            full_path = Path(f"data/{generated_path}")
+            # generated_path is relative like "characters/id/thumbnail.png"
+            full_path = data_dir / generated_path
             if full_path.exists():
                 return FileResponse(
                     path=str(full_path),

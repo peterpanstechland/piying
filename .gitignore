@@ -28,6 +28,9 @@ yarn-error.log*
 *.swo
 *~
 
+# Cursor IDE workspace storage images
+**/c__Users_*_workspaceStorage_*
+
 # OS
 .DS_Store
 Thumbs.db
@@ -54,6 +57,6 @@ config/settings.json
 backend/config/settings.json
 
 # Electron Build Artifacts
-electron-app/dist/
+electron-app/dist*/
 electron-app/resources/backend/
 electron-app/out/

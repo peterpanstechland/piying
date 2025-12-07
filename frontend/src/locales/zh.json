@@ -28,7 +28,16 @@
       "position": "请站在中央位置",
       "ready": "准备好表演"
     },
-    "starting": "即将开始..."
+    "starting": "即将开始...",
+    "calibration": {
+      "raiseLeftHand": "请举起左手",
+      "raiseRightHand": "请举起右手",
+      "liftLeftFoot": "请抬起左脚",
+      "liftRightFoot": "请抬起右脚",
+      "holdStill": "保持姿势...",
+      "complete": "校准完成！",
+      "step": "步骤 {{current}}/{{total}}"
+    }
   },
   "countdown": {
     "getReady": "准备好！",

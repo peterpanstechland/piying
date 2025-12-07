@@ -39,11 +39,10 @@ from ...models.admin.storyline import (
 from ...models.admin.character import CharacterDB
 
 
+from ...utils.path import get_user_data_dir
+
 # Storyline assets directory
-STORYLINES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-    "data", "storylines"
-)
+STORYLINES_DIR = str(get_user_data_dir() / "storylines")
 
 # Supported video formats
 SUPPORTED_VIDEO_FORMATS = [".mp4"]
@@ -567,6 +566,14 @@ class StorylineService:
         storyline.video_height = metadata.height
         storyline.updated_at = datetime.utcnow()
         await db.commit()
+        
+        # Automatically generate cover image from the first frame (0.0s)
+        # This ensures a cover image is always available after video upload
+        try:
+            await self.capture_cover_from_video(db, storyline_id, 0.0)
+        except Exception as e:
+            # Log error but don't fail the upload if cover generation fails
+            print(f"Warning: Failed to auto-generate cover image: {e}")
         
         return relative_path, metadata.duration, ""
 

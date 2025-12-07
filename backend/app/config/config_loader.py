@@ -143,10 +143,14 @@ class ConfigLoader:
         if config_dir:
             self.config_dir = Path(config_dir)
         else:
-            # Determine project root
-            from ..utils.path import get_project_root
-            project_root = get_project_root()
-            self.config_dir = project_root / "config"
+            # Determine config directory in user data
+            from ..utils.path import get_user_data_dir, ensure_user_data
+            
+            # Ensure user data and config exist
+            ensure_user_data()
+            
+            user_data_dir = get_user_data_dir()
+            self.config_dir = user_data_dir.parent / "config"
         
         self.scenes_file = self.config_dir / "scenes.json"
         self.settings_file = self.config_dir / "settings.json"

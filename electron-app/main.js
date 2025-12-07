@@ -3,6 +3,16 @@ const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const http = require('http');
+const { autoUpdater } = require('electron-updater');
+const logger = require('electron-log');
+const treeKill = require('tree-kill');
+
+// 使 log 既可以作为函数调用，又拥有 electron-log 的所有方法
+const log = Object.assign((message) => logger.info(message), logger);
+
+// 配置日志
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
 
 let launcherWindow = null;
 let mainWindow = null;
@@ -16,10 +26,10 @@ const appPath = isDev ? path.join(__dirname, '..') : path.dirname(app.getPath('e
 const resourcesPath = isDev ? __dirname : process.resourcesPath;
 
 // 日志函数
-function log(message) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${message}`);
-}
+// function log(message) {
+//   const timestamp = new Date().toISOString();
+//   console.log(`[${timestamp}] ${message}`);
+// }
 
 // 启动画面
 function createSplashScreen() {
@@ -39,6 +49,58 @@ function createSplashScreen() {
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
   splashWindow.center();
 }
+
+// 检查更新
+function checkForUpdates() {
+  if (isDev) {
+    log.info('Skipping update check in development mode');
+    return;
+  }
+
+  log.info('Checking for updates...');
+  autoUpdater.checkForUpdatesAndNotify();
+}
+
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available: ' + info.version);
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '发现新版本，正在下载...');
+  }
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available.');
+});
+
+autoUpdater.on('error', (err) => {
+  log.error('Error in auto-updater: ' + err);
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '更新检查失败，继续启动...');
+  }
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+  log.info(log_message);
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', `正在下载更新... ${Math.round(progressObj.percent)}%`);
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded');
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '更新下载完成，下次启动时安装');
+  }
+  // 这里可以选择立即安装并重启，或者下次启动时安装
+  // autoUpdater.quitAndInstall(); 
+});
 
 // 检查后端是否已运行
 function checkBackendRunning() {
@@ -284,6 +346,8 @@ function backToLauncher() {
   } else {
     launcherWindow.show();
     launcherWindow.focus();
+    // 通知启动器重置界面状态（如隐藏 Loading）
+    launcherWindow.webContents.send('reset-state');
   }
 }
 
@@ -358,6 +422,41 @@ function createTray() {
   });
 }
 
+// 强制关闭后端
+function killBackend() {
+  return new Promise((resolve) => {
+    if (!backendProcess) {
+      resolve();
+      return;
+    }
+    if (!backendProcess.pid) {
+        backendProcess = null;
+        resolve();
+        return;
+    }
+    log.info(`Killing backend process tree (PID: ${backendProcess.pid})...`);
+    treeKill(backendProcess.pid, 'SIGKILL', (err) => {
+      if (err) {
+        log.error(`Failed to kill backend: ${err.message}`);
+        // Windows 备用方案
+        if (process.platform === 'win32') {
+             exec(`taskkill /pid ${backendProcess.pid} /T /F`, () => {
+                 backendProcess = null;
+                 resolve();
+             });
+        } else {
+             backendProcess = null;
+             resolve();
+        }
+      } else {
+        log.info('Backend process killed successfully');
+        backendProcess = null;
+        resolve();
+      }
+    });
+  });
+}
+
 // 重启后端
 async function restartBackend() {
   log('Restarting backend...');
@@ -385,6 +484,9 @@ app.whenReady().then(async () => {
     
     // 显示启动画面
     createSplashScreen();
+
+    // 检查更新
+    checkForUpdates();
 
     // 启动后端
     try {
@@ -436,15 +538,29 @@ app.on('activate', () => {
   }
 });
 
+let isQuitting = false;
+
 // 应用退出前
-app.on('before-quit', () => {
-  log('Application quitting...');
+app.on('before-quit', async (e) => {
+  if (isQuitting) return;
   
-  if (backendProcess) {
-    log('Stopping backend process...');
-    backendProcess.kill();
-    backendProcess = null;
+  // 阻止默认退出，先执行清理
+  e.preventDefault();
+  log.info('Application quitting... Cleaning up backend.');
+  
+  try {
+    if (backendProcess) {
+        // 设置超时，防止无限等待
+        const killPromise = killBackend();
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+        await Promise.race([killPromise, timeoutPromise]);
+    }
+  } catch (err) {
+      log.error(`Error during cleanup: ${err.message}`);
   }
+  
+  isQuitting = true;
+  app.quit();
 });
 
 // 处理未捕获的异常

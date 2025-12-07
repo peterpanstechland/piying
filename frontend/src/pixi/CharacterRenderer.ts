@@ -30,7 +30,7 @@ import type {
   PoseLandmarks,
   FrameData,
 } from './types'
-import type { ProcessedPose, PartAngles, Facing } from '../pose/types'
+import type { ProcessedPose, PartAngles, Facing } from '@pose/types'
 
 // Extended frame data with assembly info and animation config
 interface FrameDataWithAssembly extends FrameData {
@@ -678,17 +678,20 @@ export class CharacterRenderer {
   // Rotation limits for parts (in radians)
   // Format: [minAngle, maxAngle] relative to default pose
   private static readonly ROTATION_LIMITS: Record<string, [number, number] | null> = {
-    'head': null,
-    'body': null,
-    'left-arm': null,          // arms can rotate freely
-    'right-arm': null,
+    'head': [-Math.PI / 4, Math.PI / 4],  // ±45 degrees
+    'body': [-Math.PI / 6, Math.PI / 6],  // ±30 degrees
+    // Arms rotation limits:
+    // Forward/Up: -PI (allows full raise)
+    // Backward: PI/3 (60 degrees, prevents unnatural backward flip)
+    'left-arm': [-Math.PI, Math.PI / 3],
+    'right-arm': [-Math.PI, Math.PI / 3],
     'left-hand': null,
     'right-hand': null,
     // 裙子不旋转
     'skirt': null,
     // 左右大腿有旋转限制
-    'left-thigh': [-Math.PI / 4, Math.PI / 4],   // ±45 degrees
-    'right-thigh': [-Math.PI / 4, Math.PI / 4],  // ±45 degrees
+    'left-thigh': [-Math.PI * 0.8, Math.PI * 0.8],
+    'right-thigh': [-Math.PI * 0.8, Math.PI * 0.8],
     'left-foot': null,
     'right-foot': null,
   }

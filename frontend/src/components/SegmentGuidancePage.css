@@ -5,8 +5,10 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: radial-gradient(ellipse at center, #2d1810 0%, #1a0a0a 100%);
+  background: radial-gradient(ellipse at center, var(--color-bg-medium) 0%, var(--color-bg-dark) 100%);
   isolation: isolate;
+  /* Add a subtle texture or gradient for depth */
+  background-image: var(--bg-gradient);
 }
 
 /* 皮影戏舞台背景 */
@@ -22,6 +24,11 @@
   background-position: center;
   background-repeat: no-repeat;
   z-index: 0;
+}
+
+/* Light Theme: Hide stage background */
+[data-theme='light'] .segment-guidance-page::before {
+  background-image: none;
 }
 
 /* 皮影人物 Canvas 层 - 定位在检测框中心 */
@@ -47,11 +54,12 @@
   height: 210px;
   border-radius: 16px;
   overflow: hidden;
-  border: 3px solid rgba(212, 175, 55, 0.6);
+  border: 3px solid var(--color-gold);
   box-shadow: 
     0 0 20px rgba(0, 0, 0, 0.5),
     0 0 40px rgba(255, 150, 50, 0.2);
   z-index: 50;
+  background: #000;
 }
 
 .camera-preview-window video {
@@ -68,7 +76,7 @@
   right: 0;
   padding: 8px;
   background: rgba(0, 0, 0, 0.7);
-  color: #ffd700;
+  color: var(--color-gold);
   font-size: 14px;
   text-align: center;
   font-family: 'Noto Serif SC', serif;
@@ -92,13 +100,13 @@
   padding: 20px 40px;
   background: rgba(0, 0, 0, 0.6);
   border-radius: 16px;
-  border: 2px solid rgba(212, 175, 55, 0.5);
+  border: 2px solid var(--color-border);
 }
 
 .calibration-text {
   font-size: 28px;
   font-family: 'Noto Serif SC', serif;
-  color: #ffd700;
+  color: var(--color-gold);
   margin-bottom: 15px;
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
 }
@@ -114,7 +122,7 @@
 
 .calibration-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ffd700, #ffaa00);
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-gold-light) 100%);
   border-radius: 4px;
   transition: width 0.1s ease-out;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
@@ -122,12 +130,12 @@
 
 .calibration-hint {
   font-size: 18px;
-  color: rgba(245, 230, 211, 0.8);
+  color: var(--color-text-secondary);
 }
 
 .calibrating-prompt {
   font-size: 28px;
-  color: #ffd700;
+  color: var(--color-gold);
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
   animation: pulse 1s ease-in-out infinite;
 }
@@ -152,7 +160,15 @@
     rgba(45, 24, 16, 0.5) 0%,
     rgba(26, 10, 10, 0.8) 100%
   );
-  z-index: 10;
+  z-index: 20;
+}
+
+[data-theme='light'] .guidance-overlay {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(240, 230, 210, 0.7) 100%
+  );
 }
 
 /* 幕布边框光晕 */
@@ -178,7 +194,7 @@
 .guidance-header h1 {
   font-family: 'Noto Serif SC', 'KaiTi', serif;
   font-size: 44px;
-  color: #f5e6d3;
+  color: var(--color-text-primary);
   letter-spacing: 0.15em;
   margin: 0;
   text-shadow: 
@@ -189,7 +205,7 @@
 .segment-counter {
   font-family: 'Noto Sans SC', sans-serif;
   font-size: 22px;
-  color: #d4af37;
+  color: var(--color-gold);
   margin-top: 12px;
   letter-spacing: 0.1em;
 }
@@ -197,7 +213,7 @@
 /* 检测框 - 传统风格 */
 .detection-box {
   position: absolute;
-  border: 3px dashed rgba(212, 175, 55, 0.5);
+  border: 3px dashed var(--color-border);
   border-radius: 12px;
   transition: all 0.3s ease;
   display: flex;
@@ -207,7 +223,7 @@
 }
 
 .detection-box.active {
-  border: 4px solid #c41e3a;
+  border: 4px solid var(--color-primary);
   background: rgba(196, 30, 58, 0.1);
   box-shadow: 
     0 0 40px rgba(196, 30, 58, 0.5),
@@ -217,15 +233,15 @@
 
 @keyframes pulseBorder {
   0% { 
-    border-color: #c41e3a; 
+    border-color: var(--color-primary); 
     box-shadow: 0 0 40px rgba(196, 30, 58, 0.5); 
   }
   50% { 
-    border-color: #d4af37; 
+    border-color: var(--color-gold); 
     box-shadow: 0 0 60px rgba(212, 175, 55, 0.7); 
   }
   100% { 
-    border-color: #c41e3a; 
+    border-color: var(--color-primary); 
     box-shadow: 0 0 40px rgba(196, 30, 58, 0.5); 
   }
 }
@@ -235,13 +251,13 @@
   position: absolute;
   width: 35px;
   height: 35px;
-  border: 4px solid #d4af37;
+  border: 4px solid var(--color-gold);
   opacity: 0.8;
   transition: all 0.3s ease;
 }
 
 .detection-box.active .box-corner {
-  border-color: #f4d03f;
+  border-color: var(--color-gold-light);
   box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
 }
 
@@ -258,11 +274,11 @@
 .stand-here-prompt {
   font-family: 'Noto Serif SC', serif;
   font-size: 28px;
-  color: #f5e6d3;
+  color: var(--color-text-primary);
   background: rgba(45, 24, 16, 0.8);
   padding: 12px 35px;
   border-radius: 8px;
-  border: 1px solid rgba(212, 175, 55, 0.5);
+  border: 1px solid var(--color-border);
   letter-spacing: 0.1em;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   animation: floatText 3s ease-in-out infinite;
@@ -278,10 +294,10 @@
   font-family: 'Noto Serif SC', serif;
   font-size: 110px;
   font-weight: 600;
-  color: #d4af37;
+  color: var(--color-gold);
   text-shadow: 
     0 0 30px rgba(212, 175, 55, 0.8),
-    4px 4px 0px #8b0000;
+    4px 4px 0px var(--color-primary-dark);
   animation: countdownPop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
 }
 
@@ -304,7 +320,7 @@
 .guidance-action {
   font-family: 'Noto Serif SC', serif;
   font-size: 38px;
-  color: #d4af37;
+  color: var(--color-gold);
   margin-bottom: 12px;
   letter-spacing: 0.15em;
   text-shadow: 
@@ -315,7 +331,7 @@
 .guidance-description {
   font-family: 'Noto Sans SC', sans-serif;
   font-size: 22px;
-  color: #f5e6d3;
+  color: var(--color-text-primary);
   letter-spacing: 0.1em;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }

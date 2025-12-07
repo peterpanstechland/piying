@@ -25,7 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // 监听事件
   onBackendStatus: (callback) => ipcRenderer.on('backend-status', callback),
-  onMessage: (callback) => ipcRenderer.on('message', callback)
+  onMessage: (callback) => ipcRenderer.on('message', callback),
+  onResetState: (callback) => ipcRenderer.on('reset-state', callback)
 });
 
 // 页面加载完成后的初始化

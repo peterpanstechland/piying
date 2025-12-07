@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { useTranslation } from 'react-i18next'
 import { adminApi } from '../services/api'
 import './SystemSettingsPage.css'
@@ -20,20 +21,35 @@ interface RenderingSettings {
   max_render_time_seconds: number
 }
 
+interface StorageSettings {
+  mode: string
+  local_path: string
+  auto_cleanup_enabled: boolean
+  auto_cleanup_threshold: number
+  s3_bucket?: string
+  s3_region?: string
+  s3_access_key?: string
+  s3_secret_key?: string
+}
+
 interface SystemSettings {
+  theme: string
   language: string
   fallback_language: string
   timeouts: TimeoutSettings
   rendering: RenderingSettings
+  storage: StorageSettings
 }
 
 const VALID_CODECS = ['H264', 'H265', 'VP9']
 
 export default function SystemSettingsPage() {
   const { user, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
   const { t, i18n } = useTranslation()
   
   const [settings, setSettings] = useState<SystemSettings>({
+    theme: 'dark',
     language: 'zh',
     fallback_language: 'en',
     timeouts: {
@@ -49,9 +65,16 @@ export default function SystemSettingsPage() {
       video_codec: 'H264',
       max_render_time_seconds: 20,
     },
+    storage: {
+      mode: 'local',
+      local_path: 'data/outputs',
+      auto_cleanup_enabled: false,
+      auto_cleanup_threshold: 24,
+    }
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -66,11 +89,17 @@ export default function SystemSettingsPage() {
       setLoading(true)
       const data = await adminApi.getSettings()
       setSettings({
+        theme: data.theme || 'dark',
         language: data.language,
         fallback_language: data.fallback_language,
         timeouts: data.timeouts,
         rendering: data.rendering,
+        storage: data.storage,
       })
+      // Sync theme with global state
+      if (data.theme && data.theme !== theme) {
+        setTheme(data.theme as 'light' | 'dark')
+      }
     } catch (err: any) {
       setError(err.message || t('settings.system.loadError'))
     } finally {
@@ -115,6 +144,33 @@ export default function SystemSettingsPage() {
     }))
   }
 
+  const handleStorageChange = (field: keyof StorageSettings, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      storage: { ...prev.storage, [field]: value },
+    }))
+  }
+
+  const handleManualCleanup = async () => {
+    if (!window.confirm(t('settings.storage.confirmCleanup', { defaultValue: 'Are you sure you want to delete ALL generated video files?' }))) {
+      return
+    }
+
+    try {
+      setCleaning(true)
+      const result = await adminApi.cleanupStorage(0) // 0 means delete all
+      setSuccess(t('settings.storage.cleanupSuccess', { 
+        count: result.files_deleted, 
+        size: result.space_freed_mb,
+        defaultValue: `Cleanup completed: ${result.files_deleted} files deleted, ${result.space_freed_mb} MB freed`
+      }))
+    } catch (err: any) {
+      setError(err.message || t('settings.storage.cleanupError', { defaultValue: 'Cleanup failed' }))
+    } finally {
+      setCleaning(false)
+    }
+  }
+
   const handleSave = async () => {
     // Validate all timeout values
     const timeoutFields = Object.entries(settings.timeouts)
@@ -131,10 +187,12 @@ export default function SystemSettingsPage() {
       setSuccess('')
       
       await adminApi.updateSettings({
+        theme: theme, // Use current theme from context
         language: settings.language,
         fallback_language: settings.fallback_language,
         timeouts: settings.timeouts,
         rendering: settings.rendering,
+        storage: settings.storage,
       })
       
       // Update the UI language immediately
@@ -171,6 +229,36 @@ export default function SystemSettingsPage() {
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
 
+        {/* Interface Settings */}
+        <div className="settings-card">
+          <h2>{t('settings.system.interfaceTitle')}</h2>
+          <div className="form-group">
+            <label>{t('settings.system.theme')}</label>
+            <div className="theme-toggle">
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  name="theme"
+                  value="dark"
+                  checked={theme === 'dark'}
+                  onChange={() => setTheme('dark')}
+                />
+                <span>{t('settings.system.themeDark')}</span>
+              </label>
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  name="theme"
+                  value="light"
+                  checked={theme === 'light'}
+                  onChange={() => setTheme('light')}
+                />
+                <span>{t('settings.system.themeLight')}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         {/* Language Settings */}
         <div className="settings-card">
           <h2>{t('settings.system.languageTitle')}</h2>
@@ -185,6 +273,64 @@ export default function SystemSettingsPage() {
               <option value="en">English</option>
             </select>
             <span className="field-hint">{t('settings.system.languageHint')}</span>
+          </div>
+        </div>
+
+        {/* Storage Settings */}
+        <div className="settings-card">
+          <h2>{t('settings.storage.title', { defaultValue: 'Storage Settings' })}</h2>
+          <div className="storage-grid">
+            <div className="form-group">
+               <label>{t('settings.storage.manualCleanup', { defaultValue: 'Manual Cleanup' })}</label>
+               <button 
+                 className="btn-danger" 
+                 onClick={handleManualCleanup}
+                 disabled={cleaning}
+               >
+                 {cleaning ? t('common.processing', { defaultValue: 'Processing...' }) : t('settings.storage.cleanAllFiles', { defaultValue: 'Clean All Generated Files' })}
+               </button>
+               <span className="field-hint">{t('settings.storage.manualCleanupHint', { defaultValue: 'Delete all generated video files immediately' })}</span>
+            </div>
+
+            <div className="form-group">
+              <label>{t('settings.storage.autoCleanup', { defaultValue: 'Auto Cleanup' })}</label>
+              <div className="toggle-switch">
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={settings.storage.auto_cleanup_enabled}
+                    onChange={(e) => handleStorageChange('auto_cleanup_enabled', e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
+                <span className="switch-label">
+                  {settings.storage.auto_cleanup_enabled 
+                    ? t('common.enabled', { defaultValue: 'Enabled' }) 
+                    : t('common.disabled', { defaultValue: 'Disabled' })}
+                </span>
+              </div>
+            </div>
+
+            {settings.storage.auto_cleanup_enabled && (
+              <div className="form-group">
+                <label htmlFor="auto_cleanup_threshold">
+                  {t('settings.storage.cleanupThreshold', { defaultValue: 'Cleanup Threshold' })}
+                </label>
+                <div className="input-with-unit">
+                  <input
+                    id="auto_cleanup_threshold"
+                    type="number"
+                    min="1"
+                    value={settings.storage.auto_cleanup_threshold}
+                    onChange={(e) => handleStorageChange('auto_cleanup_threshold', parseInt(e.target.value) || 1)}
+                  />
+                  <span className="unit">{t('common.hours', { defaultValue: 'Hours' })}</span>
+                </div>
+                <span className="field-hint">
+                  {t('settings.storage.cleanupThresholdHint', { defaultValue: 'Files older than this will be automatically deleted' })}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

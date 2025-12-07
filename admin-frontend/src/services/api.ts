@@ -595,6 +595,14 @@ class AdminApiClient {
     return response.data
   }
 
+  async cleanupStorage(olderThanHours: number = 0): Promise<{
+    files_deleted: number;
+    space_freed_mb: number;
+  }> {
+    const response = await this.client.post('/settings/storage/cleanup', { older_than_hours: olderThanHours })
+    return response.data
+  }
+
   async testS3Connection(credentials?: {
     bucket: string;
     region: string;
