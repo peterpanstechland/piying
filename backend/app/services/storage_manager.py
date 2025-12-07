@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import logging
 
 from ..models import Session
+from ..utils.path import get_user_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class StorageManager:
         Initialize StorageManager
         
         Args:
-            base_path: Base directory for all data storage (default: project_root/data)
+            base_path: Base directory for all data storage (default: user_data_dir)
             max_age_days: Maximum age of files before cleanup (default: 7 days)
             min_disk_space_gb: Minimum disk space threshold for warnings
             emergency_threshold_gb: Disk space threshold for emergency cleanup
@@ -38,9 +39,8 @@ class StorageManager:
         if base_path:
             self.base_path = Path(base_path)
         else:
-            # Default to project root's data directory
-            project_root = Path(__file__).parent.parent.parent.parent
-            self.base_path = project_root / "data"
+            # Default to user data directory for persistence
+            self.base_path = get_user_data_dir()
         
         self.sessions_path = self.base_path / "sessions"
         self.outputs_path = self.base_path / "outputs"
@@ -282,4 +282,3 @@ class StorageManager:
             'total_size_mb': total_size_mb,
             'available_space_gb': available_space_gb
         }
-

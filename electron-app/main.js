@@ -3,6 +3,12 @@ const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const http = require('http');
+const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
+
+// 配置日志
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
 
 let launcherWindow = null;
 let mainWindow = null;
@@ -16,10 +22,10 @@ const appPath = isDev ? path.join(__dirname, '..') : path.dirname(app.getPath('e
 const resourcesPath = isDev ? __dirname : process.resourcesPath;
 
 // 日志函数
-function log(message) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${message}`);
-}
+// function log(message) {
+//   const timestamp = new Date().toISOString();
+//   console.log(`[${timestamp}] ${message}`);
+// }
 
 // 启动画面
 function createSplashScreen() {
@@ -39,6 +45,58 @@ function createSplashScreen() {
   splashWindow.loadFile(path.join(__dirname, 'splash.html'));
   splashWindow.center();
 }
+
+// 检查更新
+function checkForUpdates() {
+  if (isDev) {
+    log.info('Skipping update check in development mode');
+    return;
+  }
+
+  log.info('Checking for updates...');
+  autoUpdater.checkForUpdatesAndNotify();
+}
+
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available: ' + info.version);
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '发现新版本，正在下载...');
+  }
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available.');
+});
+
+autoUpdater.on('error', (err) => {
+  log.error('Error in auto-updater: ' + err);
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '更新检查失败，继续启动...');
+  }
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+  log.info(log_message);
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', `正在下载更新... ${Math.round(progressObj.percent)}%`);
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded');
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '更新下载完成，下次启动时安装');
+  }
+  // 这里可以选择立即安装并重启，或者下次启动时安装
+  // autoUpdater.quitAndInstall(); 
+});
 
 // 检查后端是否已运行
 function checkBackendRunning() {
@@ -385,6 +443,9 @@ app.whenReady().then(async () => {
     
     // 显示启动画面
     createSplashScreen();
+
+    // 检查更新
+    checkForUpdates();
 
     // 启动后端
     try {

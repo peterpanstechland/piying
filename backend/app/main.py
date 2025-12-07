@@ -94,10 +94,18 @@ app.add_middleware(
 )
 
 # Mount static files for config and assets BEFORE routers
-# Get project root
-from .utils.path import get_project_root
+# Get project root and user data dir
+from .utils.path import get_project_root, get_user_data_dir, ensure_user_data
+
+# Ensure user data exists on startup
+ensure_user_data()
+
 project_root = get_project_root()
-config_dir = project_root / "config"
+user_data_dir = get_user_data_dir()
+
+# Config is in user_data_dir/../config (i.e., RobomonPiying/config)
+config_dir = user_data_dir.parent / "config"
+# Assets are bundled with app
 assets_dir = project_root / "assets"
 
 print(f"Project root: {project_root.absolute()}")

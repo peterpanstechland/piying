@@ -30,15 +30,14 @@ from ...models.admin.character import (
 )
 
 
+from ...utils.path import get_user_data_dir
+
 # Minimum PNG resolution
 MIN_PNG_WIDTH = 256
 MIN_PNG_HEIGHT = 256
 
 # Character assets directory
-CHARACTERS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-    "data", "characters"
-)
+CHARACTERS_DIR = str(get_user_data_dir() / "characters")
 
 
 class CharacterService:
@@ -381,10 +380,7 @@ class CharacterService:
             return False, f"Part '{part_name}' not found"
         
         # Delete the file
-        file_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-            "data", part_to_delete.file_path
-        )
+        file_path = str(get_user_data_dir() / part_to_delete.file_path)
         if os.path.exists(file_path):
             os.remove(file_path)
         
@@ -479,10 +475,7 @@ class CharacterService:
             
             # Composite each part using assembly positions
             for part in sorted_parts:
-                part_path = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-                    "data", part.file_path
-                )
+                part_path = str(get_user_data_dir() / part.file_path)
                 if os.path.exists(part_path) and part.name in assembly_data:
                     part_img = Image.open(part_path).convert("RGBA")
                     asm = assembly_data[part.name]
@@ -529,10 +522,7 @@ class CharacterService:
             sorted_parts = sorted(character.parts, key=lambda p: p.z_index)
             
             for part in sorted_parts:
-                part_path = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-                    "data", part.file_path
-                )
+                part_path = str(get_user_data_dir() / part.file_path)
                 if os.path.exists(part_path):
                     part_img = Image.open(part_path).convert("RGBA")
                     part_img.thumbnail((400, 400), Image.Resampling.LANCZOS)

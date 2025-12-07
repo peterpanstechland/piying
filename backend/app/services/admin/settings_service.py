@@ -25,10 +25,10 @@ from ...models.admin.settings import (
 
 
 # Determine project root and settings file path
-from ...utils.path import get_project_root
+from ...utils.path import get_user_data_dir
 
-PROJECT_ROOT = get_project_root()
-SETTINGS_FILE_PATH = PROJECT_ROOT / "config" / "settings.json"
+# Settings are stored in user data/../config (RobomonPiying/config)
+SETTINGS_FILE_PATH = get_user_data_dir().parent / "config" / "settings.json"
 
 
 class SettingsService:

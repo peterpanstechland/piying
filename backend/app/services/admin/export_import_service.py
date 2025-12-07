@@ -20,10 +20,11 @@ from sqlalchemy.orm import selectinload
 from ...models.admin.character import CharacterDB, CharacterPartDB, SkeletonBindingDB
 from ...models.admin.storyline import StorylineDB, SegmentDB, StorylineCharacterDB
 from .settings_service import settings_service
+from ...utils.path import get_user_data_dir
 
 
 # Export directory for temporary files
-EXPORT_DIR = Path("data/exports")
+EXPORT_DIR = get_user_data_dir() / "exports"
 
 # Export manifest version for compatibility checking
 EXPORT_MANIFEST_VERSION = "1.0"
@@ -130,7 +131,7 @@ class ExportImportService:
                 
                 # Add part file to ZIP if it exists
                 if part.file_path:
-                    full_path = Path("data") / part.file_path
+                    full_path = get_user_data_dir() / part.file_path
                     if full_path.exists():
                         zf.write(str(full_path), f"characters/{char.id}/{part.name}.png")
             
@@ -146,7 +147,7 @@ class ExportImportService:
             
             # Add thumbnail if exists
             if char.thumbnail_path:
-                thumb_path = Path("data") / char.thumbnail_path
+                thumb_path = get_user_data_dir() / char.thumbnail_path
                 if thumb_path.exists():
                     zf.write(str(thumb_path), f"characters/{char.id}/thumbnail.png")
             
@@ -207,7 +208,7 @@ class ExportImportService:
                 
                 # Add guidance image if exists
                 if segment.guidance_image:
-                    img_path = Path("data") / segment.guidance_image
+                    img_path = get_user_data_dir() / segment.guidance_image
                     if img_path.exists():
                         zf.write(str(img_path), f"storylines/{storyline.id}/segment{segment.index}_guide.png")
             
@@ -226,25 +227,25 @@ class ExportImportService:
                 
                 # Add character-specific video file if exists
                 if char_assoc.video_path:
-                    video_path = Path("data") / char_assoc.video_path
+                    video_path = get_user_data_dir() / char_assoc.video_path
                     if video_path.exists():
                         zf.write(str(video_path), f"storylines/{storyline.id}/videos/{char_assoc.character_id}.mp4")
                 
                 # Add character video thumbnail if exists
                 if char_assoc.video_thumbnail:
-                    thumb_path = Path("data") / char_assoc.video_thumbnail
+                    thumb_path = get_user_data_dir() / char_assoc.video_thumbnail
                     if thumb_path.exists():
                         zf.write(str(thumb_path), f"storylines/{storyline.id}/videos/{char_assoc.character_id}_thumb.jpg")
             
             # Add base video if exists
             if storyline.base_video_path:
-                video_path = Path("data") / storyline.base_video_path
+                video_path = get_user_data_dir() / storyline.base_video_path
                 if video_path.exists():
                     zf.write(str(video_path), f"storylines/{storyline.id}/base_video.mp4")
             
             # Add icon image if exists
             if storyline.icon_image:
-                icon_path = Path("data") / storyline.icon_image
+                icon_path = get_user_data_dir() / storyline.icon_image
                 if icon_path.exists():
                     _, ext = os.path.splitext(storyline.icon_image)
                     zf.write(str(icon_path), f"storylines/{storyline.id}/icon{ext}")
@@ -496,7 +497,7 @@ class ExportImportService:
             await db.flush()
             
             # Create character directory
-            char_dir = Path("data/characters") / char_id
+            char_dir = get_user_data_dir() / "characters" / char_id
             char_dir.mkdir(parents=True, exist_ok=True)
             
             # Import parts
@@ -593,7 +594,7 @@ class ExportImportService:
             await db.flush()
             
             # Create storyline directory
-            storyline_dir = Path("data/storylines") / storyline_id
+            storyline_dir = get_user_data_dir() / "storylines" / storyline_id
             storyline_dir.mkdir(parents=True, exist_ok=True)
             
             # Import segments

@@ -28,6 +28,7 @@ from ...models.admin.storyline import (
 from ...models.admin import TokenPayload
 from ...services.admin.storyline_service import storyline_service
 from .auth import get_current_user
+from ...utils.path import get_user_data_dir
 
 router = APIRouter(prefix="/api/admin/storylines", tags=["Admin Storyline Management"])
 
@@ -302,10 +303,9 @@ async def get_storyline_video(
             detail="No video uploaded for this storyline",
         )
     
-    # Build full path - data directory is at backend/data
-    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    data_dir = os.path.join(backend_dir, "data")
-    full_path = os.path.join(data_dir, storyline.base_video_path)
+    # Build full path - data directory is user data dir
+    data_dir = get_user_data_dir()
+    full_path = str(data_dir / storyline.base_video_path)
     
     if not os.path.exists(full_path):
         raise HTTPException(
@@ -399,11 +399,7 @@ async def extract_video_frame(
         )
     
     # Get full video path
-    storyline_dir = storyline_service.get_storyline_dir(storyline_id)
-    video_full_path = os.path.join(
-        os.path.dirname(os.path.dirname(storyline_dir)),
-        storyline.base_video_path
-    )
+    video_full_path = str(get_user_data_dir() / storyline.base_video_path)
     
     if not os.path.exists(video_full_path):
         raise HTTPException(
@@ -976,10 +972,9 @@ async def get_cover_image(
                 detail="Cover image not found",
             )
         
-        # Build full path - data directory is at backend/data
-        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        data_dir = os.path.join(backend_dir, "data")
-        full_path = os.path.join(data_dir, cover_path)
+        # Build full path - data directory is user data dir
+        data_dir = get_user_data_dir()
+        full_path = str(data_dir / cover_path)
         
         if not os.path.exists(full_path):
             raise HTTPException(

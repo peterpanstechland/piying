@@ -39,11 +39,10 @@ from ...models.admin.storyline import (
 from ...models.admin.character import CharacterDB
 
 
+from ...utils.path import get_user_data_dir
+
 # Storyline assets directory
-STORYLINES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-    "data", "storylines"
-)
+STORYLINES_DIR = str(get_user_data_dir() / "storylines")
 
 # Supported video formats
 SUPPORTED_VIDEO_FORMATS = [".mp4"]

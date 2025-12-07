@@ -6,11 +6,14 @@ import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from .utils.path import get_user_data_dir
 
 # Database file location
-DATABASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
-DATABASE_PATH = os.path.join(DATABASE_DIR, "admin.db")
-DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_PATH}"
+# Store database in user data directory to persist across updates
+DATABASE_DIR = get_user_data_dir()
+DATABASE_PATH = DATABASE_DIR / "admin.db"
+# SQLite URL requires string path
+DATABASE_URL = f"sqlite+aiosqlite:///{str(DATABASE_PATH)}"
 
 # Create async engine
 engine = create_async_engine(
