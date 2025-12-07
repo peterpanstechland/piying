@@ -48,15 +48,15 @@ if not exist admin-frontend\dist (
 echo       管理后台前端构建完成 ✓
 echo.
 
-:: 步骤 3: 检查 Python 虚拟环境
-echo [3/5] 检查 Python 环境...
-if not exist venv (
-    echo [错误] 未找到 Python 虚拟环境 (venv)
-    echo 请先运行 setup.bat 创建虚拟环境
+:: 步骤 3: 构建后端
+echo [3/5] 构建 Python 后端...
+call build-backend-exe.bat
+if %errorlevel% neq 0 (
+    echo [错误] 后端构建失败
     pause
     exit /b 1
 )
-echo       Python 环境检查完成 ✓
+echo       Python 后端构建完成 ✓
 echo.
 
 :: 步骤 4: 安装 Electron 依赖
@@ -75,6 +75,7 @@ echo.
 
 :: 步骤 5: 创建应用图标（如果不存在）
 echo [5/5] 准备打包资源...
+if not exist electron-app\build mkdir electron-app\build
 if not exist electron-app\build\icon.ico (
     echo       创建默认图标...
     :: 使用 PowerShell 创建一个简单的图标占位符

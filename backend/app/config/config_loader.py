@@ -16,12 +16,13 @@ class SegmentConfig(BaseModel):
     start_time: float = Field(default=0.0, ge=0, description="Start time in video (seconds)")
     duration: float = Field(..., gt=0, description="Segment duration in seconds")
     path_type: str = Field(default="static", description="Movement path type")
-    offset_start: list[int] = Field(default_factory=lambda: [0, 0], description="Starting offset [x, y]")
-    offset_end: list[int] = Field(default_factory=lambda: [0, 0], description="Ending offset [x, y]")
+    offset_start: list[float] = Field(default_factory=lambda: [0.0, 0.0], description="Starting offset [x, y]")
+    offset_end: list[float] = Field(default_factory=lambda: [0.0, 0.0], description="Ending offset [x, y]")
     
     # Path configuration
-    path_waypoints: list[list[int]] = Field(default_factory=list, description="Path waypoints [[x1,y1], [x2,y2], ...]")
+    path_waypoints: list[list[float]] = Field(default_factory=list, description="Path waypoints [[x1,y1], [x2,y2], ...]")
     path_draw_type: str = Field(default="linear", description="Path draw type: linear, bezier, freehand")
+    is_normalized: bool = Field(default=False, description="Whether offsets/waypoints are normalized (0-1) or pixels")
     
     # Entry animation
     entry_type: str = Field(default="instant", description="Entry animation type")
@@ -37,7 +38,7 @@ class SegmentConfig(BaseModel):
     @classmethod
     def validate_offset(cls, v):
         if len(v) != 2:
-            raise ValueError("Offset must be a list of 2 integers [x, y]")
+            raise ValueError("Offset must be a list of 2 numbers [x, y]")
         return v
 
 

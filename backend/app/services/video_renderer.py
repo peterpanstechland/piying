@@ -357,11 +357,53 @@ class VideoRenderer:
         # Build character paths for each segment
         character_paths = []
         for i, segment_config in enumerate(self.scene_config.segments):
+            offset_start = segment_config.offset_start
+            offset_end = segment_config.offset_end
+            waypoints = segment_config.path_waypoints
+
+            # If offsets are normalized (0-1), convert to pixels relative to center
+            # Check explicit flag or heuristic (values <= 1.0 are likely normalized)
+            is_normalized = getattr(segment_config, 'is_normalized', False)
+            
+            # Additional safety check: if values are small floats, assume normalized
+            # unless it's (0,0) which is ambiguous but 0 pixels == center anyway
+            if not is_normalized and all(abs(x) <= 2.0 for x in offset_start) and all(abs(x) <= 2.0 for x in offset_end):
+                # Only if not integer 0, 1 (which could be pixels)
+                # But here we assume explicit flag is better. 
+                # If flag is missing (legacy scenes.json), it defaults to False.
+                is_normalized = True
+
+            if is_normalized:
+                w, h = self.frame_width, self.frame_height
+                
+                # Convert normalized (0-1) to pixel offset from center
+                # 0.5 is center (offset 0)
+                # 0.0 is left edge (offset -w/2)
+                # 1.0 is right edge (offset +w/2)
+                
+                start_x = (offset_start[0] - 0.5) * w
+                start_y = (offset_start[1] - 0.5) * h
+                offset_start = [start_x, start_y]
+                
+                end_x = (offset_end[0] - 0.5) * w
+                end_y = (offset_end[1] - 0.5) * h
+                offset_end = [end_x, end_y]
+                
+                if waypoints:
+                    new_waypoints = []
+                    for wp in waypoints:
+                        wp_x = (wp[0] - 0.5) * w
+                        wp_y = (wp[1] - 0.5) * h
+                        new_waypoints.append([wp_x, wp_y])
+                    waypoints = new_waypoints
+                
+                logger.info(f"Converted normalized offsets for segment {i}: start={offset_start}, end={offset_end}")
+
             path = CharacterPath(
-                segment_config.offset_start,
-                segment_config.offset_end,
+                offset_start,
+                offset_end,
                 segment_config.duration,
-                waypoints=segment_config.path_waypoints,
+                waypoints=waypoints,
                 path_draw_type=segment_config.path_draw_type
             )
             character_paths.append(path)

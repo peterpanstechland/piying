@@ -102,10 +102,11 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                                 start_time=seg.start_time or 0.0,  # 关键：包含 start_time
                                 duration=seg.duration,
                                 path_type=seg.path_type or "static",
-                                offset_start=[int(seg.offset_start_x * 100) if seg.offset_start_x else 0, int(seg.offset_start_y * 100) if seg.offset_start_y else 0],
-                                offset_end=[int(seg.offset_end_x * 100) if seg.offset_end_x else 0, int(seg.offset_end_y * 100) if seg.offset_end_y else 0],
+                                offset_start=[seg.offset_start_x if seg.offset_start_x is not None else 0.1, seg.offset_start_y if seg.offset_start_y is not None else 0.5],
+                                offset_end=[seg.offset_end_x if seg.offset_end_x is not None else 0.9, seg.offset_end_y if seg.offset_end_y is not None else 0.5],
                                 path_waypoints=waypoints,
                                 path_draw_type=seg.path_draw_type or "linear",
+                                is_normalized=True,
                                 entry_type=seg.entry_type or "instant",
                                 entry_duration=seg.entry_duration or 1.0,
                                 entry_delay=seg.entry_delay or 0.0,
@@ -135,10 +136,11 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                         start_time=seg.start_time or 0.0,  # 包含 start_time
                         duration=seg.duration,
                         path_type=seg.path_type or "static",
-                        offset_start=[int(seg.offset_start_x or 0), int(seg.offset_start_y or 0)],
-                        offset_end=[int(seg.offset_end_x or 0), int(seg.offset_end_y or 0)],
+                        offset_start=[seg.offset_start_x if seg.offset_start_x is not None else 0.1, seg.offset_start_y if seg.offset_start_y is not None else 0.5],
+                        offset_end=[seg.offset_end_x if seg.offset_end_x is not None else 0.9, seg.offset_end_y if seg.offset_end_y is not None else 0.5],
                         path_waypoints=waypoints,
                         path_draw_type=seg.path_draw_type or "linear",
+                        is_normalized=True,
                         entry_type=seg.entry_type or "instant",
                         entry_duration=seg.entry_duration or 1.0,
                         entry_delay=seg.entry_delay or 0.0,
@@ -430,14 +432,16 @@ async def _render_video_background(session_id: str):
             extra={"context": {"session_id": session_id, "status": "processing"}}
         )
         
-        # Get scene configuration - try static config first, then database storyline
-        scene_config = config_loader.get_scene(session.scene_id)
+        # Get scene configuration - try database first (to support edits), then static config
+        # This ensures that if a user edits a default scene (like sceneA) in the admin panel,
+        # the changes are reflected in the rendering.
+        scene_config = await _get_scene_config_from_storyline(session.scene_id, session.character_id)
         
         if scene_config is None:
-            # Try to load from database storyline (UUID format scene_id)
-            # Pass character_id to load character-specific video segments if available
-            logger.info(f"Scene {session.scene_id} not found in static config, trying database storyline")
-            scene_config = await _get_scene_config_from_storyline(session.scene_id, session.character_id)
+            logger.info(f"Scene {session.scene_id} not found in database, trying static config")
+            scene_config = config_loader.get_scene(session.scene_id)
+        else:
+            logger.info(f"Loaded scene {session.scene_id} from database")
         
         if scene_config is None:
             log_error_with_context(
