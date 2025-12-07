@@ -11,6 +11,8 @@ class StorageSettings(BaseModel):
     """Settings for video storage configuration."""
     mode: str = Field(default="local", description="Storage mode: 'local' or 's3'")
     local_path: str = Field(default="data/outputs", description="Local storage path")
+    auto_cleanup_enabled: bool = Field(default=False, description="Enable automatic file cleanup")
+    auto_cleanup_threshold: int = Field(default=24, ge=1, description="Cleanup files older than X hours")
     s3_bucket: Optional[str] = Field(default=None, description="S3 bucket name")
     s3_region: Optional[str] = Field(default=None, description="S3 region")
     s3_access_key: Optional[str] = Field(default=None, description="S3 access key")
@@ -28,6 +30,8 @@ class StorageSettings(BaseModel):
             "example": {
                 "mode": "local",
                 "local_path": "data/outputs",
+                "auto_cleanup_enabled": False,
+                "auto_cleanup_threshold": 24,
                 "s3_bucket": None,
                 "s3_region": None,
                 "s3_access_key": None,
@@ -131,6 +135,7 @@ class CameraSettings(BaseModel):
 
 class SystemSettings(BaseModel):
     """Complete system settings model."""
+    theme: str = Field(default="dark", description="UI Theme")
     language: str = Field(default="zh", description="Default language")
     fallback_language: str = Field(default="en", description="Fallback language")
     storage: StorageSettings = Field(default_factory=StorageSettings, description="Storage configuration")
@@ -138,6 +143,14 @@ class SystemSettings(BaseModel):
     camera: CameraSettings = Field(default_factory=CameraSettings, description="Camera configuration")
     timeouts: TimeoutSettings = Field(default_factory=TimeoutSettings, description="Timeout configurations")
     rendering: RenderingSettings = Field(default_factory=RenderingSettings, description="Rendering settings")
+
+    @field_validator('theme')
+    @classmethod
+    def validate_theme(cls, v: str) -> str:
+        valid_themes = ['light', 'dark']
+        if v not in valid_themes:
+            raise ValueError(f"Theme must be one of: {valid_themes}")
+        return v
 
     @field_validator('language', 'fallback_language')
     @classmethod
@@ -182,6 +195,8 @@ class StorageSettingsUpdate(BaseModel):
     """Schema for updating storage settings."""
     mode: Optional[str] = Field(default=None, description="Storage mode: 'local' or 's3'")
     local_path: Optional[str] = Field(default=None, description="Local storage path")
+    auto_cleanup_enabled: Optional[bool] = Field(default=None, description="Enable automatic file cleanup")
+    auto_cleanup_threshold: Optional[int] = Field(default=None, ge=1, description="Cleanup files older than X hours")
     s3_bucket: Optional[str] = Field(default=None, description="S3 bucket name")
     s3_region: Optional[str] = Field(default=None, description="S3 region")
     s3_access_key: Optional[str] = Field(default=None, description="S3 access key")
@@ -228,6 +243,7 @@ class CameraSettingsUpdate(BaseModel):
 
 class SystemSettingsUpdate(BaseModel):
     """Schema for updating system settings."""
+    theme: Optional[str] = Field(default=None, description="UI Theme")
     language: Optional[str] = Field(default=None, description="Default language")
     fallback_language: Optional[str] = Field(default=None, description="Fallback language")
     storage: Optional[StorageSettingsUpdate] = Field(default=None)

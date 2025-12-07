@@ -125,17 +125,24 @@ class StorageManager:
         
         return deleted
     
-    def cleanup_old_files(self) -> Dict[str, int]:
+    def cleanup_old_files(self, max_age_hours: Optional[float] = None) -> Dict[str, int]:
         """
-        Clean up files older than max_age_days
+        Clean up files older than max_age_hours (or max_age_days if None)
         
+        Args:
+            max_age_hours: Override for max age in hours. If None, uses max_age_days.
+            
         Returns:
             Dictionary with cleanup metrics: {
                 'files_deleted': int,
                 'space_freed_mb': int
             }
         """
-        cutoff_time = time.time() - (self.max_age_days * 24 * 60 * 60)
+        if max_age_hours is not None:
+            cutoff_time = time.time() - (max_age_hours * 60 * 60)
+        else:
+            cutoff_time = time.time() - (self.max_age_days * 24 * 60 * 60)
+            
         files_deleted = 0
         space_freed = 0
         
@@ -164,7 +171,7 @@ class StorageManager:
                 space_freed += file_size
         
         space_freed_mb = space_freed // (1024 * 1024)
-        logger.info(f"Cleanup completed: {files_deleted} files deleted, {space_freed_mb} MB freed")
+        logger.info(f"Cleanup completed: {files_deleted} files deleted, {space_freed_mb} MB freed (older than {max_age_hours if max_age_hours is not None else self.max_age_days * 24} hours)")
         
         return {
             'files_deleted': files_deleted,

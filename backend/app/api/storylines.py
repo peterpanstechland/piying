@@ -365,12 +365,10 @@ async def get_storyline_video_file(
             detail="No video available for this storyline",
         )
     
-    # Build full path - data directory is at backend/data
-    # __file__ is at backend/app/api/storylines.py
-    # We need to go up to backend/ then into data/
-    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # backend/
-    data_dir = os.path.join(backend_dir, "data")
-    full_path = os.path.join(data_dir, video_path)
+    # Build full path - data directory is user data dir
+    from ..utils.path import get_user_data_dir
+    data_dir = get_user_data_dir()
+    full_path = str(data_dir / video_path)
     
     # Debug logging
     import logging
@@ -688,10 +686,10 @@ async def get_storyline_cover_image(
             detail=f"Cover image ({size}) not found for storyline",
         )
     
-    # Build full path - data directory is at backend/data
-    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    data_dir = os.path.join(backend_dir, "data")
-    full_path = os.path.join(data_dir, cover_path)
+    # Build full path - data directory is user data dir
+    from ..utils.path import get_user_data_dir
+    data_dir = get_user_data_dir()
+    full_path = str(data_dir / cover_path)
     
     if not os.path.exists(full_path):
         raise HTTPException(

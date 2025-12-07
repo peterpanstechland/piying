@@ -567,6 +567,14 @@ class StorylineService:
         storyline.updated_at = datetime.utcnow()
         await db.commit()
         
+        # Automatically generate cover image from the first frame (0.0s)
+        # This ensures a cover image is always available after video upload
+        try:
+            await self.capture_cover_from_video(db, storyline_id, 0.0)
+        except Exception as e:
+            # Log error but don't fail the upload if cover generation fails
+            print(f"Warning: Failed to auto-generate cover image: {e}")
+        
         return relative_path, metadata.duration, ""
 
     async def update_segments(

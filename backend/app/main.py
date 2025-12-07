@@ -10,11 +10,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from .api import sessions_router, videos_router, public_storylines_router, characters_router as public_characters_router
+from .api.system import router as public_system_router
 from .api.admin import auth_router, users_router, characters_router, storylines_router, settings_router, dashboard_router, export_import_router, character_videos_router
 from .config import ConfigLoader
 from .database import init_db
 from .services.admin.auth_service import auth_service
+from .services.admin.settings_service import settings_service
 from .services import StorageManager, SessionManager
 from .models import SessionStatus
 from .utils.logger import setup_logging, log_error_with_context
@@ -41,35 +44,51 @@ session_manager = SessionManager(storage_manager)
 scheduler = BackgroundScheduler()
 
 def scheduled_cleanup():
-    """Scheduled cleanup job that runs daily"""
+    """Scheduled cleanup job that checks for auto-cleanup and disk space"""
     context = {"event_type": "scheduled_cleanup"}
-    logger.info("Running scheduled cleanup job", extra={"context": context})
+    # logger.info("Running scheduled cleanup check", extra={"context": context})
     try:
-        metrics = storage_manager.cleanup_old_files()
-        cleanup_context = {
-            "event_type": "cleanup_completed",
-            "files_deleted": metrics['files_deleted'],
-            "space_freed_mb": metrics['space_freed_mb']
-        }
-        logger.info(
-            f"Scheduled cleanup completed: {metrics['files_deleted']} files deleted, {metrics['space_freed_mb']} MB freed",
-            extra={"context": cleanup_context}
-        )
+        # Check auto-cleanup settings
+        settings = settings_service.get_settings()
+        if settings.storage.auto_cleanup_enabled:
+            threshold = settings.storage.auto_cleanup_threshold
+            logger.info(f"Auto-cleanup enabled, cleaning files older than {threshold} hours")
+            
+            metrics = storage_manager.cleanup_old_files(max_age_hours=threshold)
+            
+            if metrics['files_deleted'] > 0:
+                cleanup_context = {
+                    "event_type": "auto_cleanup_completed",
+                    "files_deleted": metrics['files_deleted'],
+                    "space_freed_mb": metrics['space_freed_mb']
+                }
+                logger.info(
+                    f"Auto-cleanup completed: {metrics['files_deleted']} files deleted, {metrics['space_freed_mb']} MB freed",
+                    extra={"context": cleanup_context}
+                )
+
+        # Regular check for max_age_days (legacy/fallback) if we want to enforce it? 
+        # Actually, if auto_cleanup is disabled, do we still want to clean up very old files? 
+        # The prompt implies the user wants control.
+        # But storage_manager has defaults. 
+        # For now, let's assume the user controls cleanup via the new settings.
+        # But if disk space is critical, emergency cleanup still runs.
         
         # Check disk space after cleanup
         available_space = storage_manager.check_disk_space()
-        logger.info(
-            f"Available disk space after cleanup: {available_space} GB",
-            extra={"context": {"available_space_gb": available_space}}
-        )
+        # logger.info(
+        #     f"Available disk space: {available_space} GB",
+        #     extra={"context": {"available_space_gb": available_space}}
+        # )
         
         # Trigger emergency cleanup if still low on space
         if available_space < storage_manager.emergency_threshold_gb:
             logger.warning(
-                "Disk space still low after scheduled cleanup, triggering emergency cleanup",
+                "Disk space still low after cleanup, triggering emergency cleanup",
                 extra={"context": {"available_space_gb": available_space, "threshold_gb": storage_manager.emergency_threshold_gb}}
             )
             storage_manager.ensure_space()
+            
     except Exception as e:
         log_error_with_context(
             logger,
@@ -145,6 +164,7 @@ if admin_frontend_dist.exists():
 # Include routers AFTER static files
 app.include_router(sessions_router)
 app.include_router(videos_router)
+app.include_router(public_system_router) # Public system settings API (no auth required)
 app.include_router(public_storylines_router)  # Public storylines API (no auth required)
 app.include_router(public_characters_router)  # Public characters API (no auth required)
 app.include_router(auth_router)
@@ -187,16 +207,16 @@ async def startup_event():
     scenes = config_loader.get_all_scenes()
     logger.info(f"Loaded {len(scenes)} scenes: {list(scenes.keys())}")
     
-    # Start cleanup scheduler - runs daily at 3 AM
+    # Start cleanup scheduler - runs every 5 minutes to check for auto-cleanup
     scheduler.add_job(
         scheduled_cleanup,
-        trigger=CronTrigger(hour=3, minute=0),
-        id='daily_cleanup',
-        name='Daily storage cleanup',
+        trigger=IntervalTrigger(minutes=5),
+        id='cleanup_job',
+        name='Storage cleanup job',
         replace_existing=True
     )
     scheduler.start()
-    logger.info("Cleanup scheduler started - daily cleanup at 3:00 AM")
+    logger.info("Cleanup scheduler started - running every 5 minutes")
 
 @app.on_event("shutdown")
 async def shutdown_event():

@@ -70,11 +70,14 @@ class SettingsService:
         qr_code = raw_settings.get("qr_code", {})
         
         return SystemSettings(
+            theme=system.get("theme", "dark"),
             language=system.get("language", "zh"),
             fallback_language=system.get("fallback_language", "en"),
             storage=StorageSettings(
                 mode=storage.get("mode", "local"),
                 local_path=storage.get("local_path", "data/outputs"),
+                auto_cleanup_enabled=storage.get("auto_cleanup_enabled", False),
+                auto_cleanup_threshold=storage.get("auto_cleanup_threshold", 24),
                 s3_bucket=storage.get("s3_bucket"),
                 s3_region=storage.get("s3_region"),
                 s3_access_key=storage.get("s3_access_key"),
@@ -109,6 +112,7 @@ class SettingsService:
         """Convert SystemSettings model to file structure."""
         return {
             "system": {
+                "theme": settings.theme,
                 "language": settings.language,
                 "fallback_language": settings.fallback_language,
             },
@@ -128,6 +132,8 @@ class SettingsService:
             "storage": {
                 "mode": settings.storage.mode,
                 "local_path": settings.storage.local_path,
+                "auto_cleanup_enabled": settings.storage.auto_cleanup_enabled,
+                "auto_cleanup_threshold": settings.storage.auto_cleanup_threshold,
                 "s3_bucket": settings.storage.s3_bucket,
                 "s3_region": settings.storage.s3_region,
                 "s3_access_key": settings.storage.s3_access_key,
@@ -177,6 +183,8 @@ class SettingsService:
         current = self.get_settings()
         
         # Update top-level fields
+        if update.theme is not None:
+            current.theme = update.theme
         if update.language is not None:
             current.language = update.language
         if update.fallback_language is not None:
@@ -188,6 +196,10 @@ class SettingsService:
                 current.storage.mode = update.storage.mode
             if update.storage.local_path is not None:
                 current.storage.local_path = update.storage.local_path
+            if update.storage.auto_cleanup_enabled is not None:
+                current.storage.auto_cleanup_enabled = update.storage.auto_cleanup_enabled
+            if update.storage.auto_cleanup_threshold is not None:
+                current.storage.auto_cleanup_threshold = update.storage.auto_cleanup_threshold
             if update.storage.s3_bucket is not None:
                 current.storage.s3_bucket = update.storage.s3_bucket
             if update.storage.s3_region is not None:
