@@ -4,7 +4,11 @@ const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const { autoUpdater } = require('electron-updater');
-const log = require('electron-log');
+const logger = require('electron-log');
+const treeKill = require('tree-kill');
+
+// 使 log 既可以作为函数调用，又拥有 electron-log 的所有方法
+const log = Object.assign((message) => logger.info(message), logger);
 
 // 配置日志
 log.transports.file.level = 'info';
@@ -342,6 +346,8 @@ function backToLauncher() {
   } else {
     launcherWindow.show();
     launcherWindow.focus();
+    // 通知启动器重置界面状态（如隐藏 Loading）
+    launcherWindow.webContents.send('reset-state');
   }
 }
 
@@ -413,6 +419,41 @@ function createTray() {
     } else {
       createLauncherWindow();
     }
+  });
+}
+
+// 强制关闭后端
+function killBackend() {
+  return new Promise((resolve) => {
+    if (!backendProcess) {
+      resolve();
+      return;
+    }
+    if (!backendProcess.pid) {
+        backendProcess = null;
+        resolve();
+        return;
+    }
+    log.info(`Killing backend process tree (PID: ${backendProcess.pid})...`);
+    treeKill(backendProcess.pid, 'SIGKILL', (err) => {
+      if (err) {
+        log.error(`Failed to kill backend: ${err.message}`);
+        // Windows 备用方案
+        if (process.platform === 'win32') {
+             exec(`taskkill /pid ${backendProcess.pid} /T /F`, () => {
+                 backendProcess = null;
+                 resolve();
+             });
+        } else {
+             backendProcess = null;
+             resolve();
+        }
+      } else {
+        log.info('Backend process killed successfully');
+        backendProcess = null;
+        resolve();
+      }
+    });
   });
 }
 
@@ -497,15 +538,29 @@ app.on('activate', () => {
   }
 });
 
+let isQuitting = false;
+
 // 应用退出前
-app.on('before-quit', () => {
-  log('Application quitting...');
+app.on('before-quit', async (e) => {
+  if (isQuitting) return;
   
-  if (backendProcess) {
-    log('Stopping backend process...');
-    backendProcess.kill();
-    backendProcess = null;
+  // 阻止默认退出，先执行清理
+  e.preventDefault();
+  log.info('Application quitting... Cleaning up backend.');
+  
+  try {
+    if (backendProcess) {
+        // 设置超时，防止无限等待
+        const killPromise = killBackend();
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+        await Promise.race([killPromise, timeoutPromise]);
+    }
+  } catch (err) {
+      log.error(`Error during cleanup: ${err.message}`);
   }
+  
+  isQuitting = true;
+  app.quit();
 });
 
 // 处理未捕获的异常

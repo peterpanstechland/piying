@@ -389,6 +389,13 @@
             checkBackendStatus();
             // 每 10 秒检查一次状态
             setInterval(checkBackendStatus, 10000);
+
+            // 监听状态重置事件
+            if (window.electronAPI && window.electronAPI.onResetState) {
+                window.electronAPI.onResetState(() => {
+                    hideLoading();
+                });
+            }
         });
     </script>
 </body>
