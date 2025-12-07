@@ -132,16 +132,16 @@ async function startBackend() {
         });
     } else {
         // 启动 Python 脚本
-        backendProcess = spawn(pythonPath, [
-        '-m', 'uvicorn',
-        'backend.app.main:app',
-        '--host', '0.0.0.0',
-        '--port', '8000'
-        ], {
-        cwd: workingDir,
-        env: env,
-        windowsHide: true
-        });
+    backendProcess = spawn(pythonPath, [
+      '-m', 'uvicorn',
+      'backend.app.main:app',
+      '--host', '0.0.0.0',
+      '--port', '8000'
+    ], {
+      cwd: workingDir,
+      env: env,
+      windowsHide: true
+    });
     }
 
     let startupComplete = false;
@@ -253,6 +253,10 @@ function createMainWindow(url) {
   mainWindow.loadURL(url);
 
   mainWindow.once('ready-to-show', () => {
+    if (splashWindow) {
+      splashWindow.close();
+      splashWindow = null;
+    }
     mainWindow.show();
     mainWindow.focus();
   });

@@ -34,6 +34,9 @@ if %errorlevel% neq 0 (
 )
 
 :: Clean old builds
+echo Cleaning old build artifacts...
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
 if exist backend\build rmdir /s /q backend\build
 if exist backend\dist rmdir /s /q backend\dist
 if exist backend.spec del backend.spec
@@ -45,9 +48,9 @@ echo This may take a few minutes...
 :: --onedir: Directory output
 :: --name: Output name
 :: --noconsole: No console window
+:: --noconfirm: Do not ask for confirmation to overwrite output directory
 
-pyinstaller --noconsole --onedir --name backend --clean ^
-    --add-data "backend/app;app" ^
+pyinstaller --noconfirm --noconsole --onedir --name backend --clean ^
     --hidden-import=uvicorn.logging ^
     --hidden-import=uvicorn.loops ^
     --hidden-import=uvicorn.loops.auto ^
@@ -66,6 +69,7 @@ pyinstaller --noconsole --onedir --name backend --clean ^
     --hidden-import=multipart ^
     --hidden-import=boto3 ^
     --hidden-import=botocore ^
+    --collect-all jaraco ^
     backend/run.py
 
 if %errorlevel% neq 0 (

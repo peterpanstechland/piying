@@ -19,7 +19,6 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-dist/
 .vite/
 
 # IDE
@@ -53,3 +52,8 @@ data/admin.db
 # Configuration
 config/settings.json
 backend/config/settings.json
+
+# Electron Build Artifacts
+electron-app/dist/
+electron-app/resources/backend/
+electron-app/out/
