@@ -32,11 +32,21 @@ logger = logging.getLogger(__name__)
 
 # Initialize global instances
 config_loader = ConfigLoader()
+settings = config_loader.get_settings()
+
+# Determine base path for storage
+# If local_path is "data" (default), we rely on StorageManager's robust default (get_user_data_dir)
+# Otherwise, we use the configured path
+base_storage_path = None
+if settings.storage.local_path and settings.storage.local_path != "data":
+    base_storage_path = settings.storage.local_path
+
 storage_manager = StorageManager(
-    max_age_days=config_loader.get_settings().storage.max_age_days,
-    min_disk_space_gb=config_loader.get_settings().storage.min_disk_space_gb,
-    emergency_threshold_gb=config_loader.get_settings().storage.emergency_cleanup_threshold_gb,
-    emergency_target_gb=config_loader.get_settings().storage.emergency_cleanup_target_gb
+    base_path=base_storage_path,
+    max_age_days=settings.storage.max_age_days,
+    min_disk_space_gb=settings.storage.min_disk_space_gb,
+    emergency_threshold_gb=settings.storage.emergency_cleanup_threshold_gb,
+    emergency_target_gb=settings.storage.emergency_cleanup_target_gb
 )
 session_manager = SessionManager(storage_manager)
 

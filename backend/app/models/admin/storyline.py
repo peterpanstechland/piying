@@ -660,6 +660,7 @@ class StorylineExtendedListResponse(BaseModel):
     video_duration: float = 0.0
     cover_image: Optional[CoverImage] = None
     segment_count: int = 0
+    character_count: int = 0
     created_at: datetime
 
     class Config:

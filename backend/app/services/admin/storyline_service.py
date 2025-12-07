@@ -1174,6 +1174,7 @@ class StorylineService:
             video_duration=storyline.video_duration or 0.0,
             cover_image=cover_image,
             segment_count=len(storyline.segments),
+            character_count=len(storyline.storyline_characters),
             created_at=storyline.created_at,
         )
 

@@ -45,6 +45,8 @@ class StorageManager:
         self.sessions_path = self.base_path / "sessions"
         self.outputs_path = self.base_path / "outputs"
         self.logs_path = self.base_path / "logs"
+        # Also clean up temp directory used for multi-segment rendering
+        self.temp_path = self.outputs_path / "temp"
         
         self.max_age_days = max_age_days
         self.min_disk_space_gb = min_disk_space_gb
@@ -146,6 +148,27 @@ class StorageManager:
         files_deleted = 0
         space_freed = 0
         
+        # Clean up temp directory (delete old session temp folders)
+        if self.temp_path.exists():
+            for temp_item in self.temp_path.iterdir():
+                try:
+                    if temp_item.stat().st_mtime < cutoff_time:
+                        if temp_item.is_dir():
+                            # Calculate size before deleting
+                            folder_size = sum(f.stat().st_size for f in temp_item.glob('**/*') if f.is_file())
+                            shutil.rmtree(temp_item)
+                            logger.info(f"Deleted old temp folder: {temp_item}")
+                            files_deleted += 1  # Count folder as 1 item
+                            space_freed += folder_size
+                        else:
+                            file_size = temp_item.stat().st_size
+                            temp_item.unlink()
+                            logger.info(f"Deleted old temp file: {temp_item}")
+                            files_deleted += 1
+                            space_freed += file_size
+                except Exception as e:
+                    logger.warning(f"Failed to delete temp item {temp_item}: {e}")
+
         # Clean up old session files
         for session_file in self.sessions_path.glob("*.json"):
             if session_file.stat().st_mtime < cutoff_time:
@@ -279,6 +302,12 @@ class StorageManager:
             total_size += file_path.stat().st_size
         for file_path in self.outputs_path.glob("final_*.mp4"):
             total_size += file_path.stat().st_size
+        
+        # Include temp folder in stats if it exists
+        if self.temp_path.exists():
+            for temp_file in self.temp_path.glob("**/*"):
+                if temp_file.is_file():
+                    total_size += temp_file.stat().st_size
         
         total_size_mb = total_size // (1024 * 1024)
         available_space_gb = self.check_disk_space()

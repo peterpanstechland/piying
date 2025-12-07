@@ -45,6 +45,7 @@ class StorageStats(BaseModel):
     session_files_count: int
     video_files_count: int
     total_data_size_mb: float
+    absolute_path: str  # Absolute path to storage directory
 
 
 class ActivityLogEntry(BaseModel):
@@ -79,12 +80,26 @@ class DashboardService:
         Args:
             base_path: Base directory for data storage (default: project_root/data)
         """
-        if base_path:
-            self.base_path = Path(base_path)
+        # Initialize paths consistent with main.py logic
+        from ...config import ConfigLoader
+        config_loader = ConfigLoader()
+        settings = config_loader.get_settings()
+        
+        # Determine base path for storage
+        # If local_path is "data" (default), we rely on StorageManager's robust default (get_user_data_dir)
+        # Otherwise, we use the configured path
+        effective_base_path = None
+        
+        if settings.storage.local_path and settings.storage.local_path != "data":
+            effective_base_path = Path(settings.storage.local_path)
+        elif base_path:
+            effective_base_path = Path(base_path)
         else:
-            # Default to project root's data directory
-            project_root = Path(__file__).parent.parent.parent.parent
-            self.base_path = project_root / "data"
+            # Fallback to user data dir if "data" is set, just like StorageManager
+            from ...utils.path import get_user_data_dir
+            effective_base_path = get_user_data_dir()
+            
+        self.base_path = effective_base_path
         
         self.sessions_path = self.base_path / "sessions"
         self.outputs_path = self.base_path / "outputs"
@@ -255,7 +270,8 @@ class DashboardService:
             is_warning=is_warning,
             session_files_count=session_files_count,
             video_files_count=video_files_count,
-            total_data_size_mb=round(total_data_size_mb, 2)
+            total_data_size_mb=round(total_data_size_mb, 2),
+            absolute_path=str(self.base_path.absolute())
         )
 
     def get_activity_logs(

@@ -92,13 +92,16 @@ class InteractionConfig(BaseModel):
 
 class StorageConfig(BaseModel):
     """Storage configuration"""
+    mode: str = Field(default="local", description="Storage mode: 'local' or 's3'")
+    local_path: str = Field(default="data", description="Local storage path")
+    auto_cleanup_enabled: bool = Field(default=False)
+    auto_cleanup_threshold: int = Field(default=24)
     max_age_days: int = Field(default=7, ge=1)
     min_disk_space_gb: int = Field(default=5, ge=1)
     emergency_cleanup_threshold_gb: int = Field(default=2, ge=1)
     emergency_cleanup_target_gb: int = Field(default=3, ge=1)
     
     # S3 Configuration
-    mode: str = Field(default="local", description="Storage mode: 'local' or 's3'")
     s3_bucket: Optional[str] = Field(default=None)
     s3_region: Optional[str] = Field(default=None)
     s3_access_key: Optional[str] = Field(default=None)
