@@ -23,6 +23,7 @@ interface StorylineListItem {
   video_duration: number
   cover_image: CoverImage | null
   segment_count: number
+  character_count: number
   created_at: string
 }
 
@@ -278,8 +279,8 @@ export default function StorylineListPage() {
                 )}
                 <div className="meta-row">
                   <span className="meta-item">
-                    <span className="meta-label">段落:</span>
-                    <span className="meta-value">{storyline.segment_count} 个</span>
+                    <span className="meta-label">人物:</span>
+                    <span className="meta-value">{storyline.character_count} 个</span>
                   </span>
                   <span className="meta-item">
                     <span className="meta-label">时长:</span>

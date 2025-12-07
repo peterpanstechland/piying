@@ -19,17 +19,10 @@ interface RenderingSettings {
   target_fps: number
   video_codec: string
   max_render_time_seconds: number
-}
-
-interface StorageSettings {
-  mode: string
-  local_path: string
-  auto_cleanup_enabled: boolean
-  auto_cleanup_threshold: number
-  s3_bucket?: string
-  s3_region?: string
-  s3_access_key?: string
-  s3_secret_key?: string
+  composition_mode: string
+  video_encoder: string
+  encoder_preset: string
+  encoder_quality: number
 }
 
 interface SystemSettings {
@@ -38,10 +31,15 @@ interface SystemSettings {
   fallback_language: string
   timeouts: TimeoutSettings
   rendering: RenderingSettings
-  storage: StorageSettings
 }
 
 const VALID_CODECS = ['H264', 'H265', 'VP9']
+const VALID_COMPOSITION_MODES = [
+  { value: 'side_by_side', label: 'Side-by-Side (High Quality)' },
+  { value: 'chromakey', label: 'Chromakey (Green Screen)' }
+]
+const VALID_ENCODERS = ['h264_nvenc', 'libx264', 'hevc_nvenc', 'libx265']
+const VALID_PRESETS = ['fast', 'medium', 'slow', 'veryslow']
 
 export default function SystemSettingsPage() {
   const { user, logout } = useAuth()
@@ -64,17 +62,14 @@ export default function SystemSettingsPage() {
       target_fps: 30,
       video_codec: 'H264',
       max_render_time_seconds: 20,
-    },
-    storage: {
-      mode: 'local',
-      local_path: 'data/outputs',
-      auto_cleanup_enabled: false,
-      auto_cleanup_threshold: 24,
+      composition_mode: 'side_by_side',
+      video_encoder: 'h264_nvenc',
+      encoder_preset: 'slow',
+      encoder_quality: 19,
     }
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [cleaning, setCleaning] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -94,7 +89,6 @@ export default function SystemSettingsPage() {
         fallback_language: data.fallback_language,
         timeouts: data.timeouts,
         rendering: data.rendering,
-        storage: data.storage,
       })
       // Sync theme with global state
       if (data.theme && data.theme !== theme) {
@@ -144,33 +138,6 @@ export default function SystemSettingsPage() {
     }))
   }
 
-  const handleStorageChange = (field: keyof StorageSettings, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      storage: { ...prev.storage, [field]: value },
-    }))
-  }
-
-  const handleManualCleanup = async () => {
-    if (!window.confirm(t('settings.storage.confirmCleanup', { defaultValue: 'Are you sure you want to delete ALL generated video files?' }))) {
-      return
-    }
-
-    try {
-      setCleaning(true)
-      const result = await adminApi.cleanupStorage(0) // 0 means delete all
-      setSuccess(t('settings.storage.cleanupSuccess', { 
-        count: result.files_deleted, 
-        size: result.space_freed_mb,
-        defaultValue: `Cleanup completed: ${result.files_deleted} files deleted, ${result.space_freed_mb} MB freed`
-      }))
-    } catch (err: any) {
-      setError(err.message || t('settings.storage.cleanupError', { defaultValue: 'Cleanup failed' }))
-    } finally {
-      setCleaning(false)
-    }
-  }
-
   const handleSave = async () => {
     // Validate all timeout values
     const timeoutFields = Object.entries(settings.timeouts)
@@ -192,7 +159,6 @@ export default function SystemSettingsPage() {
         fallback_language: settings.fallback_language,
         timeouts: settings.timeouts,
         rendering: settings.rendering,
-        storage: settings.storage,
       })
       
       // Update the UI language immediately
@@ -217,7 +183,7 @@ export default function SystemSettingsPage() {
   return (
     <div className="system-settings-container">
       <header className="page-header">
-        <Link to="/dashboard" className="btn-back">← 返回首页</Link>
+        <Link to="/dashboard" className="btn-back">← {t('common.back')}</Link>
         <h1>{t('settings.system.title')}</h1>
         <div className="header-actions">
           <span className="user-name">{user?.username}</span>
@@ -273,64 +239,6 @@ export default function SystemSettingsPage() {
               <option value="en">English</option>
             </select>
             <span className="field-hint">{t('settings.system.languageHint')}</span>
-          </div>
-        </div>
-
-        {/* Storage Settings */}
-        <div className="settings-card">
-          <h2>{t('settings.storage.title', { defaultValue: 'Storage Settings' })}</h2>
-          <div className="storage-grid">
-            <div className="form-group">
-               <label>{t('settings.storage.manualCleanup', { defaultValue: 'Manual Cleanup' })}</label>
-               <button 
-                 className="btn-danger" 
-                 onClick={handleManualCleanup}
-                 disabled={cleaning}
-               >
-                 {cleaning ? t('common.processing', { defaultValue: 'Processing...' }) : t('settings.storage.cleanAllFiles', { defaultValue: 'Clean All Generated Files' })}
-               </button>
-               <span className="field-hint">{t('settings.storage.manualCleanupHint', { defaultValue: 'Delete all generated video files immediately' })}</span>
-            </div>
-
-            <div className="form-group">
-              <label>{t('settings.storage.autoCleanup', { defaultValue: 'Auto Cleanup' })}</label>
-              <div className="toggle-switch">
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.storage.auto_cleanup_enabled}
-                    onChange={(e) => handleStorageChange('auto_cleanup_enabled', e.target.checked)}
-                  />
-                  <span className="slider round"></span>
-                </label>
-                <span className="switch-label">
-                  {settings.storage.auto_cleanup_enabled 
-                    ? t('common.enabled', { defaultValue: 'Enabled' }) 
-                    : t('common.disabled', { defaultValue: 'Disabled' })}
-                </span>
-              </div>
-            </div>
-
-            {settings.storage.auto_cleanup_enabled && (
-              <div className="form-group">
-                <label htmlFor="auto_cleanup_threshold">
-                  {t('settings.storage.cleanupThreshold', { defaultValue: 'Cleanup Threshold' })}
-                </label>
-                <div className="input-with-unit">
-                  <input
-                    id="auto_cleanup_threshold"
-                    type="number"
-                    min="1"
-                    value={settings.storage.auto_cleanup_threshold}
-                    onChange={(e) => handleStorageChange('auto_cleanup_threshold', parseInt(e.target.value) || 1)}
-                  />
-                  <span className="unit">{t('common.hours', { defaultValue: 'Hours' })}</span>
-                </div>
-                <span className="field-hint">
-                  {t('settings.storage.cleanupThresholdHint', { defaultValue: 'Files older than this will be automatically deleted' })}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -473,6 +381,66 @@ export default function SystemSettingsPage() {
           <h2>{t('settings.system.renderingTitle')}</h2>
           
           <div className="rendering-grid">
+            <div className="form-group">
+              <label htmlFor="composition_mode">Composition Mode</label>
+              <select
+                id="composition_mode"
+                value={settings.rendering.composition_mode || 'side_by_side'}
+                onChange={(e) => handleRenderingChange('composition_mode', e.target.value)}
+              >
+                {VALID_COMPOSITION_MODES.map(mode => (
+                  <option key={mode.value} value={mode.value}>{mode.label}</option>
+                ))}
+              </select>
+              <span className="field-hint">
+                {settings.rendering.composition_mode === 'side_by_side' 
+                  ? 'Uses Luma Matte for perfect transparency (requires 2x width)' 
+                  : 'Uses Green Screen keying (simpler but may have artifacts)'}
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="video_encoder">FFmpeg Encoder</label>
+              <select
+                id="video_encoder"
+                value={settings.rendering.video_encoder || 'h264_nvenc'}
+                onChange={(e) => handleRenderingChange('video_encoder', e.target.value)}
+              >
+                {VALID_ENCODERS.map(encoder => (
+                  <option key={encoder} value={encoder}>{encoder}</option>
+                ))}
+              </select>
+              <span className="field-hint">Use nvenc for NVIDIA GPU acceleration</span>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="encoder_preset">Encoder Preset</label>
+              <select
+                id="encoder_preset"
+                value={settings.rendering.encoder_preset || 'slow'}
+                onChange={(e) => handleRenderingChange('encoder_preset', e.target.value)}
+              >
+                {VALID_PRESETS.map(preset => (
+                  <option key={preset} value={preset}>{preset}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="encoder_quality">Quality (CQ/CRF)</label>
+              <div className="input-with-unit">
+                <input
+                  id="encoder_quality"
+                  type="number"
+                  min="0"
+                  max="51"
+                  value={settings.rendering.encoder_quality ?? 19}
+                  onChange={(e) => handleRenderingChange('encoder_quality', parseInt(e.target.value) || 19)}
+                />
+                <span className="unit">(Lower is better)</span>
+              </div>
+            </div>
+
             <div className="form-group">
               <label htmlFor="target_fps">{t('settings.system.targetFps')}</label>
               <div className="input-with-unit">

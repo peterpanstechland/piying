@@ -613,6 +613,11 @@ class AdminApiClient {
     return response.data
   }
 
+  async browseStoragePath(): Promise<{ path: string | null }> {
+    const response = await this.client.post('/settings/browse-path')
+    return response.data
+  }
+
   async getCameras() {
     const response = await this.client.get('/settings/cameras')
     return response.data

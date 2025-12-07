@@ -50,11 +50,20 @@ export default function PathEditor({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
+  const [isLineDrawing, setIsLineDrawing] = useState(false) // New state for 2-step line drawing
   const [dragTarget, setDragTarget] = useState<'start' | 'end' | null>(null)
   const [currentPath, setCurrentPath] = useState<PathPoint[]>([])
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
 
   const activePath = path || DEFAULT_PATH
+
+  // Reset drawing states when tool changes
+  useEffect(() => {
+    setIsDrawing(false)
+    setIsLineDrawing(false)
+    setDragTarget(null)
+    setCurrentPath([])
+  }, [tool])
 
   // Update canvas size to match video
   useEffect(() => {
@@ -259,16 +268,27 @@ export default function PathEditor({
       const normalized = toNormalizedCoords(pos.x, pos.y)
       setCurrentPath([normalized])
     } else if (tool === 'line') {
-      // Start new line from click position
       const normalized = toNormalizedCoords(pos.x, pos.y)
-      onPathChange({
-        ...activePath,
-        startPoint: normalized,
-        waypoints: [],
-      })
-      setDragTarget('end')
+      
+      if (!isLineDrawing) {
+        // First click: Start new line (Set Start Point)
+        setIsLineDrawing(true)
+        onPathChange({
+          ...activePath,
+          startPoint: normalized,
+          endPoint: normalized, // Reset end point to start initially
+          waypoints: [],
+        })
+      } else {
+        // Second click: Finish line (Set End Point)
+        setIsLineDrawing(false)
+        onPathChange({
+          ...activePath,
+          endPoint: normalized,
+        })
+      }
     }
-  }, [enabled, tool, getMousePos, isNearPoint, activePath, toNormalizedCoords, onPathChange])
+  }, [enabled, tool, getMousePos, isNearPoint, activePath, toNormalizedCoords, onPathChange, isLineDrawing])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!enabled) return
@@ -285,8 +305,14 @@ export default function PathEditor({
       onPathChange(newPath)
     } else if (isDrawing && tool === 'pencil') {
       setCurrentPath(prev => [...prev, normalized])
+    } else if (tool === 'line' && isLineDrawing) {
+      // Preview line while moving mouse after first click
+      onPathChange({
+        ...activePath,
+        endPoint: normalized
+      })
     }
-  }, [enabled, dragTarget, isDrawing, tool, getMousePos, toNormalizedCoords, activePath, onPathChange])
+  }, [enabled, dragTarget, isDrawing, tool, getMousePos, toNormalizedCoords, activePath, onPathChange, isLineDrawing])
 
   const handleMouseUp = useCallback(() => {
     if (dragTarget) {
