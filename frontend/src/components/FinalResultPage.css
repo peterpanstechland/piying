@@ -66,7 +66,7 @@
 /* 返回按钮 - 传统风格 */
 .back-button {
   position: relative;
-  margin: 40px auto 0 auto;
+  margin: 10px auto 20px auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,21 +154,25 @@
 
 /* 内容区域 */
 .result-content {
-  flex: 0 0 auto;
+  flex: 1;
   display: flex;
-  gap: 50px;
+  flex-direction: column;
+  gap: 20px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   animation: slideUp 0.6s ease-out;
   position: relative;
   z-index: 10;
+  width: 100%;
 }
 
 /* 视频容器 - 传统边框 */
 .video-container {
   position: relative;
+  width: 90%;
+  max-width: 1400px;
   flex: 1;
-  max-width: 700px;
+  min-height: 0; /* Important for flex child scrolling/sizing */
   background: #000;
   border-radius: 8px;
   overflow: hidden;
@@ -176,33 +180,15 @@
   box-shadow: 
     0 0 30px rgba(255, 180, 80, 0.3),
     0 10px 40px rgba(0, 0, 0, 0.5);
-}
-
-/* 视频容器装饰角 */
-.video-container::before,
-.video-container::after {
-  content: '◆';
-  position: absolute;
-  color: #d4af37;
-  font-size: 14px;
-  z-index: 10;
-}
-
-.video-container::before {
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.video-container::after {
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .result-video {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
   display: block;
 }
 

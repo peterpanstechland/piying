@@ -29,67 +29,87 @@ async def get_character_config(
     
     Returns character config including skeleton, bindings, and render order.
     """
-    import json
-    from fastapi import status, HTTPException
-    from ..services.admin.spritesheet_service import spritesheet_service
-    
-    character = await character_service.get_character_by_id(db, character_id)
-    if character is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Character with ID '{character_id}' not found",
-        )
-    
-    # Generate config from database
-    from pathlib import Path
-    
-    # Prepare parts data
-    parts_data = []
-    for p in character.parts:
-        joints = []
-        if hasattr(p, 'joints') and p.joints:
-            try:
-                joints = json.loads(p.joints)
-            except Exception:
-                pass
+    try:
+        import json
+        from fastapi import status, HTTPException
+        from ..services.admin.spritesheet_service import spritesheet_service
         
-        parts_data.append({
-            'name': p.name,
-            'file_path': p.file_path,
-            'pivot_x': p.pivot_x,
-            'pivot_y': p.pivot_y,
-            'z_index': p.z_index,
-            'joints': joints,
-            'editor_x': getattr(p, 'editor_x', None),
-            'editor_y': getattr(p, 'editor_y', None),
-            'editor_width': getattr(p, 'editor_width', None),
-            'editor_height': getattr(p, 'editor_height', None),
-            'joint_pivot_x': getattr(p, 'joint_pivot_x', None),
-            'joint_pivot_y': getattr(p, 'joint_pivot_y', None),
-            'rotation_offset': getattr(p, 'rotation_offset', None),
-            'rest_pose_offset': getattr(p, 'rest_pose_offset', None),
-        })
+        character = await character_service.get_character_by_id(db, character_id)
+        if character is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Character with ID '{character_id}' not found",
+            )
+        
+        # Generate config from database
+        from pathlib import Path
+        
+        # Prepare parts data
+        parts_data = []
+        for p in character.parts:
+            joints = []
+            if hasattr(p, 'joints') and p.joints:
+                try:
+                    joints = json.loads(p.joints)
+                except Exception:
+                    pass
+            
+            # Safely get attributes that might be missing in older schema versions
+            editor_x = getattr(p, 'editor_x', None)
+            editor_y = getattr(p, 'editor_y', None)
+            editor_width = getattr(p, 'editor_width', None)
+            editor_height = getattr(p, 'editor_height', None)
+            joint_pivot_x = getattr(p, 'joint_pivot_x', None)
+            joint_pivot_y = getattr(p, 'joint_pivot_y', None)
+            rotation_offset = getattr(p, 'rotation_offset', None)
+            rest_pose_offset = getattr(p, 'rest_pose_offset', None)
+            
+            parts_data.append({
+                'name': p.name,
+                'file_path': p.file_path,
+                'pivot_x': p.pivot_x,
+                'pivot_y': p.pivot_y,
+                'z_index': p.z_index,
+                'joints': joints,
+                'editor_x': editor_x,
+                'editor_y': editor_y,
+                'editor_width': editor_width,
+                'editor_height': editor_height,
+                'joint_pivot_x': joint_pivot_x,
+                'joint_pivot_y': joint_pivot_y,
+                'rotation_offset': rotation_offset,
+                'rest_pose_offset': rest_pose_offset,
+            })
+        
+        # Prepare bindings data
+        bindings_data = []
+        for b in character.bindings:
+            bindings_data.append({
+                'part_name': b.part_name,
+                'landmarks': json.loads(b.landmarks) if b.landmarks else [],
+                'rotation_landmark': b.rotation_landmark,
+                'scale_landmarks': json.loads(b.scale_landmarks) if b.scale_landmarks else [],
+            })
+        
+        # Generate config using spritesheet service
+        config = spritesheet_service.generate_character_config(
+            character_id,
+            character.name,
+            parts_data,
+            bindings_data,
+            character.default_facing or "left"
+        )
+        
+        return config
     
-    # Prepare bindings data
-    bindings_data = []
-    for b in character.bindings:
-        bindings_data.append({
-            'part_name': b.part_name,
-            'landmarks': json.loads(b.landmarks) if b.landmarks else [],
-            'rotation_landmark': b.rotation_landmark,
-            'scale_landmarks': json.loads(b.scale_landmarks) if b.scale_landmarks else [],
-        })
-    
-    # Generate config using spritesheet service
-    config = spritesheet_service.generate_character_config(
-        character_id,
-        character.name,
-        parts_data,
-        bindings_data,
-        character.default_facing or "left"
-    )
-    
-    return config
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating character config: {character_id}, error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate character config: {str(e)}"
+        )
 
 
 @router.get("/{character_id}/spritesheet.json")

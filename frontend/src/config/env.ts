@@ -13,9 +13,9 @@ export function getApiBaseUrl(): string {
   // Check if running in development mode
   const isDevelopment = import.meta.env.DEV;
   
-  // In development, use localhost
+  // In development, use relative path to leverage Vite proxy
   if (isDevelopment) {
-    return `http://localhost:${APP_CONFIG.API.DEFAULT_PORT}`;
+    return '';
   }
   
   // In production, try to get from environment variable

@@ -28,7 +28,7 @@
 
 /* Light Theme: Hide stage background */
 [data-theme='light'] .segment-guidance-page::before {
-  background-image: none;
+  background: var(--main-bg-image);
 }
 
 /* 皮影人物 Canvas 层 - 定位在检测框中心 */

@@ -44,6 +44,37 @@ def get_user_data_dir() -> Path:
     
     return base_path / app_name / "data"
 
+def resolve_relative_path(path_str: str) -> Path:
+    """
+    Resolve a relative path string to a concrete Path.
+    
+    Strategy:
+    1. Check if it exists in user_data_dir (priority for user content)
+    2. Check if it exists in project_root (priority for bundled assets)
+    3. Default to user_data_dir path if not found
+    
+    This ensures consistent path resolution across Dev (source) and Prod (frozen) environments,
+    allowing access to both mutable user data and immutable app assets.
+    """
+    path = Path(path_str)
+    if path.is_absolute():
+        return path
+        
+    # 1. Check user data directory
+    user_data = get_user_data_dir()
+    full_path = user_data / path
+    if full_path.exists():
+        return full_path
+        
+    # 2. Check project root (for assets/ defaults)
+    project_root = get_project_root()
+    full_path = project_root / path
+    if full_path.exists():
+        return full_path
+        
+    # 3. Default to user_data path
+    return user_data / path
+
 def ensure_user_data() -> Path:
     """
     Ensure user data directory exists and is populated with initial data if needed.

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CharacterRenderer } from '../pixi/CharacterRenderer';
+import { apiClient } from '../services/api-client';
 import './SegmentReviewPage.css';
 
 interface SegmentReviewPageProps {
@@ -14,7 +16,36 @@ interface SegmentReviewPageProps {
   uploadError?: string | null;
   cursorPosition?: { x: number; y: number } | null;
   hoverDurationMs?: number;
+  characterId?: string;
 }
+
+// Walk cycle poses (copied from CharacterPreview)
+const PRESET_POSES = {
+  walk1: {
+    pose: {
+      'left-arm': 0.4,
+      'right-arm': -0.3,
+      'left-hand': 0,
+      'right-hand': 0,
+      'left-thigh': -Math.PI / 10,
+      'right-thigh': Math.PI / 10,
+      'left-foot': -Math.PI / 8,
+      'right-foot': Math.PI / 8,
+    }
+  },
+  walk2: {
+    pose: {
+      'left-arm': -0.3,
+      'right-arm': 0.4,
+      'left-hand': 0,
+      'right-hand': 0,
+      'left-thigh': Math.PI / 10,
+      'right-thigh': -Math.PI / 10,
+      'left-foot': Math.PI / 8,
+      'right-foot': -Math.PI / 8,
+    }
+  }
+};
 
 /**
  * SegmentReviewPage - Review interface after recording a segment
@@ -32,6 +63,7 @@ export const SegmentReviewPage = ({
   uploadError = null,
   cursorPosition,
   hoverDurationMs = 3000,
+  characterId,
 }: SegmentReviewPageProps) => {
   const { t } = useTranslation();
 
@@ -52,6 +84,12 @@ export const SegmentReviewPage = ({
   // Video ref to prevent repeated play() calls
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoInitializedRef = useRef(false);
+
+  // Character Renderer refs
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<CharacterRenderer | null>(null);
+  const walkIntervalRef = useRef<number | null>(null);
+  const [rendererError, setRendererError] = useState(false);
 
   // Check if cursor is over a button
   const isCursorOverElement = useCallback((elementRef: React.RefObject<HTMLElement>) => {
@@ -146,6 +184,69 @@ export const SegmentReviewPage = ({
     }
   }, [videoElement]);
 
+  // Setup Character Renderer for Walk Cycle
+  useEffect(() => {
+    if (!canvasRef.current || !characterId) return;
+
+    let isMounted = true;
+    setRendererError(false);
+    
+    const initRenderer = async () => {
+      try {
+        if (rendererRef.current) {
+          await rendererRef.current.destroy();
+        }
+
+        const renderer = new CharacterRenderer();
+        rendererRef.current = renderer;
+
+        // Initialize with smaller dimensions suitable for the review box
+        await renderer.init(canvasRef.current!, 300, 400, { 
+          backgroundAlpha: 0,
+          compositionMode: 'chromakey' // Use single view for preview
+        });
+
+        if (!isMounted) return;
+
+        const configUrl = apiClient.getCharacterConfigUrl(characterId);
+        await renderer.loadCharacter(configUrl);
+
+        if (!isMounted) return;
+
+        // Start walk cycle
+        let step = 0;
+        const animate = () => {
+          if (!rendererRef.current) return;
+          const pose = step % 2 === 0 ? PRESET_POSES.walk1.pose : PRESET_POSES.walk2.pose;
+          rendererRef.current.animateToPose(pose, 400);
+          step++;
+        };
+
+        animate();
+        walkIntervalRef.current = window.setInterval(animate, 500);
+
+      } catch (error) {
+        console.error('Failed to initialize character preview:', error);
+        if (isMounted) {
+          setRendererError(true);
+        }
+      }
+    };
+
+    initRenderer();
+
+    return () => {
+      isMounted = false;
+      if (walkIntervalRef.current) {
+        clearInterval(walkIntervalRef.current);
+      }
+      if (rendererRef.current) {
+        rendererRef.current.destroy().catch(console.error);
+        rendererRef.current = null;
+      }
+    };
+  }, [characterId]);
+
   return (
     <div className="segment-review-page">
       {/* Gesture cursor indicator */}
@@ -181,36 +282,7 @@ export const SegmentReviewPage = ({
         </div>
 
         <div className="review-content">
-          <div className="review-stats">
-            <div className="stat-item">
-              <div className="stat-icon">✓</div>
-              <div className="stat-label">{t('review.recorded')}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">{frameCount}</div>
-              <div className="stat-label">{t('review.frames')}</div>
-            </div>
-          </div>
-
-          {uploadError && (
-            <div className="upload-error">
-              <p className="error-message">❌ {uploadError}</p>
-              <p className="error-hint">{t('review.uploadFailed')}</p>
-            </div>
-          )}
-
-          {isUploading && (
-            <div className="upload-progress">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <p className="progress-text">{t('review.uploading')} {uploadProgress}%</p>
-            </div>
-          )}
-
+          {/* Action Buttons moved to top */}
           <div className="review-actions">
             <button
               ref={rerecordButtonRef}
@@ -252,6 +324,44 @@ export const SegmentReviewPage = ({
               )}
             </button>
           </div>
+
+          {/* Stats replaced with Walking Puppet Animation */}
+          <div className="review-stats walking-puppet-container">
+             {characterId && !rendererError ? (
+               <canvas 
+                 ref={canvasRef} 
+                 className="walking-puppet-canvas"
+                 width={300}
+                 height={400}
+               />
+             ) : (
+               <img 
+                 src="/images/monster.webp" 
+                 alt="Walking Shadow Puppet" 
+                 className="walking-puppet-image" 
+               />
+             )}
+             <div className="puppet-label">{t('review.recorded')} {frameCount} {t('review.frames')}</div>
+          </div>
+
+          {uploadError && (
+            <div className="upload-error">
+              <p className="error-message">❌ {uploadError}</p>
+              <p className="error-hint">{t('review.uploadFailed')}</p>
+            </div>
+          )}
+
+          {isUploading && (
+            <div className="upload-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="progress-text">{t('review.uploading')} {uploadProgress}%</p>
+            </div>
+          )}
         </div>
 
         <div className="review-footer">

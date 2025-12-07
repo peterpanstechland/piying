@@ -25,8 +25,7 @@
 
 /* Light Theme: Hide stage background */
 [data-theme='light'] .idle-page::before {
-  background-image: none;
-  background: var(--bg-gradient);
+  background: var(--main-bg-image);
 }
 
 .video-feed {

@@ -105,6 +105,10 @@ class SettingsService:
                 target_fps=rendering.get("target_fps", 30),
                 video_codec=rendering.get("video_codec", "H264"),
                 max_render_time_seconds=rendering.get("max_render_time_seconds", 20),
+                composition_mode=rendering.get("composition_mode", "side_by_side"),
+                video_encoder=rendering.get("video_encoder", "h264_nvenc"),
+                encoder_preset=rendering.get("encoder_preset", "slow"),
+                encoder_quality=rendering.get("encoder_quality", 19),
             ),
         )
 
@@ -148,6 +152,10 @@ class SettingsService:
                 "target_fps": settings.rendering.target_fps,
                 "video_codec": settings.rendering.video_codec,
                 "max_render_time_seconds": settings.rendering.max_render_time_seconds,
+                "composition_mode": settings.rendering.composition_mode,
+                "video_encoder": settings.rendering.video_encoder,
+                "encoder_preset": settings.rendering.encoder_preset,
+                "encoder_quality": settings.rendering.encoder_quality,
             },
             "qr_code": {
                 "auto_detect_ip": settings.qr_code.auto_detect_ip,
@@ -250,6 +258,14 @@ class SettingsService:
                 current.rendering.video_codec = update.rendering.video_codec
             if update.rendering.max_render_time_seconds is not None:
                 current.rendering.max_render_time_seconds = update.rendering.max_render_time_seconds
+            if update.rendering.composition_mode is not None:
+                current.rendering.composition_mode = update.rendering.composition_mode
+            if update.rendering.video_encoder is not None:
+                current.rendering.video_encoder = update.rendering.video_encoder
+            if update.rendering.encoder_preset is not None:
+                current.rendering.encoder_preset = update.rendering.encoder_preset
+            if update.rendering.encoder_quality is not None:
+                current.rendering.encoder_quality = update.rendering.encoder_quality
         
         # Save to file
         file_dict = self._convert_model_to_file(current)

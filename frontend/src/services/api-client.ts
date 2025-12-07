@@ -408,6 +408,15 @@ export class APIClient {
   }
 
   /**
+   * Get character config URL for frontend rendering
+   * @param characterId - Character identifier
+   * @returns Full URL to character config JSON
+   */
+  getCharacterConfigUrl(characterId: string): string {
+    return `${this.client.defaults.baseURL}/api/characters/${characterId}/config.json`;
+  }
+
+  /**
    * Process cached uploads (retry failed uploads)
    * @returns Number of successfully processed uploads
    */

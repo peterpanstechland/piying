@@ -104,24 +104,24 @@ const DEFAULT_JOINT_PIVOTS: Record<string, { x: number; y: number }> = {
 // - 右臂：素材指向 0，目标是让 0 度输入时显示为垂直向下（PI/2）
 //   需要 offset = -PI/2，这样当 absoluteAngle = PI/2 时，finalRotation = PI/2 - (-PI/2) = PI（需要调整）
 //
-// 实际测试后的修正值：
-const DEFAULT_ROTATION_OFFSETS: Record<string, number> = {
-  'head': 0,                    // 头部不旋转
-  'body': 0,                    // 身体不旋转
-  // 手臂和手的默认偏移设为 0，让配置文件中的值生效
-  // 如果配置文件没有设置，则不做额外偏移
-  'left-arm': 0,
-  'right-arm': 0,
-  'left-hand': 0,
-  'right-hand': 0,
-  // 裙子（一体式下身）- 通常不旋转
-  'skirt': 0,
-  // 左右大腿（分体式下身）
-  'left-thigh': 0,
-  'right-thigh': 0,
-  'left-foot': 0,
-  'right-foot': 0,
-}
+  // 实际测试后的修正值：
+  const DEFAULT_ROTATION_OFFSETS: Record<string, number> = {
+    'head': 0,                    // 头部不旋转
+    'body': 0,                    // 身体不旋转
+    // 手臂和手的默认偏移设为 0，让配置文件中的值生效
+    // 如果配置文件没有设置，则不做额外偏移
+    'left-arm': 0,
+    'right-arm': 0,
+    'left-hand': 0,
+    'right-hand': 0,
+    // 裙子（一体式下身）- 通常不旋转
+    'skirt': 0,
+    // 左右大腿（分体式下身）
+    'left-thigh': 0,
+    'right-thigh': 0,
+    'left-foot': 0,
+    'right-foot': 0,
+  }
 
 // 默认初始姿势偏移量（弧度）
 // 这个值表示素材默认姿势与"自然垂下"姿势之间的角度差
@@ -247,7 +247,8 @@ export class CharacterRenderer {
 
   // Side-by-Side Rendering Support
   private renderMode: 'chromakey' | 'side_by_side' = 'side_by_side'
-  private renderTexture: RenderTexture | null = null
+  // Use Texture type for compatibility with PixiJS 8 RenderTexture.create()
+  private renderTexture: Texture | null = null
   private previewSprite: Sprite | null = null
   private maskSprite: Sprite | null = null
   private colorMatrix: ColorMatrixFilter | null = null
@@ -768,18 +769,20 @@ export class CharacterRenderer {
   private static readonly ROTATION_LIMITS: Record<string, [number, number] | null> = {
     'head': [-Math.PI / 4, Math.PI / 4],  // ±45 degrees
     'body': [-Math.PI / 6, Math.PI / 6],  // ±30 degrees
-    // Arms rotation limits:
-    // Forward/Up: -PI (allows full raise)
-    // Backward: PI/3 (60 degrees, prevents unnatural backward flip)
-    'left-arm': [-Math.PI, Math.PI / 3],
-    'right-arm': [-Math.PI, Math.PI / 3],
+    // Arms rotation limits (Relative to Rest Pose / Down):
+    // Removing strict limits to prevent "snapping" when crossing the discontinuity at ±180°
+    // The user's own arm physics will be the limit.
+    'left-arm': null,
+    'right-arm': null,
     'left-hand': null,
     'right-hand': null,
     // 裙子不旋转
     'skirt': null,
-    // 左右大腿有旋转限制
-    'left-thigh': [-Math.PI * 0.8, Math.PI * 0.8],
-    'right-thigh': [-Math.PI * 0.8, Math.PI * 0.8],
+    // 左右大腿有旋转限制 (正值=向前/高抬腿，负值=向后/后踢)
+    // 限制向后翻转 (-0.3 rad ≈ -17度)
+    // 允许大幅度向前高抬腿 (2.5 rad ≈ 143度)
+    'left-thigh': [-0.3, 2.5],
+    'right-thigh': [-0.3, 2.5],
     'left-foot': null,
     'right-foot': null,
   }
@@ -1175,31 +1178,43 @@ export class CharacterRenderer {
       
       // 根据角色朝向决定是否取反角度
       // 
-      // 原理：
-      // - PoseProcessor 输出的角度变化（抬起时）是正值
-      // - 面朝左的角色：向前抬 = 顺时针 = 正值 -> 不需要取反
-      // - 面朝右的角色：向前抬 = 逆时针 = 负值 -> 需要取反
-      // 
-      // 这是因为两个朝向的角色在屏幕上是镜像的，它们的"向前"方向相反
-      const needsInversion = this.defaultFacing === 'right'
+      // 逻辑修正：
+      // 1. 面朝左（如嫦娥）：左手（外侧）不需要取反，右手（里侧）需要取反
+      // 2. 面朝右：右手（外侧）不需要取反，左手（里侧）需要取反
+      let needsInversion = false
+      if (this.defaultFacing === 'left') {
+        // 面朝左：里侧是右手/右臂
+        if (targetPartName.includes('right')) {
+          needsInversion = true
+        }
+      } else {
+        // 面朝右：里侧是左手/左臂
+        if (targetPartName.includes('left')) {
+          needsInversion = true
+        }
+      }
+
       const adjustedAngle = needsInversion ? -angle : angle
       
       if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
         console.log(`  APPLY: target="${targetPartName}" needsInversion=${needsInversion} angle=${(angle * 180 / Math.PI).toFixed(1)}° -> adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}°`)
       }
       
-      const finalRotation = restPoseOffset + adjustedAngle + rotationOffset
-
+      // Apply rotation limits to the RELATIVE angle (movement), not the final absolute rotation
+      // This ensures limits work consistently regardless of sprite drawing direction
+      let limitedAngle = adjustedAngle
       const limits = CharacterRenderer.ROTATION_LIMITS[targetPartName]
       if (limits) {
         const [minAngle, maxAngle] = limits
-        sprite.rotation = Math.max(minAngle, Math.min(maxAngle, finalRotation))
-      } else {
-        sprite.rotation = finalRotation
+        limitedAngle = Math.max(minAngle, Math.min(maxAngle, limitedAngle))
       }
 
+      const finalRotation = restPoseOffset + limitedAngle + rotationOffset
+
+      sprite.rotation = finalRotation
+
       if (shouldLog) {
-        console.log(`  ${targetPartName} (src:${sourcePartName}): angle=${(angle * 180 / Math.PI).toFixed(1)}° adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° offset=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(sprite.rotation * 180 / Math.PI).toFixed(1)}°`)
+        console.log(`  ${targetPartName} (src:${sourcePartName}): angle=${(angle * 180 / Math.PI).toFixed(1)}° adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}° limited=${(limitedAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° offset=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(sprite.rotation * 180 / Math.PI).toFixed(1)}°`)
       }
     }
   }
@@ -1688,7 +1703,11 @@ export class CharacterRenderer {
     // Update Side-by-Side components if active
     if (this.renderMode === 'side_by_side' && this.renderTexture) {
       // Recreate texture with new size
-      (this.renderTexture as RenderTexture).resize(width, height)
+      // In PixiJS 8, we resize the source of the texture
+      const source = this.renderTexture.source;
+      if (source && 'resize' in source) {
+        (source as any).resize(width, height);
+      }
       
       if (this.maskSprite) {
         this.maskSprite.x = width

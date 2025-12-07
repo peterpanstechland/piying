@@ -667,6 +667,27 @@ class VideoRenderer:
         # Determine base video path
         base_video_path = self._get_base_video_path(session)
         
+        # Get base video FPS using ffprobe
+        target_fps = 30  # Default
+        try:
+            ffprobe_path = shutil.which("ffprobe")
+            if ffprobe_path:
+                probe_result = subprocess.run(
+                    [ffprobe_path, "-v", "error", "-select_streams", "v:0", 
+                     "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", str(base_video_path)],
+                    capture_output=True, text=True, timeout=10
+                )
+                if probe_result.returncode == 0 and probe_result.stdout.strip():
+                    fps_str = probe_result.stdout.strip()
+                    if '/' in fps_str:
+                        num, den = fps_str.split('/')
+                        target_fps = int(int(num) / int(den))
+                    else:
+                        target_fps = int(float(fps_str))
+                    logger.info(f"Detected base video FPS: {target_fps}")
+        except Exception as e:
+            logger.warning(f"Failed to detect FPS, using default {target_fps}: {e}")
+        
         # Prepare output path
         output_path = self.output_dir / f"final_{session.id}.mp4"
         
@@ -682,12 +703,14 @@ class VideoRenderer:
         encoder_preset = getattr(rendering_settings, 'encoder_preset', 'fast')
         encoder_quality = getattr(rendering_settings, 'encoder_quality', 23)
         
-        logger.info(f"Rendering with mode={composition_mode}, encoder={video_encoder}, preset={encoder_preset}")
+        logger.info(f"Rendering with mode={composition_mode}, encoder={video_encoder}, preset={encoder_preset}, fps={target_fps}")
         
         # Build encoder flags
-        encoder_flags = ["-c:v", video_encoder, "-preset", encoder_preset]
+        # Force yuv420p pixel format for best browser compatibility
+        encoder_flags = ["-c:v", video_encoder, "-preset", encoder_preset, "-pix_fmt", "yuv420p"]
         if 'nvenc' in video_encoder:
-            encoder_flags.extend(["-cq", str(encoder_quality)])
+            # Use VBR mode for NVENC to respect CQ parameter properly
+            encoder_flags.extend(["-rc", "vbr", "-cq", str(encoder_quality)])
         else:
             encoder_flags.extend(["-crf", str(encoder_quality)])
         
@@ -708,13 +731,14 @@ class VideoRenderer:
             if composition_mode == 'side_by_side':
                 # Side-by-Side (Luma Matte) Composition
                 # 1:v is the side-by-side video (Left=Color, Right=Mask)
-                # Crop Left -> fg_rgb
+                # Crop Left -> fg_rgb (use trunc for integer width)
                 # Crop Right -> fg_alpha (convert to grayscale)
                 # Alphamerge -> fg_trans
+                # fps filter: 强制overlay视频使用固定帧率，防止帧时间戳不连续导致卡顿
                 # Scale -> Overlay
                 filter_complex = (
-                    f"[1:v]crop=iw/2:ih:0:0[fg_rgb];"
-                    f"[1:v]crop=iw/2:ih:iw/2:0,format=gray[fg_alpha];"
+                    f"[1:v]fps={target_fps},crop=trunc(iw/2):ih:0:0[fg_rgb];"
+                    f"[1:v]fps={target_fps},crop=trunc(iw/2):ih:trunc(iw/2):0,format=gray[fg_alpha];"
                     f"[fg_rgb][fg_alpha]alphamerge,setpts=PTS+{seg_start_time}/TB[fg_trans];"
                     f"[fg_trans][0:v]scale2ref[fg][bg];"
                     f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
@@ -726,7 +750,7 @@ class VideoRenderer:
                 # format=yuva420p ensures alpha channel is preserved after chromakey
                 # scale2ref ensures the overlay matches the base video resolution
                 filter_complex = (
-                    f"[1:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_key];"
+                    f"[1:v]fps={target_fps},chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_key];"
                     f"[fg_key][0:v]scale2ref[fg][bg];"
                     f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
                 )
@@ -734,8 +758,9 @@ class VideoRenderer:
             cmd = [
                 ffmpeg_path,
                 "-y",  # Overwrite output
+                "-loglevel", "warning",  # Show warnings to debug issues
                 "-i", str(base_video_path),  # Base video (full length)
-                "-i", str(overlay_video),  # Overlay video
+                "-i", str(overlay_video),  # Overlay video (WebM from frontend)
                 "-filter_complex", filter_complex,
                 "-map", "[out]",
                 "-map", "0:a?",  # Keep audio from base video if exists
@@ -753,6 +778,10 @@ class VideoRenderer:
                 text=True,
                 timeout=300  # 5 minute timeout
             )
+            
+            # Log any warnings even on success
+            if result.stderr:
+                logger.info(f"FFmpeg output: {result.stderr[:500]}")  # First 500 chars
             
             if result.returncode != 0:
                 logger.error(f"FFmpeg failed: {result.stderr}")
@@ -784,14 +813,15 @@ class VideoRenderer:
                 # Prepare overlay source based on composition mode
                 if composition_mode == 'side_by_side':
                     # Side-by-Side logic for segment
-                    filter_parts.append(f"[{input_idx}:v]crop=iw/2:ih:0:0[fg_rgb_{i}]")
-                    filter_parts.append(f"[{input_idx}:v]crop=iw/2:ih:iw/2:0,format=gray[fg_alpha_{i}]")
+                    # fps filter: 强制overlay视频使用固定帧率，防止帧时间戳不连续导致卡顿
+                    filter_parts.append(f"[{input_idx}:v]fps={target_fps},crop=trunc(iw/2):ih:0:0[fg_rgb_{i}]")
+                    filter_parts.append(f"[{input_idx}:v]fps={target_fps},crop=trunc(iw/2):ih:trunc(iw/2):0,format=gray[fg_alpha_{i}]")
                     filter_parts.append(f"[fg_rgb_{i}][fg_alpha_{i}]alphamerge,setpts=PTS+{seg_start_time}/TB[fg_{i}]")
                     overlay_source = f"[fg_{i}]"
                 else:
                     # Chromakey logic for segment
                     filter_parts.append(
-                        f"[{input_idx}:v]chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_{i}]"
+                        f"[{input_idx}:v]fps={target_fps},chromakey=0x00ff00:0.15:0.1,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_{i}]"
                     )
                     overlay_source = f"[fg_{i}]"
                 
@@ -812,6 +842,7 @@ class VideoRenderer:
             cmd = [
                 ffmpeg_path,
                 "-y",
+                "-loglevel", "warning",  # Show warnings to debug issues
                 *inputs,
                 "-filter_complex", filter_complex,
                 "-map", "[out]",
@@ -831,6 +862,10 @@ class VideoRenderer:
                 text=True,
                 timeout=300
             )
+            
+            # Log any warnings even on success
+            if result.stderr:
+                logger.info(f"FFmpeg output: {result.stderr[:500]}")  # First 500 chars
             
             if result.returncode != 0:
                 logger.error(f"FFmpeg failed: {result.stderr}")

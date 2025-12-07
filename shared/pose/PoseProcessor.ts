@@ -305,9 +305,8 @@ export class PoseProcessor {
     }
 
     // 右臂（标准化处理）
-    // 原始计算中，右臂抬起是顺时针旋转（正值）。
-    // 为了简化后续处理（如 SecondaryMotion），我们将所有肢体的“向前/向上”运动统一为负值（逆时针）。
-    // CharacterRenderer 会根据角色朝向自动处理这种标准化带来的符号差异。
+    // 移除之前的负号，保持与左臂一致的计算逻辑
+    // CharacterRenderer 会根据 facing 自动处理镜像
     const rightArmAngle = this.computeJointAngle(
       landmarks,
       LANDMARK_INDEX.RIGHT_SHOULDER,
@@ -315,7 +314,7 @@ export class PoseProcessor {
       calibration?.referencePose
     )
     if (rightArmAngle !== null) {
-      angles['right-arm'] = -rightArmAngle
+      angles['right-arm'] = rightArmAngle
     }
 
     // 右手（标准化处理）
@@ -326,8 +325,8 @@ export class PoseProcessor {
       calibration?.referencePose
     )
     if (rightHandAngle !== null) {
-      // 同样统一为负值（抬手）
-      const normalizedRightHand = -rightHandAngle
+      // 同样移除负号
+      const normalizedRightHand = rightHandAngle
       
       // 应用约束
       if (angles['right-arm'] !== undefined) {
@@ -450,6 +449,7 @@ export class PoseProcessor {
     const dy = end.y - start.y
     const currentAngle = Math.atan2(dy, dx)
 
+    // 直接返回相对角度，由 CharacterRenderer 根据角色朝向处理
     let relativeAngle: number
 
     // 如果有参考姿态（校准后），计算相对角度
@@ -469,7 +469,10 @@ export class PoseProcessor {
       relativeAngle = currentAngle - Math.PI / 2
     }
 
-    // 直接返回相对角度，由 CharacterRenderer 根据角色朝向处理
+    // Normalize to [-PI, PI]
+    while (relativeAngle <= -Math.PI) relativeAngle += 2 * Math.PI
+    while (relativeAngle > Math.PI) relativeAngle -= 2 * Math.PI
+
     return relativeAngle
   }
 

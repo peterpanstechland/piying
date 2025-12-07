@@ -26,8 +26,7 @@
 
 /* Light Theme: Hide stage background, use paper texture/gradient */
 [data-theme='light'] .scene-selection-page::before {
-  background-image: none;
-  background: var(--bg-gradient); 
+  background: var(--main-bg-image);
 }
 
 /* ========== 皮影装饰元素 - 已禁用（使用舞台背景） ========== */

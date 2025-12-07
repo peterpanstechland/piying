@@ -550,9 +550,12 @@ export const RecordingPage = ({
           position: 'absolute', 
           top: 0, 
           left: 0,
-          opacity: 0, // 隐藏但保持渲染 (防止浏览器停止 RAF)
+          // 关键修复：
+          // 1. opacity: 0.01 (不能是0) - 确保浏览器认为它是"可见"的
+          // 2. zIndex: 5 (高于背景) - 防止被背景视频遮挡导致被浏览器优化掉(停止渲染)
+          opacity: 0.01, 
           pointerEvents: 'none', // 点击穿透
-          zIndex: -999
+          zIndex: 5
         }} 
       />
 

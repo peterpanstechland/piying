@@ -41,7 +41,7 @@ export const FinalResultPage = ({
     console.log('[FinalResultPage] Computing playerUrl', { videoUrl, sessionId });
     
     if (sessionId) {
-      const relativeUrl = `/api/videos/${sessionId}`;
+      const relativeUrl = `/api/videos/${sessionId}?t=${Date.now()}`;
       console.log('[FinalResultPage] Using relative URL from sessionId:', relativeUrl);
       return relativeUrl;
     }
@@ -52,6 +52,7 @@ export const FinalResultPage = ({
       const url = new URL(videoUrl);
       // Check if it's an API video URL
       if (url.pathname.startsWith('/api/videos/')) {
+        url.searchParams.set('t', Date.now().toString());
         const relativePath = url.pathname + url.search;
         console.log('[FinalResultPage] Converted to relative path:', relativePath);
         return relativePath; // Preserve query params if any
@@ -184,6 +185,26 @@ export const FinalResultPage = ({
         </div>
       </div>
 
+      {/* Back button with hover progress - moved between title and video */}
+      <div
+        ref={backButtonRef}
+        className={`back-button ${hoverProgress > 0 ? 'hovering' : ''}`}
+      >
+        <div
+          className="back-button-progress"
+          style={{
+            transform: `scaleX(${hoverProgress})`,
+          }}
+        />
+        <span className="back-button-icon">←</span>
+        <span className="back-button-text">{t('common.back', '返回')}</span>
+        {hoverProgress > 0 && (
+          <span className="back-button-hint">
+            {Math.ceil((1 - hoverProgress) * (hoverDurationMs / 1000))}s
+          </span>
+        )}
+      </div>
+
       <div className="result-content">
         <div className="video-container">
           <video
@@ -206,7 +227,7 @@ export const FinalResultPage = ({
           <div className="qr-wrapper">
             <QRCodeSVG
               value={videoUrl}
-              size={256}
+              size={120}
               level="H"
               includeMargin={true}
               className="qr-code"
@@ -215,26 +236,6 @@ export const FinalResultPage = ({
           <p className="qr-instruction">{t('result.scanQR')}</p>
           <p className="qr-url">{videoUrl}</p>
         </div>
-      </div>
-
-      {/* Back button with hover progress - moved below content */}
-      <div
-        ref={backButtonRef}
-        className={`back-button ${hoverProgress > 0 ? 'hovering' : ''}`}
-      >
-        <div
-          className="back-button-progress"
-          style={{
-            transform: `scaleX(${hoverProgress})`,
-          }}
-        />
-        <span className="back-button-icon">←</span>
-        <span className="back-button-text">{t('common.back', '返回')}</span>
-        {hoverProgress > 0 && (
-          <span className="back-button-hint">
-            {Math.ceil((1 - hoverProgress) * (hoverDurationMs / 1000))}s
-          </span>
-        )}
       </div>
     </div>
   );

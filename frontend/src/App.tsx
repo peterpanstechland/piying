@@ -890,6 +890,7 @@ function App() {
             uploadError={uploadError}
             cursorPosition={handPosition}
             hoverDurationMs={3000}
+            characterId={context?.characterId}
           />
         );
       

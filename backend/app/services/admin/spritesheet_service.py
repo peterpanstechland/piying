@@ -253,6 +253,7 @@ class SpritesheetService:
         name: str,
         parts_data: List[dict],
         bindings_data: List[dict],
+        default_facing: str = "left"
     ) -> dict:
         """
         Generate complete character configuration for PixiJS renderer.
@@ -314,7 +315,7 @@ class SpritesheetService:
             'bindings': bindings,
             'renderOrder': render_order,
             'restPoseOffsets': rest_pose_offsets,
-            'defaultFacing': 'left'  # 默认值，会被 API 端点覆盖
+            'defaultFacing': default_facing
         }
 
 

@@ -24,6 +24,9 @@
   --color-bg-medium: #2d1810;         /* 中褐 */
   --color-bg-light: #3d2418;          /* 浅褐 */
   
+  /* Main Background - Dark Mode Default (Gradient) */
+  --main-bg-image: radial-gradient(ellipse at center, var(--color-bg-medium) 0%, var(--color-bg-dark) 100%);
+
   /* 皮影色 - 半透明暖色调 */
   --color-shadow-puppet: rgba(255, 200, 100, 0.85);
   --color-shadow-glow: rgba(255, 180, 80, 0.6);
@@ -60,6 +63,9 @@
   --color-bg-medium: #EBE6D8;         /* 稍深的宣纸色 */
   --color-bg-light: #FFFDF5;          /* 亮白 */
 
+  /* Main Background - Light Mode (Image) */
+  --main-bg-image: url('/images/background-light.png') center center / cover no-repeat fixed;
+
   /* Text - Dark Brown / Ink */
   --color-text-primary: #3E342E;      /* 墨茶色 */
   --color-text-secondary: rgba(62, 52, 46, 0.8);
@@ -90,8 +96,7 @@
 
 /* ========== 全局背景 - 皮影幕布效果 ========== */
 .shadow-puppet-bg {
-  background: 
-    radial-gradient(ellipse at center, var(--color-bg-medium) 0%, var(--color-bg-dark) 100%);
+  background: var(--main-bg-image);
   position: relative;
 }
 

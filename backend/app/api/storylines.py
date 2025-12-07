@@ -365,15 +365,22 @@ async def get_storyline_video_file(
             detail="No video available for this storyline",
         )
     
-    # Build full path - data directory is user data dir
-    from ..utils.path import get_user_data_dir
-    data_dir = get_user_data_dir()
-    full_path = str(data_dir / video_path)
+    # Resolve full path (check both user data and app assets)
+    from ..utils.path import resolve_relative_path, get_user_data_dir
+    
+    try:
+        full_path_obj = resolve_relative_path(video_path)
+        full_path = str(full_path_obj)
+    except Exception as e:
+        logger.error(f"Error resolving video path {video_path}: {e}")
+        # Fallback to simple join if resolution fails (shouldn't happen)
+        data_dir = get_user_data_dir()
+        full_path = str(data_dir / video_path)
     
     # Debug logging
     import logging
     logger = logging.getLogger(__name__)
-    logger.info(f"Video path resolution: video_path={video_path}, data_dir={data_dir}, full_path={full_path}, exists={os.path.exists(full_path)}")
+    logger.info(f"Video path resolution: video_path={video_path}, full_path={full_path}, exists={os.path.exists(full_path)}")
     
     if not os.path.exists(full_path):
         raise HTTPException(
@@ -686,10 +693,16 @@ async def get_storyline_cover_image(
             detail=f"Cover image ({size}) not found for storyline",
         )
     
-    # Build full path - data directory is user data dir
-    from ..utils.path import get_user_data_dir
-    data_dir = get_user_data_dir()
-    full_path = str(data_dir / cover_path)
+    # Resolve full path (check both user data and app assets)
+    from ..utils.path import resolve_relative_path, get_user_data_dir
+    
+    try:
+        full_path_obj = resolve_relative_path(cover_path)
+        full_path = str(full_path_obj)
+    except Exception as e:
+        # Fallback
+        data_dir = get_user_data_dir()
+        full_path = str(data_dir / cover_path)
     
     if not os.path.exists(full_path):
         raise HTTPException(

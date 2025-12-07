@@ -51,7 +51,6 @@ export const SegmentGuidancePage = ({
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CharacterRenderer | null>(null);
   const poseProcessorRef = useRef<PoseProcessor | null>(null);
-  const poseDetectionCountRef = useRef(0);
   
   // Store callback in ref to avoid dependency issues
   const onGuidanceCompleteRef = useRef(onGuidanceComplete);
