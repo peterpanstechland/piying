@@ -141,14 +141,19 @@ export const RecordingPage = ({
       try {
         // 1. 初始化显示渲染器 (透明背景)
         const renderer = new CharacterRenderer();
-        await renderer.init(characterCanvasRef.current!, window.innerWidth, window.innerHeight);
+        // 强制使用单视图模式 (chromakey) 用于前端显示，保持透明背景
+        await renderer.init(characterCanvasRef.current!, window.innerWidth, window.innerHeight, {
+          compositionMode: 'chromakey',
+          useGreenScreen: false,
+        });
         
         // 2. 初始化录制渲染器 (绿幕背景 - 用于录制)
         // 创建一个离屏 canvas 如果 ref 不存在 (虽然我们在 JSX 中渲染了 hidden canvas)
         const recordingRenderer = new CharacterRenderer();
         if (recordingCanvasRef.current) {
+          // 使用后端设置的渲染模式
           await recordingRenderer.init(recordingCanvasRef.current, APP_CONFIG.RECORDING.WIDTH, APP_CONFIG.RECORDING.HEIGHT, {
-            useGreenScreen: true, // 强制绿幕
+            compositionMode: 'side_by_side', // 使用 Side-by-Side 模式
           });
         }
         
@@ -162,6 +167,37 @@ export const RecordingPage = ({
         // 重置到默认姿态
         renderer.resetPose();
         recordingRenderer.resetPose();
+        
+        // FIX: Apply initial scale immediately to avoid large character flash
+        const scaleStart = pathConfig?.scale_start ?? APP_CONFIG.DISPLAY.DEFAULT_CHARACTER_SCALE;
+        renderer.setScale(scaleStart);
+        recordingRenderer.setScale(scaleStart);
+        
+        // FIX: Apply initial position immediately
+        const startPos = pathConfig?.offset_start || [0.5, 0.5];
+        const entryType = pathConfig?.entry_type || 'instant';
+        
+        if (entryType === 'fade') {
+           // Start with opacity 0
+           renderer.setOpacity(0);
+           recordingRenderer.setOpacity(0);
+           renderer.setPosition(startPos[0], startPos[1]);
+           recordingRenderer.setPosition(startPos[0], startPos[1]);
+        } else if (entryType === 'slide_left') {
+           // Start outside left
+           const startX = -0.2; 
+           renderer.setPosition(startX, startPos[1]);
+           recordingRenderer.setPosition(startX, startPos[1]);
+        } else if (entryType === 'slide_right') {
+           // Start outside right
+           const startX = 1.2;
+           renderer.setPosition(startX, startPos[1]);
+           recordingRenderer.setPosition(startX, startPos[1]);
+        } else {
+           // Instant or default: start at startPos
+           renderer.setPosition(startPos[0], startPos[1]);
+           recordingRenderer.setPosition(startPos[0], startPos[1]);
+        }
         
         rendererRef.current = renderer;
         recordingRendererRef.current = recordingRenderer;
@@ -502,18 +538,20 @@ export const RecordingPage = ({
         />
       )}
 
-      {/* 隐藏的录制专用 Canvas (绿幕) */}
+      {/* 隐藏的录制专用 Canvas (Side-by-Side 模式宽度翻倍) */}
       {/* 注意：不能使用 visibility: hidden 或 display: none，否则无法录制 */}
       {/* 将其移出屏幕外以隐藏 */}
       <canvas 
         ref={recordingCanvasRef}
         className="recording-canvas-hidden"
-        width={APP_CONFIG.RECORDING.WIDTH}
+        width={APP_CONFIG.RECORDING.WIDTH * 2} // 宽度翻倍以支持 Side-by-Side
         height={APP_CONFIG.RECORDING.HEIGHT}
         style={{ 
           position: 'absolute', 
           top: 0, 
-          left: '-9999px', // 移出屏幕外
+          left: 0,
+          opacity: 0, // 隐藏但保持渲染 (防止浏览器停止 RAF)
+          pointerEvents: 'none', // 点击穿透
           zIndex: -999
         }} 
       />

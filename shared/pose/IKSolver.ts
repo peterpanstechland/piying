@@ -310,13 +310,30 @@ export class IKSolver {
     rightShin: number
   } {
     // 根据朝向调整角度
+    // 左朝向：向前为负，向后为正
+    // 右朝向：向前为正，向后为负
     const flip = facing === 'left' ? -1 : 1
 
+    // 计算绝对角度
+    // 大腿：总是向前抬起 (Forward) -> magnitude * flip
+    const leftThighAbs = this.state.left.thighAngle * flip
+    const rightThighAbs = this.state.right.thighAngle * flip
+
+    // 小腿：总是向后弯曲 (Backward)
+    // 左朝向(flip=-1)：向后是正 -> kneeAngle * 1  (-flip)
+    // 右朝向(flip=1)：向后是负 -> kneeAngle * -1 (-flip)
+    const leftKneeBend = this.state.left.kneeAngle * (-flip)
+    const rightKneeBend = this.state.right.kneeAngle * (-flip)
+
+    // 绝对小腿角度 = 绝对大腿角度 + 膝盖弯曲量
+    const leftShinAbs = leftThighAbs + leftKneeBend
+    const rightShinAbs = rightThighAbs + rightKneeBend
+
     return {
-      leftThigh: this.state.left.thighAngle * flip,
-      leftShin: this.state.left.kneeAngle * flip,
-      rightThigh: this.state.right.thighAngle * flip,
-      rightShin: this.state.right.kneeAngle * flip,
+      leftThigh: leftThighAbs,
+      leftShin: leftShinAbs,
+      rightThigh: rightThighAbs,
+      rightShin: rightShinAbs,
     }
   }
 }

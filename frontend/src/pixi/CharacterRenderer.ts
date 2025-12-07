@@ -23,6 +23,8 @@ import {
   Graphics,
   Text,
   TextStyle,
+  RenderTexture,
+  ColorMatrixFilter,
 } from 'pixi.js'
 import type {
   CharacterConfig,
@@ -243,6 +245,13 @@ export class CharacterRenderer {
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
 
+  // Side-by-Side Rendering Support
+  private renderMode: 'chromakey' | 'side_by_side' = 'side_by_side'
+  private renderTexture: RenderTexture | null = null
+  private previewSprite: Sprite | null = null
+  private maskSprite: Sprite | null = null
+  private colorMatrix: ColorMatrixFilter | null = null
+
   /**
    * Initialize the PixiJS application
    */
@@ -268,18 +277,48 @@ export class CharacterRenderer {
     
     console.log('Calling app.init...')
     
+    // Determine Render Mode
+    // Default to 'chromakey' (single view) unless explicitly set to 'side_by_side'
+    // Also support legacy 'useGreenScreen' option
+    const compositionMode = options.compositionMode || 'chromakey'
+    this.renderMode = compositionMode as 'chromakey' | 'side_by_side'
+    
     // 绿幕模式：录制时使用绿色背景（用于 FFmpeg chromakey）
     // 预览模式：使用透明背景
     // 检查 options 中的 useGreenScreen 参数
     const useGreenScreen = options.useGreenScreen === true
-    const bgColor = useGreenScreen ? 0x00ff00 : undefined
-    const bgAlpha = useGreenScreen ? 1 : 0
     
-    console.log('CharacterRenderer config:', { useGreenScreen, bgColor, bgAlpha })
+    let bgColor: number | string | undefined = undefined
+    let bgAlpha = 0
+    let canvasWidth = width
+    
+    if (this.renderMode === 'chromakey') {
+      if (useGreenScreen) {
+        bgColor = 0x00ff00
+        bgAlpha = 1
+      } else {
+        bgAlpha = 0
+      }
+    } else {
+      // side_by_side mode
+      // Double the width: Left = Color, Right = Mask
+      canvasWidth = width * 2
+      // Background must be pure black for the mask to work correctly
+      bgColor = 0x000000
+      bgAlpha = 1
+    }
+    
+    console.log('CharacterRenderer config:', { 
+      renderMode: this.renderMode,
+      useGreenScreen, 
+      bgColor, 
+      bgAlpha,
+      canvasWidth 
+    })
 
     await app.init({
       canvas,
-      width,
+      width: canvasWidth,
       height,
       backgroundColor: bgColor,
       backgroundAlpha: bgAlpha,
@@ -303,10 +342,59 @@ export class CharacterRenderer {
     this.container.y = height / 2
     // 开启 Z轴排序，防止层级错乱
     this.container.sortableChildren = true
-    this.app.stage.addChild(this.container)
+    
+    if (this.renderMode === 'chromakey') {
+      this.app.stage.addChild(this.container)
+    } else {
+      // Side-by-Side Setup
+      console.log('Setting up Side-by-Side rendering...')
+      
+      // 1. Create RenderTexture (single frame size)
+      const rt = RenderTexture.create({ width, height })
+      this.renderTexture = rt
+      
+      // 2. Create Sprites
+      // Left: Color Preview
+      this.previewSprite = new Sprite(rt)
+      this.app.stage.addChild(this.previewSprite)
+      
+      // Right: Alpha Mask
+      this.maskSprite = new Sprite(rt)
+      this.maskSprite.x = width // Offset to right half
+      
+      // 3. Apply Filter for Mask
+      // Convert Alpha to Grayscale (R=A, G=A, B=A)
+      this.colorMatrix = new ColorMatrixFilter()
+      this.colorMatrix.matrix = [
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0
+      ]
+      this.maskSprite.filters = [this.colorMatrix]
+      this.app.stage.addChild(this.maskSprite)
+      
+      // 4. Hook into Ticker
+      this.app.ticker.add(this.renderToTexture, this)
+    }
 
     this.initialized = true
     console.log('CharacterRenderer.init completed successfully')
+  }
+
+  /**
+   * Render the character container to the render texture
+   * Used in side-by-side mode
+   */
+  private renderToTexture(): void {
+    if (!this.app || !this.container || !this.renderTexture) return
+    
+    // Manually render the container to the texture
+    this.app.renderer.render({
+      container: this.container,
+      target: this.renderTexture,
+      clear: true
+    })
   }
 
   /**
@@ -1594,11 +1682,23 @@ export class CharacterRenderer {
   resize(width: number, height: number): void {
     if (!this.app || !this.container) return
 
-    this.app.renderer.resize(width, height)
+    const canvasWidth = this.renderMode === 'side_by_side' ? width * 2 : width
+    this.app.renderer.resize(canvasWidth, height)
+
+    // Update Side-by-Side components if active
+    if (this.renderMode === 'side_by_side' && this.renderTexture) {
+      // Recreate texture with new size
+      (this.renderTexture as RenderTexture).resize(width, height)
+      
+      if (this.maskSprite) {
+        this.maskSprite.x = width
+      }
+    }
+
     // Only reset position if not using external control
     if (!this.useExternalPosition) {
-    this.container.x = width / 2
-    this.container.y = height / 2
+      this.container.x = width / 2
+      this.container.y = height / 2
     }
   }
 
@@ -2084,8 +2184,21 @@ export class CharacterRenderer {
   async destroy(): Promise<void> {
     // 先标记为未初始化，防止其他方法继续操作
     this.initialized = false
+    
+    if (this.app?.ticker) {
+      this.app.ticker.remove(this.renderToTexture, this)
+    }
 
     this.clearParts()
+    
+    // Cleanup Side-by-Side resources
+    if (this.renderTexture) {
+      this.renderTexture.destroy(true)
+      this.renderTexture = null
+    }
+    this.previewSprite = null
+    this.maskSprite = null
+    this.colorMatrix = null
 
     if (this.container) {
       try {
