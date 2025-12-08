@@ -44,7 +44,7 @@
 }
 
 .dashboard-content {
-  padding: 2rem;
+  padding: 2.5rem;
   color: var(--text-primary);
 }
 
@@ -56,15 +56,15 @@
 .stats-section h2,
 .logs-section h2,
 .nav-section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  margin-bottom: 1.25rem;
   color: var(--text-primary);
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .stat-card {

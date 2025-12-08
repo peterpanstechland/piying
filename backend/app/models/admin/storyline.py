@@ -67,6 +67,11 @@ class SegmentDB(Base):
     # Audio playback during recording
     play_audio: Mapped[bool] = mapped_column(Boolean, default=False)
     
+    # Scale configuration (Requirements 11.6)
+    scale_mode: Mapped[str] = mapped_column(String(20), default="auto")
+    scale_start: Mapped[float] = mapped_column(Float, default=1.0)
+    scale_end: Mapped[float] = mapped_column(Float, default=1.0)
+    
     # Timeline fields (Requirements 5.1, 5.2, 5.3, 5.4)
     start_time: Mapped[float] = mapped_column(Float, default=0.0)
     
@@ -260,8 +265,8 @@ class Segment(BaseModel):
     start_time: float = Field(default=0.0, ge=0, description="Start time in seconds")
     duration: float = Field(..., gt=0, description="Duration in seconds")
     path_type: str = Field(default="static", description="Movement type")
-    offset_start: List[int] = Field(default_factory=lambda: [0, 0], description="Starting position offset [x, y]")
-    offset_end: List[int] = Field(default_factory=lambda: [0, 0], description="Ending position offset [x, y]")
+    offset_start: List[float] = Field(default_factory=lambda: [0.0, 0.0], description="Starting position offset [x, y]")
+    offset_end: List[float] = Field(default_factory=lambda: [0.0, 0.0], description="Ending position offset [x, y]")
     entry_animation: Optional[dict] = Field(default=None, description="Entry animation config")
     exit_animation: Optional[dict] = Field(default=None, description="Exit animation config")
     guidance_text: str = Field(default="", description="Chinese guidance text")
@@ -277,9 +282,9 @@ class Segment(BaseModel):
 
     @field_validator('offset_start', 'offset_end')
     @classmethod
-    def validate_offset(cls, v: List[int]) -> List[int]:
+    def validate_offset(cls, v: List[float]) -> List[float]:
         if len(v) != 2:
-            raise ValueError("Offset must be a list of exactly 2 integers [x, y]")
+            raise ValueError("Offset must be a list of exactly 2 numbers [x, y]")
         return v
 
     class Config:

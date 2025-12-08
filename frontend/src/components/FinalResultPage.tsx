@@ -137,7 +137,7 @@ export const FinalResultPage = ({
   // Auto-play video when loaded
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !playerUrl) return;
 
     const handleCanPlay = () => {
       // Try to play with sound first
@@ -154,16 +154,23 @@ export const FinalResultPage = ({
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
 
+    // If video already can play, trigger play immediately
+    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      handleCanPlay();
+    }
+
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('loadeddata', handleCanPlay);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
 
     return () => {
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('loadeddata', handleCanPlay);
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
     };
-  }, []);
+  }, [playerUrl]);
 
   return (
     <div className="final-result-page">
@@ -186,9 +193,19 @@ export const FinalResultPage = ({
       </div>
 
       {/* Back button with hover progress - moved between title and video */}
+      {/* Supports both mouse click and gesture hover for accessibility */}
       <div
         ref={backButtonRef}
         className={`back-button ${hoverProgress > 0 ? 'hovering' : ''}`}
+        onClick={onReset}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onReset();
+          }
+        }}
       >
         <div
           className="back-button-progress"
@@ -214,6 +231,7 @@ export const FinalResultPage = ({
             loop
             className="result-video"
             playsInline
+            autoPlay
             muted={false}
           />
           {!isPlaying && (

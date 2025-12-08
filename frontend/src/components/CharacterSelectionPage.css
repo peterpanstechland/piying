@@ -121,10 +121,10 @@
 
 .character-selection-header h1 {
   font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
-  font-size: 56px;
+  font-size: 64px;
   color: var(--color-text-primary);
   letter-spacing: 0.25em;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   text-shadow: 
     2px 2px 4px rgba(0, 0, 0, 0.9),
     0 0 60px var(--color-shadow-glow),
@@ -149,16 +149,16 @@
 
 .character-selection-scene {
   font-family: 'Noto Sans SC', sans-serif;
-  font-size: 26px;
+  font-size: 30px;
   color: var(--color-gold);
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   letter-spacing: 0.15em;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .character-selection-hint {
   font-family: 'Noto Sans SC', sans-serif;
-  font-size: 18px;
+  font-size: 20px;
   color: var(--color-text-secondary);
   letter-spacing: 0.08em;
   margin: 0;
@@ -174,22 +174,22 @@
 /* ========== 角色卡片容器 ========== */
 .character-cards-container {
   display: flex;
-  gap: 50px;
+  gap: 60px;
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  max-width: 1400px;
+  max-width: 1600px;
   width: 100%;
   position: relative;
   z-index: 2;
-  padding: 20px;
+  padding: 30px;
 }
 
 /* ========== 角色卡片 - 高级版 ========== */
 .character-card {
-  width: 280px;
-  height: 360px;
-  border-radius: 24px;
+  width: 320px;
+  height: 420px;
+  border-radius: 28px;
   text-align: center;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
@@ -320,7 +320,7 @@
 }
 
 .character-placeholder-icon {
-  font-size: 80px;
+  font-size: 90px;
   opacity: 0.7;
   filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
   animation: icon-float 3s ease-in-out infinite;
@@ -360,7 +360,7 @@
 
 /* 角色名称 - 高级版 */
 .character-name {
-  font-size: 28px;
+  font-size: 32px;
   font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -380,9 +380,9 @@
 /* 推荐标签 - 高级版 */
 .character-default-badge {
   display: inline-block;
-  margin-top: 8px;
-  padding: 6px 18px;
-  font-size: 13px;
+  margin-top: 10px;
+  padding: 8px 20px;
+  font-size: 15px;
   font-family: 'Noto Sans SC', sans-serif;
   font-weight: 500;
   color: #fff;
@@ -516,16 +516,47 @@
 }
 
 /* ========== 响应式 ========== */
+/* 1920x1080 优化 - 默认样式已优化 */
+@media (min-width: 1920px) {
+  .character-cards-container {
+    gap: 70px;
+    max-width: 1700px;
+  }
+  .character-card {
+    width: 340px;
+    height: 450px;
+  }
+  .character-selection-header h1 {
+    font-size: 72px;
+  }
+  .character-name {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 1600px) {
+  .character-cards-container {
+    gap: 50px;
+  }
+  .character-card {
+    width: 300px;
+    height: 400px;
+  }
+}
+
 @media (max-width: 1200px) {
   .character-cards-container {
     gap: 40px;
   }
   .character-card {
-    width: 240px;
-    height: 320px;
+    width: 260px;
+    height: 350px;
   }
   .character-selection-header h1 {
-    font-size: 44px;
+    font-size: 52px;
+  }
+  .character-name {
+    font-size: 28px;
   }
 }
 
@@ -534,11 +565,11 @@
     gap: 32px;
   }
   .character-card {
-    width: 200px;
-    height: 270px;
+    width: 220px;
+    height: 300px;
   }
   .character-selection-header h1 {
-    font-size: 36px;
+    font-size: 40px;
   }
   .character-name {
     font-size: 24px;
@@ -550,16 +581,16 @@
     gap: 24px;
   }
   .character-card {
-    width: 160px;
-    height: 220px;
+    width: 180px;
+    height: 250px;
   }
   .character-selection-header h1 {
-    font-size: 28px;
+    font-size: 32px;
   }
   .character-name {
     font-size: 20px;
   }
   .character-placeholder-icon {
-    font-size: 50px;
+    font-size: 60px;
   }
 }

@@ -110,6 +110,17 @@ export const RecordingPage = ({
     hasVideoElement: !!videoElement,
   });
   
+  // Additional path debug
+  if (pathConfig) {
+    console.log('[PATH DEBUG] offset_start:', pathConfig.offset_start);
+    console.log('[PATH DEBUG] offset_end:', pathConfig.offset_end);
+    console.log('[PATH DEBUG] entry_type:', pathConfig.entry_type);
+    console.log('[PATH DEBUG] scale_start:', pathConfig.scale_start);
+    console.log('[PATH DEBUG] scale_end:', pathConfig.scale_end);
+  } else {
+    console.warn('[PATH DEBUG] pathConfig is undefined!');
+  }
+  
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   
@@ -373,6 +384,11 @@ export const RecordingPage = ({
       }
       
       // 应用位置和透明度 - 同步更新两个渲染器
+      // Debug position every second
+      if (Math.floor(elapsedTime) !== Math.floor(elapsedTime - 0.1)) {
+        console.log(`[PATH ANIMATION] t=${elapsedTime.toFixed(2)}s, pos=(${position.x.toFixed(3)}, ${position.y.toFixed(3)}), opacity=${opacity.toFixed(2)}`);
+      }
+      
       if (renderer) {
       renderer.setPosition(position.x, position.y);
       renderer.setOpacity(opacity);

@@ -853,11 +853,21 @@ async def upload_cover_image(
     file_content = await file.read()
     
     # Upload and process cover image
-    cover_image, error = await storyline_service.upload_cover_image(
-        db, storyline_id, file_content, file.filename
-    )
+    try:
+        cover_image, error = await storyline_service.upload_cover_image(
+            db, storyline_id, file_content, file.filename
+        )
+    except Exception as e:
+        import traceback
+        error_msg = f"Unexpected error uploading cover image: {str(e)}\n{traceback.format_exc()}"
+        print(f"[ERROR] upload_cover_image API error: {error_msg}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload cover image: {str(e)}"
+        )
     
     if cover_image is None:
+        print(f"[ERROR] upload_cover_image failed: {error}")
         if "not found" in error.lower():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -896,12 +906,22 @@ async def capture_cover_from_video(
     
     Generates thumbnail (200x150), medium (400x300), and large (800x600) versions.
     """
-    # Capture frame and generate cover images
-    cover_image, error = await storyline_service.capture_cover_from_video(
-        db, storyline_id, timestamp
-    )
+    try:
+        # Capture frame and generate cover images
+        cover_image, error = await storyline_service.capture_cover_from_video(
+            db, storyline_id, timestamp
+        )
+    except Exception as e:
+        import traceback
+        error_msg = f"Unexpected error capturing cover from video: {str(e)}\n{traceback.format_exc()}"
+        print(f"[ERROR] capture_cover_from_video API error: {error_msg}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to capture cover from video: {str(e)}"
+        )
     
     if cover_image is None:
+        print(f"[ERROR] capture_cover_from_video failed: {error}")
         if "not found" in error.lower():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

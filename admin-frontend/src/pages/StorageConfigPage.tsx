@@ -256,12 +256,21 @@ export default function StorageConfigPage() {
                   <div className="stats-grid">
                     <div className="stat-item">
                       <div className="stat-label">{t('settings.storage.currentLocation')}</div>
-                      <div className="stat-value small" style={{ fontSize: '0.9rem', wordBreak: 'break-all' }}>
-                        {settings.local_path}
-                      </div>
-                      {stats?.absolute_path && (
-                        <div className="stat-detail" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-all' }}>
-                          ({stats.absolute_path})
+                      {/* Show absolute path as primary, relative path as detail */}
+                      {stats?.absolute_path ? (
+                        <>
+                          <div className="stat-value small" style={{ fontSize: '0.9rem', wordBreak: 'break-all' }}>
+                            {stats.absolute_path}
+                          </div>
+                          {settings.local_path && settings.local_path !== stats.absolute_path && (
+                            <div className="stat-detail" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-all' }}>
+                              ({settings.local_path})
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="stat-value small" style={{ fontSize: '0.9rem', wordBreak: 'break-all' }}>
+                          {settings.local_path || 'data'}
                         </div>
                       )}
                     </div>

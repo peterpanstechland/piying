@@ -387,4 +387,20 @@ async def frontend_spa(full_path: str, request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import socket
+    
+    def find_free_port(start_port=8000, max_attempts=10):
+        """Find a free port starting from start_port"""
+        for port in range(start_port, start_port + max_attempts):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('0.0.0.0', port))
+                    return port
+            except OSError:
+                continue
+        raise RuntimeError(f"Could not find a free port in range {start_port}-{start_port + max_attempts - 1}")
+    
+    port = find_free_port(8000)
+    if port != 8000:
+        print(f"Port 8000 is in use, using port {port} instead", file=sys.stderr)
+    uvicorn.run(app, host="0.0.0.0", port=port)

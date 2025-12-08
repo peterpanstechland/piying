@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 退出应用
   exitApp: () => ipcRenderer.invoke('exit-app'),
   
+  // 切换开发者工具
+  toggleDevTools: () => ipcRenderer.invoke('toggle-devtools'),
+  
+  // 打开日志文件夹
+  openLogsFolder: () => ipcRenderer.invoke('open-logs-folder'),
+  
   // 获取应用版本
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   

@@ -393,10 +393,28 @@ class AdminApiClient {
       large_path: string;
     };
   }> {
-    const response = await this.client.post(`/storylines/${storylineId}/cover/capture`, null, {
-      params: { timestamp }
+    console.log('[API] captureCoverFromVideo request:', {
+      storylineId,
+      timestamp,
+      url: `/storylines/${storylineId}/cover/capture`
     })
-    return response.data
+    
+    try {
+      const response = await this.client.post(`/storylines/${storylineId}/cover/capture`, null, {
+        params: { timestamp }
+      })
+      
+      console.log('[API] captureCoverFromVideo success:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('[API] captureCoverFromVideo error:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        config: error?.config
+      })
+      throw error
+    }
   }
 
   async deleteCoverImage(storylineId: string): Promise<{ message: string }> {

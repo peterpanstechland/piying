@@ -161,10 +161,13 @@ async def _get_scene_config_from_storyline(scene_id: str, character_id: str = No
                 ))
             
             # Fix video path: storyline paths are stored as "storylines/{id}/base_video.mp4"
-            # but actual files are in "backend/data/storylines/{id}/base_video.mp4"
+            # In packaged app: "data/storylines/{id}/base_video.mp4"
+            # In dev mode: "backend/data/storylines/{id}/base_video.mp4"
             base_video_path = storyline.base_video_path
             if base_video_path.startswith("storylines/"):
-                base_video_path = f"backend/data/{base_video_path}"
+                # VideoRenderer will check both locations, so we can use either format
+                # Prefer "data/" for packaged app compatibility
+                base_video_path = f"data/{base_video_path}"
             
             # Create SceneConfig from storyline
             scene_config = SceneConfig(

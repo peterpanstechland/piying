@@ -103,12 +103,29 @@ export default function CoverImageManager({
 
     setIsUploading(true)
     try {
+      console.log('[CoverImageManager] Starting cover image upload:', {
+        storylineId,
+        fileName: pendingFile.name,
+        fileSize: pendingFile.size,
+        fileType: pendingFile.type
+      })
+      
       await onUpload(pendingFile)
+      
+      console.log('[CoverImageManager] Cover image upload successful')
       setPreviewImage(null)
       setPendingFile(null)
-    } catch (error) {
-      console.error('Failed to upload cover image:', error)
-      alert('上传失败，请重试 / Upload failed, please try again')
+    } catch (error: any) {
+      console.error('[CoverImageManager] Failed to upload cover image:', error)
+      console.error('[CoverImageManager] Upload error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack
+      })
+      
+      const errorMessage = error?.response?.data?.detail || error?.message || '未知错误'
+      alert(`上传失败: ${errorMessage}\n\n请查看浏览器控制台获取详细信息。\n\nUpload failed: ${errorMessage}\n\nPlease check browser console for details.`)
     } finally {
       setIsUploading(false)
     }
@@ -170,13 +187,30 @@ export default function CoverImageManager({
   const handleConfirmCapture = async () => {
     setIsCapturing(true)
     try {
+      console.log('[CoverImageManager] Starting frame capture:', {
+        storylineId,
+        timestamp: captureTimestamp,
+        videoUrl,
+        videoRef: videoRef?.current ? 'available' : 'not available'
+      })
+      
       await onFrameCapture(captureTimestamp)
+      
+      console.log('[CoverImageManager] Frame capture successful')
       setShowCapturePreview(false)
       setCapturePreviewImage(null)
       setCaptureTimestamp(0)
-    } catch (error) {
-      console.error('Failed to capture frame:', error)
-      alert('截取失败，请重试 / Capture failed, please try again')
+    } catch (error: any) {
+      console.error('[CoverImageManager] Failed to capture frame:', error)
+      console.error('[CoverImageManager] Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack
+      })
+      
+      const errorMessage = error?.response?.data?.detail || error?.message || '未知错误'
+      alert(`截取失败: ${errorMessage}\n\n请查看浏览器控制台获取详细信息。\n\nCapture failed: ${errorMessage}\n\nPlease check browser console for details.`)
     } finally {
       setIsCapturing(false)
     }

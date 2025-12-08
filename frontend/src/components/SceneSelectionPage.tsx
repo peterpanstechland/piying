@@ -435,12 +435,30 @@ export const SceneSelectionPage = ({
             // Check if scene is disabled (enabled is false or undefined defaults to true)
             const isDisabled = scene.enabled === false;
             
+            // Handle mouse click for scene selection (dual input: mouse + gesture)
+            const handleSceneClick = () => {
+              if (isDisabled) return;
+              console.log('Scene selected via click:', scene.id);
+              if (onSceneSelect) {
+                onSceneSelect(scene.id);
+              }
+            };
+            
             return (
               <div
                 key={scene.id}
                 id={`scene-card-${scene.id}`}
                 className={`scene-card ${isHovered && !isDisabled ? 'hovered' : ''} ${coverImageUrl ? 'has-cover' : ''} ${isDisabled ? 'disabled' : ''}`}
                 style={{ animationDelay: `${index * 0.15}s` }}
+                onClick={handleSceneClick}
+                role="button"
+                tabIndex={isDisabled ? -1 : 0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleSceneClick();
+                  }
+                }}
               >
                 {/* New Background Layer */}
                 <div className="scene-card-bg">

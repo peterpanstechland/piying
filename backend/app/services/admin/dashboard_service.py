@@ -86,17 +86,17 @@ class DashboardService:
         settings = config_loader.get_settings()
         
         # Determine base path for storage
-        # If local_path is "data" (default), we rely on StorageManager's robust default (get_user_data_dir)
-        # Otherwise, we use the configured path
-        effective_base_path = None
+        # If local_path is "data" (default) or empty, use user_data_dir
+        # Otherwise, resolve the configured path (which may be relative or absolute)
+        from ...utils.path import get_user_data_dir, resolve_relative_path
         
         if settings.storage.local_path and settings.storage.local_path != "data":
-            effective_base_path = Path(settings.storage.local_path)
+            # Resolve the path - handles both relative and absolute paths
+            effective_base_path = resolve_relative_path(settings.storage.local_path)
         elif base_path:
             effective_base_path = Path(base_path)
         else:
-            # Fallback to user data dir if "data" is set, just like StorageManager
-            from ...utils.path import get_user_data_dir
+            # Default to user data dir (same as StorageManager)
             effective_base_path = get_user_data_dir()
             
         self.base_path = effective_base_path

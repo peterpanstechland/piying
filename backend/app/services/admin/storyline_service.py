@@ -715,6 +715,9 @@ class StorylineService:
                 guidance_text_en=segment_data.guidance_text_en,
                 guidance_image=segment_data.guidance_image,
                 play_audio=segment_data.play_audio,
+                scale_mode=segment_data.scale_mode,
+                scale_start=segment_data.scale_start,
+                scale_end=segment_data.scale_end,
             )
             db.add(segment)
         
@@ -1083,6 +1086,10 @@ class StorylineService:
                 guidance_text=s.guidance_text,
                 guidance_text_en=s.guidance_text_en,
                 guidance_image=s.guidance_image,
+                play_audio=s.play_audio,
+                scale_mode=s.scale_mode or "auto",
+                scale_start=s.scale_start if s.scale_start is not None else 1.0,
+                scale_end=s.scale_end if s.scale_end is not None else 1.0,
             ))
         
         # Build transitions
@@ -1332,7 +1339,36 @@ class StorylineService:
         
         # Save file temporarily for validation
         storyline_dir = self.get_storyline_dir(storyline_id)
+        
+        # Log directory path for debugging
+        print(f"[DEBUG] upload_cover_image - storyline_dir: {storyline_dir}")
+        print(f"[DEBUG] upload_cover_image - STORYLINES_DIR: {STORYLINES_DIR}")
+        print(f"[DEBUG] upload_cover_image - get_user_data_dir(): {get_user_data_dir()}")
+        
+        # Ensure directory exists with better error handling
+        try:
         os.makedirs(storyline_dir, exist_ok=True)
+            # Verify directory was created and is writable
+            if not os.path.exists(storyline_dir):
+                error_msg = f"Failed to create storyline directory: {storyline_dir}"
+                print(f"[ERROR] {error_msg}")
+                return None, error_msg
+            # Test write permission
+            test_file = os.path.join(storyline_dir, ".write_test")
+            try:
+                with open(test_file, "w") as f:
+                    f.write("test")
+                os.remove(test_file)
+                print(f"[DEBUG] Directory write test passed: {storyline_dir}")
+            except Exception as e:
+                error_msg = f"Directory is not writable: {storyline_dir}. Error: {str(e)}"
+                print(f"[ERROR] {error_msg}")
+                return None, error_msg
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to create storyline directory: {storyline_dir}. Error: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] {error_msg}")
+            return None, f"Failed to create storyline directory: {storyline_dir}. Error: {str(e)}"
         
         # Get file extension
         _, ext = os.path.splitext(filename)
@@ -1344,8 +1380,22 @@ class StorylineService:
         
         # Save temporary file
         temp_path = os.path.join(storyline_dir, f"cover_temp{ext_lower}")
+        print(f"[DEBUG] Saving temporary file to: {temp_path}")
+        try:
         with open(temp_path, "wb") as f:
             f.write(file_content)
+            # Verify file was written
+            if not os.path.exists(temp_path):
+                error_msg = f"Temporary file was not created: {temp_path}"
+                print(f"[ERROR] {error_msg}")
+                return None, error_msg
+            file_size = os.path.getsize(temp_path)
+            print(f"[DEBUG] Temporary file saved successfully: {temp_path} ({file_size} bytes)")
+        except Exception as e:
+            import traceback
+            error_msg = f"Failed to save temporary file to {temp_path}: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] {error_msg}")
+            return None, f"Failed to save temporary file: {str(e)}"
         
         try:
             # Validate cover image (format and minimum resolution)
@@ -1392,8 +1442,14 @@ class StorylineService:
             ), ""
             
         except Exception as e:
+            import traceback
+            error_msg = f"Error processing cover image: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] upload_cover_image failed: {error_msg}")
             if os.path.exists(temp_path):
+                try:
                 os.remove(temp_path)
+                except:
+                    pass
             return None, f"Error processing cover image: {str(e)}"
 
     async def capture_cover_from_video(
@@ -1430,8 +1486,16 @@ class StorylineService:
             os.path.dirname(STORYLINES_DIR), storyline.base_video_path
         )
         
+        print(f"[DEBUG] capture_cover_from_video - storyline_id: {storyline_id}")
+        print(f"[DEBUG] capture_cover_from_video - base_video_path: {storyline.base_video_path}")
+        print(f"[DEBUG] capture_cover_from_video - STORYLINES_DIR: {STORYLINES_DIR}")
+        print(f"[DEBUG] capture_cover_from_video - video_full_path: {video_full_path}")
+        print(f"[DEBUG] capture_cover_from_video - timestamp: {timestamp}")
+        
         if not os.path.exists(video_full_path):
-            return None, "Video file not found on disk"
+            error_msg = f"Video file not found on disk: {video_full_path}"
+            print(f"[ERROR] {error_msg}")
+            return None, error_msg
         
         # Validate timestamp
         if timestamp < 0:
@@ -1444,6 +1508,20 @@ class StorylineService:
         
         # Capture frame and generate cover images
         storyline_dir = self.get_storyline_dir(storyline_id)
+        print(f"[DEBUG] capture_cover_from_video - storyline_dir: {storyline_dir}")
+        
+        # Ensure storyline directory exists
+        try:
+            os.makedirs(storyline_dir, exist_ok=True)
+            if not os.path.exists(storyline_dir):
+                error_msg = f"Failed to create storyline directory: {storyline_dir}"
+                print(f"[ERROR] {error_msg}")
+                return None, error_msg
+        except Exception as e:
+            error_msg = f"Failed to create storyline directory: {storyline_dir}. Error: {str(e)}"
+            print(f"[ERROR] {error_msg}")
+            return None, error_msg
+        
         cover_paths, error = image_processor.capture_frame_as_cover(
             video_full_path, timestamp, storyline_dir, "cover"
         )

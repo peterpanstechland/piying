@@ -49,6 +49,19 @@
         "to": "backend"
       },
       {
+        "from": "resources/data",
+        "to": "data"
+      },
+      {
+        "from": "resources/ffmpeg",
+        "to": "ffmpeg",
+        "filter": [
+          "**/ffmpeg.exe",
+          "**/ffprobe.exe",
+          "**/*.dll"
+        ]
+      },
+      {
         "from": "../frontend/dist",
         "to": "frontend/dist"
       },

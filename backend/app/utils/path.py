@@ -51,7 +51,8 @@ def resolve_relative_path(path_str: str) -> Path:
     Strategy:
     1. Check if it exists in user_data_dir (priority for user content)
     2. Check if it exists in project_root (priority for bundled assets)
-    3. Default to user_data_dir path if not found
+    3. Check if it exists in project_root/backend/data (legacy dev mode paths)
+    4. Default to user_data_dir path if not found
     
     This ensures consistent path resolution across Dev (source) and Prod (frozen) environments,
     allowing access to both mutable user data and immutable app assets.
@@ -71,8 +72,16 @@ def resolve_relative_path(path_str: str) -> Path:
     full_path = project_root / path
     if full_path.exists():
         return full_path
+    
+    # 3. Check backend/data directory (legacy dev mode paths)
+    # Files may be stored in backend/data/storylines/... in dev mode
+    if not getattr(sys, 'frozen', False):
+        backend_data = project_root / "backend" / "data"
+        full_path = backend_data / path
+        if full_path.exists():
+            return full_path
         
-    # 3. Default to user_data path
+    # 4. Default to user_data path
     return user_data / path
 
 def ensure_user_data() -> Path:

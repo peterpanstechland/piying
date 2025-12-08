@@ -314,11 +314,19 @@ export default function StorylineTimelineEditorPage() {
     if (!id || isNew) return
     
     try {
-      await adminApi.captureCoverFromVideo(id, time)
+      console.log('[StorylineEditor] handleCoverFrameCapture:', { storylineId: id, time })
+      const result = await adminApi.captureCoverFromVideo(id, time)
+      console.log('[StorylineEditor] Capture successful:', result)
       setSuccess('封面截图成功')
       loadData()
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to capture cover frame'
+    } catch (err: any) {
+      console.error('[StorylineEditor] Capture failed:', err)
+      console.error('[StorylineEditor] Error details:', {
+        message: err?.message,
+        response: err?.response?.data,
+        status: err?.response?.status
+      })
+      const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to capture cover frame'
       setError(errorMessage)
     }
   }, [id, isNew, loadData])

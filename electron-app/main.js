@@ -1,8 +1,9 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, shell, dialog, nativeImage } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const http = require('http');
+const net = require('net');
 const { autoUpdater } = require('electron-updater');
 const logger = require('electron-log');
 const treeKill = require('tree-kill');
@@ -102,6 +103,68 @@ autoUpdater.on('update-downloaded', (info) => {
   // autoUpdater.quitAndInstall(); 
 });
 
+// 检查端口是否被占用
+function checkPortInUse(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.listen(port, () => {
+      server.once('close', () => resolve(false));
+      server.close();
+    });
+    server.on('error', () => resolve(true));
+  });
+}
+
+// 尝试关闭占用端口的进程（Windows）
+async function killProcessOnPort(port) {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      resolve(false);
+      return;
+    }
+    
+    // 使用 netstat 和 taskkill 来关闭占用端口的进程
+    exec(`netstat -ano | findstr :${port}`, (error, stdout) => {
+      if (error || !stdout) {
+        resolve(false);
+        return;
+      }
+      
+      // 提取 PID
+      const lines = stdout.split('\n').filter(line => line.trim());
+      const pids = new Set();
+      lines.forEach(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length > 0) {
+          const pid = parts[parts.length - 1];
+          if (pid && !isNaN(pid)) {
+            pids.add(pid);
+          }
+        }
+      });
+      
+      if (pids.size === 0) {
+        resolve(false);
+        return;
+      }
+      
+      // 尝试关闭这些进程
+      let killed = false;
+      pids.forEach(pid => {
+        exec(`taskkill /F /PID ${pid}`, (killError) => {
+          if (!killError) {
+            killed = true;
+            log(`Killed process ${pid} using port ${port}`);
+          }
+        });
+      });
+      
+      // 等待一下让进程关闭
+      setTimeout(() => resolve(killed), 1000);
+    });
+  });
+}
+
 // 检查后端是否已运行
 function checkBackendRunning() {
   return new Promise((resolve) => {
@@ -134,6 +197,19 @@ async function startBackend() {
   if (isRunning) {
     log('Backend is already running');
     return true;
+  }
+  
+  // 检查端口 8000 是否被占用
+  const portInUse = await checkPortInUse(8000);
+  if (portInUse) {
+    log('Port 8000 is in use, attempting to free it...');
+    const killed = await killProcessOnPort(8000);
+    if (killed) {
+      log('Freed port 8000, waiting a moment...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } else {
+      log('Could not free port 8000, backend will try another port automatically');
+    }
   }
   
   log('Starting Python backend...');
@@ -219,11 +295,22 @@ async function startBackend() {
 
     backendProcess.stderr.on('data', (data) => {
       const output = data.toString();
-      log(`Backend stderr: ${output}`);
+      log(`Backend: ${output}`);
       // uvicorn 的正常输出也会到 stderr
       if (output.includes('Application startup complete') || output.includes('Uvicorn running')) {
         startupComplete = true;
         resolve(true);
+      }
+      // Check for port binding errors
+      if (output.includes('error while attempting to bind') || output.includes('Address already in use')) {
+        log(`Port binding error detected: ${output}`);
+        // Backend will automatically try another port, so we wait
+      }
+      // Check if backend is using a different port
+      const portMatch = output.match(/using port (\d+)/i);
+      if (portMatch) {
+        const actualPort = portMatch[1];
+        log(`Backend is using port ${actualPort} instead of 8000`);
       }
     });
 
@@ -235,6 +322,11 @@ async function startBackend() {
     backendProcess.on('close', (code) => {
       log(`Backend process exited with code ${code}`);
       if (!startupComplete) {
+        // If backend exited with code 1, it might be a port binding issue
+        // The backend should now automatically try another port, so we give it more time
+        if (code === 1) {
+          log('Backend exited with code 1, might be port binding issue. Backend should retry automatically.');
+        }
         reject(new Error(`Backend exited with code ${code}`));
       }
     });
@@ -290,10 +382,6 @@ function createLauncherWindow() {
   launcherWindow.on('closed', () => {
     launcherWindow = null;
   });
-
-  if (isDev) {
-    launcherWindow.webContents.openDevTools();
-  }
 }
 
 // 创建主窗口（全屏体验）
@@ -328,6 +416,14 @@ function createMainWindow(url) {
     if (input.key === 'Escape' && input.type === 'keyDown') {
       backToLauncher();
     }
+    // F12 或 Ctrl+Shift+I 打开 DevTools
+    if ((input.key === 'F12' || (input.control && input.shift && input.key === 'I')) && input.type === 'keyDown') {
+      if (mainWindow.webContents.isDevToolsOpened()) {
+        mainWindow.webContents.closeDevTools();
+      } else {
+        mainWindow.webContents.openDevTools();
+      }
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -355,13 +451,29 @@ function backToLauncher() {
 function createTray() {
   const iconPath = path.join(__dirname, 'build', 'icon.ico');
   
-  // 如果图标不存在，跳过托盘创建
-  if (!fs.existsSync(iconPath)) {
-    log('Tray icon not found, skipping tray creation');
-    return;
+  // 使用 nativeImage 加载图标，这样更安全且支持 ASAR
+  const icon = nativeImage.createFromPath(iconPath);
+
+  // 如果图标加载失败（空的），尝试使用 PNG
+  if (icon.isEmpty()) {
+    log(`Tray icon failed to load from: ${iconPath}`);
+    const pngPath = path.join(__dirname, 'build', 'icon.png');
+    if (fs.existsSync(pngPath)) {
+        log(`Trying PNG icon: ${pngPath}`);
+        const pngIcon = nativeImage.createFromPath(pngPath);
+        if (!pngIcon.isEmpty()) {
+            tray = new Tray(pngIcon);
+        } else {
+            log('PNG icon also failed to load');
+            return;
+        }
+    } else {
+        log('Tray icon not found, skipping tray creation');
+        return;
+    }
+  } else {
+    tray = new Tray(icon);
   }
-  
-  tray = new Tray(iconPath);
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -598,12 +710,66 @@ ipcMain.handle('open-help', async () => {
   if (fs.existsSync(helpPath)) {
     shell.openPath(helpPath);
   } else {
-    shell.openExternal('https://github.com/your-repo/shadow-puppet-system');
+    shell.openExternal('https://github.com/peterpanstechland/piying');
   }
 });
 
 ipcMain.handle('exit-app', async () => {
   app.quit();
+});
+
+ipcMain.handle('toggle-devtools', async () => {
+  // 切换启动器窗口的 DevTools
+  if (launcherWindow && !launcherWindow.isDestroyed()) {
+    if (launcherWindow.webContents.isDevToolsOpened()) {
+      launcherWindow.webContents.closeDevTools();
+    } else {
+      launcherWindow.webContents.openDevTools();
+    }
+  }
+  
+  // 如果主窗口存在，也切换主窗口的 DevTools
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.closeDevTools();
+    } else {
+      mainWindow.webContents.openDevTools();
+    }
+  }
+});
+
+ipcMain.handle('open-logs-folder', async () => {
+  try {
+    // Electron 日志文件夹 (electron-log)
+    const electronLogPath = logger.transports.file.getFile().path;
+    const electronLogDir = path.dirname(electronLogPath);
+    
+    // Python 后端日志文件夹
+    // Windows: %APPDATA%\RobomonPiying\data\logs
+    const appDataPath = app.getPath('appData');
+    const backendLogDir = path.join(appDataPath, 'RobomonPiying', 'data', 'logs');
+    
+    // 打开两个文件夹（如果存在）
+    if (fs.existsSync(electronLogDir)) {
+      shell.openPath(electronLogDir);
+    }
+    
+    // 等待一下再打开第二个文件夹，避免冲突
+    setTimeout(() => {
+      if (fs.existsSync(backendLogDir)) {
+        shell.openPath(backendLogDir);
+      } else {
+        // 如果后端日志文件夹不存在，创建它并打开
+        fs.mkdirSync(backendLogDir, { recursive: true });
+        shell.openPath(backendLogDir);
+      }
+    }, 500);
+    
+    log(`Opened logs folders: ${electronLogDir} and ${backendLogDir}`);
+  } catch (error) {
+    log.error(`Failed to open logs folder: ${error.message}`);
+    dialog.showErrorBox('错误', `无法打开日志文件夹:\n\n${error.message}`);
+  }
 });
 
 ipcMain.handle('get-app-version', async () => {

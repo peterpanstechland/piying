@@ -208,7 +208,14 @@ class ImageProcessor:
                 result = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_AREA)
             
             # Ensure output directory exists
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            output_dir = os.path.dirname(output_path)
+            if output_dir:  # Only create directory if path has a directory component
+                try:
+                    os.makedirs(output_dir, exist_ok=True)
+                    if not os.path.exists(output_dir):
+                        return False, f"Failed to create output directory: {output_dir}"
+                except Exception as e:
+                    return False, f"Failed to create output directory {output_dir}: {str(e)}"
             
             # Determine output format from extension
             _, ext = os.path.splitext(output_path)
@@ -227,11 +234,25 @@ class ImageProcessor:
             success = cv2.imwrite(output_path, result, params)
             
             if not success:
-                return False, "Failed to save resized image"
+                # Check if file was actually written
+                if not os.path.exists(output_path):
+                    return False, f"Failed to save resized image to {output_path} (file not created)"
+                return False, f"Failed to save resized image to {output_path} (cv2.imwrite returned False)"
+            
+            # Verify file was written successfully
+            if not os.path.exists(output_path):
+                return False, f"Image file was not created at {output_path}"
+            
+            # Check file size (should be > 0)
+            if os.path.getsize(output_path) == 0:
+                return False, f"Image file is empty at {output_path}"
             
             return True, ""
             
         except Exception as e:
+            import traceback
+            error_detail = f"Error resizing image: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] resize_image failed: {error_detail}")
             return False, f"Error resizing image: {str(e)}"
     
     def generate_cover_images(
@@ -258,8 +279,21 @@ class ImageProcessor:
         if not metadata.is_valid:
             return None, metadata.error_message
         
-        # Ensure output directory exists
+        # Ensure output directory exists with error handling
+        try:
         os.makedirs(output_dir, exist_ok=True)
+            if not os.path.exists(output_dir):
+                return None, f"Failed to create output directory: {output_dir}"
+            # Test write permission
+            test_file = os.path.join(output_dir, ".write_test")
+            try:
+                with open(test_file, "w") as f:
+                    f.write("test")
+                os.remove(test_file)
+            except Exception as e:
+                return None, f"Output directory is not writable: {output_dir}. Error: {str(e)}"
+        except Exception as e:
+            return None, f"Failed to create output directory: {output_dir}. Error: {str(e)}"
         
         # Determine output format (use jpg for efficiency)
         output_ext = ".jpg"
@@ -269,11 +303,27 @@ class ImageProcessor:
         try:
             img = cv2.imread(source_path, cv2.IMREAD_UNCHANGED)
             if img is None:
-                return None, "Failed to read source image"
+                return None, f"Failed to read source image: {source_path}"
             
             # Save original (possibly re-encoded)
-            cv2.imwrite(original_path, img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            success = cv2.imwrite(original_path, img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            if not success:
+                # Check if file exists
+                if not os.path.exists(original_path):
+                    return None, f"Failed to write original image to: {original_path} (file not created)"
+                return None, f"Failed to write original image to: {original_path} (cv2.imwrite returned False)"
+            
+            # Verify file was written
+            if not os.path.exists(original_path):
+                return None, f"Original image file was not created at: {original_path}"
+            
+            if os.path.getsize(original_path) == 0:
+                return None, f"Original image file is empty at: {original_path}"
+                
         except Exception as e:
+            import traceback
+            error_detail = f"Error copying original image: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] generate_cover_images - copy original failed: {error_detail}")
             return None, f"Error copying original image: {str(e)}"
         
         # Generate each size
@@ -324,21 +374,33 @@ class ImageProcessor:
         Returns:
             Tuple of (CoverImagePaths or None, error_message)
         """
+        print(f"[DEBUG] capture_frame_as_cover - video_path: {video_path}")
+        print(f"[DEBUG] capture_frame_as_cover - output_dir: {output_dir}")
+        print(f"[DEBUG] capture_frame_as_cover - timestamp: {timestamp}")
+        
         if not os.path.exists(video_path):
-            return None, "Video file not found"
+            error_msg = f"Video file not found: {video_path}"
+            print(f"[ERROR] {error_msg}")
+            return None, error_msg
         
         try:
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
-                return None, "Failed to open video file"
+                error_msg = f"Failed to open video file: {video_path}"
+                print(f"[ERROR] {error_msg}")
+                return None, error_msg
             
             try:
                 # Get video properties
                 fps = cap.get(cv2.CAP_PROP_FPS)
                 frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
                 
+                print(f"[DEBUG] Video properties - fps: {fps}, frame_count: {frame_count}")
+                
                 if fps <= 0:
-                    return None, "Could not determine video FPS"
+                    error_msg = "Could not determine video FPS"
+                    print(f"[ERROR] {error_msg}")
+                    return None, error_msg
                 
                 duration = frame_count / fps if frame_count > 0 else 0
                 
@@ -348,6 +410,8 @@ class ImageProcessor:
                 elif timestamp > duration:
                     timestamp = duration
                 
+                print(f"[DEBUG] Seeking to timestamp: {timestamp}s (frame {int(timestamp * fps)})")
+                
                 # Seek to frame
                 frame_number = int(timestamp * fps)
                 cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
@@ -355,12 +419,56 @@ class ImageProcessor:
                 # Read frame
                 ret, frame = cap.read()
                 if not ret:
-                    return None, f"Failed to read frame at timestamp {timestamp}s"
+                    error_msg = f"Failed to read frame at timestamp {timestamp}s"
+                    print(f"[ERROR] {error_msg}")
+                    return None, error_msg
+                
+                print(f"[DEBUG] Frame captured successfully - shape: {frame.shape}")
+                
+                # Ensure output directory exists
+                try:
+                    os.makedirs(output_dir, exist_ok=True)
+                    if not os.path.exists(output_dir):
+                        error_msg = f"Failed to create output directory: {output_dir}"
+                        print(f"[ERROR] {error_msg}")
+                        return None, error_msg
+                    # Test write permission
+                    test_file = os.path.join(output_dir, ".write_test")
+                    try:
+                        with open(test_file, "w") as f:
+                            f.write("test")
+                        os.remove(test_file)
+                    except Exception as e:
+                        error_msg = f"Output directory is not writable: {output_dir}. Error: {str(e)}"
+                        print(f"[ERROR] {error_msg}")
+                        return None, error_msg
+                except Exception as e:
+                    error_msg = f"Failed to create output directory: {output_dir}. Error: {str(e)}"
+                    print(f"[ERROR] {error_msg}")
+                    return None, error_msg
                 
                 # Save frame to temporary file
-                os.makedirs(output_dir, exist_ok=True)
                 temp_frame_path = os.path.join(output_dir, f"{base_name}_temp.jpg")
-                cv2.imwrite(temp_frame_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                print(f"[DEBUG] Saving temp frame to: {temp_frame_path}")
+                
+                success = cv2.imwrite(temp_frame_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                if not success:
+                    error_msg = f"Failed to write temp frame to: {temp_frame_path} (cv2.imwrite returned False)"
+                    print(f"[ERROR] {error_msg}")
+                    return None, error_msg
+                
+                # Verify temp file was written
+                if not os.path.exists(temp_frame_path):
+                    error_msg = f"Temp frame file was not created: {temp_frame_path}"
+                    print(f"[ERROR] {error_msg}")
+                    return None, error_msg
+                
+                if os.path.getsize(temp_frame_path) == 0:
+                    error_msg = f"Temp frame file is empty: {temp_frame_path}"
+                    print(f"[ERROR] {error_msg}")
+                    return None, error_msg
+                
+                print(f"[DEBUG] Temp frame saved successfully: {temp_frame_path} ({os.path.getsize(temp_frame_path)} bytes)")
                 
                 # Generate cover images from the frame
                 result, error = self.generate_cover_images(
@@ -369,7 +477,14 @@ class ImageProcessor:
                 
                 # Clean up temp file
                 if os.path.exists(temp_frame_path):
+                    try:
                     os.remove(temp_frame_path)
+                        print(f"[DEBUG] Temp frame file cleaned up: {temp_frame_path}")
+                    except Exception as e:
+                        print(f"[WARNING] Failed to remove temp frame file: {e}")
+                
+                if result is None:
+                    print(f"[ERROR] generate_cover_images failed: {error}")
                 
                 return result, error
                 
@@ -377,6 +492,9 @@ class ImageProcessor:
                 cap.release()
                 
         except Exception as e:
+            import traceback
+            error_detail = f"Error capturing frame: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] capture_frame_as_cover exception: {error_detail}")
             return None, f"Error capturing frame: {str(e)}"
     
     def delete_cover_images(self, cover_paths: CoverImagePaths) -> List[str]:

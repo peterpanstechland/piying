@@ -352,11 +352,28 @@ export const CharacterSelectionPage = ({
             const rectX = 12;
             const rectY = 12 + shadowOffset;
 
+            // Handle mouse click for character selection (dual input: mouse + gesture)
+            const handleCharacterClick = () => {
+              console.log('Character selected via click:', character.id);
+              if (onCharacterSelect) {
+                onCharacterSelect(character.id);
+              }
+            };
+
             return (
               <div
                 key={character.id}
                 id={`character-card-${character.id}`}
                 className={`character-card ${isHovered ? 'hovered' : ''} ${character.is_default ? 'default' : ''}`}
+                onClick={handleCharacterClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCharacterClick();
+                  }
+                }}
               >
                 <div className="character-card-bg">
                   {thumbnailUrl ? (

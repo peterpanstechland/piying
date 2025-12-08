@@ -1,8 +1,8 @@
 /* 东方黑金科技风 - 时间线编辑器页面 */
 .storyline-timeline-page {
   min-height: 100vh;
-  padding: 24px;
-  max-width: 1200px;
+  padding: 32px;
+  max-width: 1920px;
   margin: 0 auto;
   background: var(--bg-base);
 }
@@ -11,14 +11,14 @@
 .storyline-timeline-page__header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 20px;
+  margin-bottom: 32px;
   flex-wrap: wrap;
 }
 
 .storyline-timeline-page__header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 28px;
   color: var(--text-primary);
   flex: 1;
 }

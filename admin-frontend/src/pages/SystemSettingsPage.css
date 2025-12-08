@@ -19,8 +19,14 @@
 .system-settings-container .page-header h1 {
   color: var(--text-primary);
   font-size: 24px;
+  font-weight: 600;
   margin: 0;
   flex: 1;
+  letter-spacing: -0.3px;
+}
+
+[data-theme='light'] .system-settings-container .page-header h1 {
+  color: #2A231F;
 }
 
 .btn-back {
@@ -29,10 +35,15 @@
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 6px;
   transition: all 0.2s;
+}
+
+[data-theme='light'] .btn-back {
+  color: rgba(42, 35, 31, 0.85);
 }
 
 .btn-back:hover {
@@ -49,23 +60,35 @@
 .user-name {
   color: var(--text-secondary);
   font-size: 14px;
+  font-weight: 500;
+}
+
+[data-theme='light'] .user-name {
+  color: rgba(42, 35, 31, 0.85);
 }
 
 .btn-secondary {
   padding: 10px 20px;
   background: var(--bg-panel);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   text-decoration: none;
 }
 
+[data-theme='light'] .btn-secondary {
+  background: #FFFFFF;
+  border-color: rgba(42, 35, 31, 0.3);
+}
+
 .btn-secondary:hover {
   background: var(--bg-hover);
   border-color: var(--accent-primary);
+  box-shadow: 0 2px 4px rgba(42, 35, 31, 0.1);
 }
 
 .page-content {
@@ -82,41 +105,58 @@
 
 .error-message {
   background: rgba(198, 67, 47, 0.15);
-  border: 1px solid var(--error);
+  border: 1.5px solid var(--error);
   color: var(--error);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+[data-theme='light'] .error-message {
+  background: rgba(184, 59, 59, 0.12);
+  border-color: #B83B3B;
+  color: #9E3232;
 }
 
 .success-message {
   background: rgba(79, 227, 193, 0.15);
-  border: 1px solid var(--success);
+  border: 1.5px solid var(--success);
   color: var(--success);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+[data-theme='light'] .success-message {
+  background: rgba(79, 121, 102, 0.12);
+  border-color: #4F7966;
+  color: #3D5F4D;
 }
 
 .settings-card {
   background: var(--bg-panel);
-  border: 1px solid var(--divider);
+  border: 1.5px solid var(--border);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 8px var(--shadow-card);
+  box-shadow: var(--shadow-card);
 }
 
 .settings-card h2 {
   color: var(--accent-gold-light);
   font-size: 1.1rem;
+  font-weight: 600;
   margin: 0 0 0.5rem 0;
+  letter-spacing: 0.3px;
 }
 
 .card-description {
   color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0 0 1.5rem 0;
+  line-height: 1.6;
 }
 
 .form-group {
@@ -128,6 +168,7 @@
   color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .form-group input,
@@ -135,17 +176,24 @@
   width: 100%;
   padding: 0.75rem;
   background: var(--bg-base);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 1rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+[data-theme='light'] .form-group input,
+[data-theme='light'] .form-group select {
+  background: #FFFFFF;
+  border-color: rgba(42, 35, 31, 0.25);
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(184, 59, 59, 0.1);
 }
 
 .form-group input.error {
@@ -161,6 +209,11 @@
   color: var(--text-muted);
   font-size: 0.8rem;
   margin-top: 0.25rem;
+  line-height: 1.5;
+}
+
+[data-theme='light'] .field-hint {
+  color: rgba(42, 35, 31, 0.7);
 }
 
 .field-error {
@@ -205,6 +258,11 @@
   font-size: 0.9rem;
   min-width: 50px;
   white-space: nowrap;
+  font-weight: 500;
+}
+
+[data-theme='light'] .input-with-unit .unit {
+  color: rgba(42, 35, 31, 0.7);
 }
 
 .action-buttons {
@@ -248,16 +306,22 @@
   cursor: pointer;
   padding: 12px 16px;
   background: var(--bg-base);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 8px;
   transition: all 0.2s;
   color: var(--text-primary);
   flex: 1;
 }
 
+[data-theme='light'] .radio-label {
+  background: #FFFFFF;
+  border-color: rgba(42, 35, 31, 0.25);
+}
+
 .radio-label:hover {
   border-color: var(--accent-primary);
   background: var(--bg-hover);
+  box-shadow: 0 2px 4px rgba(42, 35, 31, 0.08);
 }
 
 .radio-label input[type="radio"] {
@@ -268,7 +332,13 @@
 
 .radio-label input[type="radio"]:checked + span {
   color: var(--accent-primary);
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.radio-label:has(input[type="radio"]:checked) {
+  border-color: var(--accent-primary);
+  background: rgba(184, 59, 59, 0.05);
+  box-shadow: 0 0 0 2px rgba(184, 59, 59, 0.1);
 }
 
 /* Toggle Switch */
@@ -342,6 +412,11 @@
   font-size: 0.9rem;
   color: var(--text-primary);
   min-width: 60px;
+  font-weight: 500;
+}
+
+[data-theme='light'] .switch-label {
+  color: #2A231F;
 }
 
 /* Danger Button */

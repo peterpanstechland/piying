@@ -3,6 +3,7 @@ Settings service for admin panel.
 Handles system settings CRUD operations, S3 connection testing, and LAN IP detection.
 """
 import json
+import logging
 import os
 import socket
 import sys
@@ -26,6 +27,8 @@ from ...models.admin.settings import (
 
 # Determine project root and settings file path
 from ...utils.path import get_user_data_dir
+
+logger = logging.getLogger(__name__)
 
 # Settings are stored in user data/../config (RobomonPiying/config)
 SETTINGS_FILE_PATH = get_user_data_dir().parent / "config" / "settings.json"
@@ -75,6 +78,8 @@ class SettingsService:
             fallback_language=system.get("fallback_language", "en"),
             storage=StorageSettings(
                 mode=storage.get("mode", "local"),
+                # Default to "data" which will be resolved to user_data_dir
+                # This ensures consistency with StorageManager and VideoRenderer
                 local_path=storage.get("local_path", "data"),
                 auto_cleanup_enabled=storage.get("auto_cleanup_enabled", False),
                 auto_cleanup_threshold=storage.get("auto_cleanup_threshold", 24),
@@ -180,7 +185,29 @@ class SettingsService:
     def get_settings(self) -> SystemSettings:
         """Get current system settings."""
         raw_settings = self._load_settings_from_file()
-        return self._convert_file_to_model(raw_settings)
+        settings = self._convert_file_to_model(raw_settings)
+        
+        # Auto-fix: If local_path points to a non-existent or invalid location,
+        # reset it to default "data" which will resolve to user_data_dir
+        if settings.storage.local_path and settings.storage.local_path != "data":
+            from ...utils.path import resolve_relative_path
+            try:
+                resolved_path = resolve_relative_path(settings.storage.local_path)
+                # If resolved path doesn't exist or is in a weird location (like dist_v4),
+                # reset to default
+                if not resolved_path.exists() or "dist_v" in str(resolved_path) or "win-unpacked" in str(resolved_path):
+                    logger.warning(f"Invalid storage path detected: {settings.storage.local_path} -> {resolved_path}, resetting to default")
+                    settings.storage.local_path = "data"
+                    # Save the fixed settings
+                    file_dict = self._convert_model_to_file(settings)
+                    self._save_settings_to_file(file_dict)
+            except Exception as e:
+                logger.warning(f"Error validating storage path {settings.storage.local_path}: {e}, resetting to default")
+                settings.storage.local_path = "data"
+                file_dict = self._convert_model_to_file(settings)
+                self._save_settings_to_file(file_dict)
+        
+        return settings
 
     def update_settings(self, update: SystemSettingsUpdate) -> SystemSettings:
         """

@@ -25,14 +25,16 @@ from ...models.admin.storyline import (
     CharacterVideoListResponse,
 )
 from ...models.admin.character import CharacterDB
+from ...utils.path import get_user_data_dir
 from .video_processor import video_processor
 
 
-# Base directory for storyline data
-STORYLINES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-    "data", "storylines"
-)
+def get_storylines_dir() -> str:
+    """
+    Get the storylines directory path using user data directory.
+    This ensures consistent path resolution across Dev and Prod environments.
+    """
+    return str(get_user_data_dir() / "storylines")
 
 
 class CharacterVideoService:
@@ -52,7 +54,7 @@ class CharacterVideoService:
     def __init__(self):
         """Initialize the character video service."""
         # Ensure base directory exists
-        os.makedirs(STORYLINES_DIR, exist_ok=True)
+        os.makedirs(get_storylines_dir(), exist_ok=True)
 
     def get_storyline_videos_dir(self, storyline_id: str) -> str:
         """
@@ -67,7 +69,7 @@ class CharacterVideoService:
         Returns:
             Path to the videos directory
         """
-        return os.path.join(STORYLINES_DIR, storyline_id, "videos")
+        return os.path.join(get_storylines_dir(), storyline_id, "videos")
 
     def get_character_video_file_path(
         self, storyline_id: str, character_id: str
@@ -240,7 +242,17 @@ class CharacterVideoService:
             
             # Move temp file to final location (replaces existing if any)
             if os.path.exists(video_path):
-                os.remove(video_path)
+                try:
+                    os.remove(video_path)
+                except PermissionError:
+                    # Retry once after a short delay if file is locked
+                    import time
+                    time.sleep(0.5)
+                    try:
+                        os.remove(video_path)
+                    except Exception as e:
+                        return None, f"File is in use, please try again later. ({str(e)})"
+            
             os.rename(temp_path, video_path)
             
             # Generate thumbnail (Requirements 2.4)

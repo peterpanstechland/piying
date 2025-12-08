@@ -267,6 +267,8 @@
     
     <div class="footer">
         <button class="footer-btn" onclick="restartBackend()">🔄 重启服务</button>
+        <button class="footer-btn" onclick="toggleDevTools()">🔧 开发者工具</button>
+        <button class="footer-btn" onclick="openLogsFolder()">📋 查看日志</button>
         <button class="footer-btn" onclick="openHelp()">❓ 帮助文档</button>
         <button class="footer-btn" onclick="exitApp()">🚪 退出程序</button>
     </div>
@@ -370,6 +372,22 @@
                 window.electronAPI.openHelp();
             } else {
                 alert('帮助文档请查看安装目录下的 README.txt');
+            }
+        }
+        
+        // 切换开发者工具
+        function toggleDevTools() {
+            if (window.electronAPI) {
+                window.electronAPI.toggleDevTools();
+            }
+        }
+        
+        // 打开日志文件夹
+        function openLogsFolder() {
+            if (window.electronAPI) {
+                window.electronAPI.openLogsFolder();
+            } else {
+                alert('日志文件夹位置:\n\nElectron日志: %APPDATA%\\<app-name>\\logs\\\n后端日志: %APPDATA%\\RobomonPiying\\data\\logs\\');
             }
         }
         

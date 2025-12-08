@@ -221,23 +221,23 @@
 /* ========== 场景卡片容器 ========== */
 .scene-cards-container {
   display: flex;
-  gap: 45px;
+  gap: 60px;
   justify-content: center;
   align-items: stretch;
-  max-width: 1700px;
+  max-width: 1800px;
   width: 100%;
   position: relative;
   z-index: 2;
-  padding: 0 50px;
+  padding: 0 60px;
 }
 
 /* ========== 场景卡片 - 横向卡片风格 - 高级版 ========== */
 .scene-card {
   flex: 1;
-  min-width: 420px;
-  max-width: 540px;
+  min-width: 480px;
+  max-width: 600px;
   aspect-ratio: 16 / 10;
-  border-radius: 20px;
+  border-radius: 24px;
   text-align: left;
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
@@ -445,8 +445,8 @@
 
 /* 场景图标 - 无封面时显示 */
 .scene-icon {
-  font-size: 70px;
-  margin-bottom: 18px;
+  font-size: 80px;
+  margin-bottom: 20px;
   filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.6));
   opacity: 0.95;
   animation: icon-glow 3s ease-in-out infinite;
@@ -459,11 +459,11 @@
 
 /* 场景名称 - 大标题 - 增强 */
 .scene-name {
-  font-size: 36px;
+  font-size: 42px;
   font-family: 'Noto Serif SC', 'KaiTi', 'STKaiti', serif;
   font-weight: 700;
   color: #fff8e1;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   letter-spacing: 0.12em;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9);
   line-height: 1.25;
@@ -471,7 +471,7 @@
 
 /* 场景描述 */
 .scene-description {
-  font-size: 15px;
+  font-size: 18px;
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   color: rgba(255, 248, 225, 0.88);
   margin: 0;
@@ -571,31 +571,56 @@
 }
 
 /* ========== 响应式 ========== */
+/* 1920x1080 优化 - 默认样式已优化 */
+@media (min-width: 1920px) {
+  .scene-cards-container {
+    gap: 70px;
+    max-width: 1900px;
+  }
+  .scene-card {
+    min-width: 520px;
+    max-width: 640px;
+  }
+}
+
+@media (max-width: 1600px) {
+  .scene-cards-container {
+    gap: 50px;
+  }
+  .scene-card {
+    min-width: 440px;
+    max-width: 560px;
+  }
+}
+
 @media (max-width: 1400px) {
+  .scene-cards-container {
+    gap: 40px;
+    padding: 0 40px;
+  }
+  .scene-card {
+    min-width: 400px;
+    max-width: 500px;
+  }
+}
+
+@media (max-width: 1200px) {
   .scene-cards-container {
     gap: 35px;
     padding: 0 35px;
   }
   .scene-card {
     min-width: 360px;
-    max-width: 480px;
-  }
-}
-
-@media (max-width: 1200px) {
-  .scene-cards-container {
-    gap: 30px;
-    padding: 0 30px;
-  }
-  .scene-card {
-    min-width: 300px;
-    max-width: 420px;
+    max-width: 460px;
   }
   .scene-selection-header h1 {
-    font-size: 46px;
+    font-size: 48px;
   }
   .scene-name {
-    font-size: 30px;
+    font-size: 36px;
+  }
+  .scene-description {
+    font-size: 16px;
   }
 }
 

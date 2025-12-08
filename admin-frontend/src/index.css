@@ -51,34 +51,34 @@
   /* 主色体系 */
   --bg-base: #F7F4EB;
   --bg-panel: #FFFFFF;
-  --bg-hover: #EEEBE2;
-  --bg-active: #E5E2D9;
+  --bg-hover: #F0EDE0;
+  --bg-active: #E8E4D6;
   
-  /* 文字颜色 */
-  --text-primary: #3E342E;
-  --text-secondary: rgba(62, 52, 46, 0.8);
-  --text-muted: rgba(62, 52, 46, 0.6);
+  /* 文字颜色 - 增强对比度 */
+  --text-primary: #2A231F;
+  --text-secondary: rgba(42, 35, 31, 0.85);
+  --text-muted: rgba(42, 35, 31, 0.65);
   
   /* 强调色 */
   --accent-primary: #B83B3B;
   --accent-primary-hover: #D64545;
   --accent-primary-active: #9E3232;
   --accent-blue: #4A90E2;
-  --accent-gold-light: #F9E8C0;
+  --accent-gold-light: #C89A4A;
   
   /* 状态色 */
   --success: #4F7966;
   --error: #B83B3B;
   --warning: #D4A024;
   
-  /* 边框和分割线 */
-  --divider: rgba(62, 52, 46, 0.1);
-  --border: #3E342E;
+  /* 边框和分割线 - 增强可见性 */
+  --divider: rgba(42, 35, 31, 0.2);
+  --border: rgba(42, 35, 31, 0.3);
   --border-focus: #B83B3B;
   
-  /* 阴影 */
-  --shadow-card: 4px 4px 0px rgba(184, 59, 59, 0.2);
-  --shadow-popup: 0 8px 24px rgba(62, 52, 46, 0.15);
+  /* 阴影 - 增强卡片层次感 */
+  --shadow-card: 0 2px 8px rgba(42, 35, 31, 0.12), 0 1px 2px rgba(42, 35, 31, 0.08);
+  --shadow-popup: 0 8px 24px rgba(42, 35, 31, 0.2);
   
   /* 图表色 */
   --chart-1: #D4A024;

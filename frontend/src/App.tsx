@@ -839,6 +839,9 @@ function App() {
           segmentDuration,
           segmentGuidance,
           totalSegments: segments.length,
+          currentSegmentConfig: currentSegmentConfig,
+          offset_start: currentSegmentConfig?.offset_start,
+          offset_end: currentSegmentConfig?.offset_end,
         });
         
         return (

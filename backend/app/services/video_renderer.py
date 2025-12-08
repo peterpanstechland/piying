@@ -202,14 +202,16 @@ class VideoRenderer:
         self.character_id = character_id
         
         # Get project root directory
-        from ..utils.path import get_project_root
+        from ..utils.path import get_project_root, get_user_data_dir
         self.project_root = get_project_root()
         
-        # Set output directory relative to project root
+        # Set output directory - default to user_data_dir/outputs for consistency with StorageManager
         if output_dir:
             self.output_dir = Path(output_dir)
         else:
-            self.output_dir = self.project_root / "data" / "outputs"
+            # Use user_data_dir/outputs as default (same as StorageManager)
+            # This ensures rendered videos are stored in the same location as other user data
+            self.output_dir = get_user_data_dir() / "outputs"
         
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -234,14 +236,29 @@ class VideoRenderer:
             character_id: Character UUID
         """
         try:
-            data_dir = self.project_root / "backend" / "data"
-            self.puppet_renderer = PuppetRendererCache.get_renderer(character_id, data_dir)
+            from ..utils.path import get_user_data_dir
             
-            if self.puppet_renderer:
-                self.use_puppet_renderer = True
-                logger.info(f"Puppet renderer loaded for character {character_id}")
-            else:
-                logger.warning(f"Failed to load puppet renderer for character {character_id}, falling back to skeleton")
+            # Try multiple possible locations for character data
+            # Priority: user_data_dir (where characters are stored) > project_root/data > project_root/backend/data
+            possible_data_dirs = [
+                get_user_data_dir(),  # User data directory (primary location)
+                self.project_root / "data",  # Packaged app location
+                self.project_root / "backend" / "data",  # Legacy/Dev mode
+            ]
+            
+            for data_dir in possible_data_dirs:
+                char_dir = data_dir / "characters" / character_id
+                if char_dir.exists():
+                    self.puppet_renderer = PuppetRendererCache.get_renderer(character_id, data_dir)
+                    if self.puppet_renderer:
+                        self.use_puppet_renderer = True
+                        logger.info(f"Puppet renderer loaded for character {character_id} from {data_dir}")
+                        return
+            
+            # If we get here, no valid character directory was found
+            logger.warning(f"Failed to load puppet renderer for character {character_id}, falling back to skeleton")
+            self.puppet_renderer = None
+            self.use_puppet_renderer = False
         except Exception as e:
             logger.warning(f"Error initializing puppet renderer: {e}, falling back to skeleton")
             self.puppet_renderer = None
@@ -702,18 +719,64 @@ class VideoRenderer:
             Path to rendered video file
         """
         # Check if FFmpeg is available
-        ffmpeg_path = shutil.which("ffmpeg")
+        # Try multiple locations:
+        # 1. Bundled ffmpeg (in resources/ffmpeg/ for packaged app)
+        # 2. System PATH
+        ffmpeg_path = None
+        ffprobe_path = None
+        
+        # Try to find bundled ffmpeg first (for packaged app)
+        from ..utils.path import get_project_root
+        project_root = get_project_root()
+        
+        # Check multiple possible locations for bundled ffmpeg
+        possible_ffmpeg_locations = [
+            project_root / "ffmpeg" / "ffmpeg.exe",  # resources/ffmpeg/ffmpeg.exe
+            project_root / "resources" / "ffmpeg" / "ffmpeg.exe",  # Alternative location
+            Path(__file__).parent.parent.parent.parent / "ffmpeg" / "ffmpeg.exe",  # Dev mode
+        ]
+        
+        for bundled_ffmpeg in possible_ffmpeg_locations:
+            if bundled_ffmpeg.exists():
+                ffmpeg_path = str(bundled_ffmpeg)
+                logger.info(f"Using bundled FFmpeg: {ffmpeg_path}")
+                break
+        
         if not ffmpeg_path:
-            raise RuntimeError("FFmpeg not found in PATH")
+            # Fallback to system PATH
+            ffmpeg_path = shutil.which("ffmpeg")
+            if ffmpeg_path:
+                logger.info(f"Using system FFmpeg from PATH: {ffmpeg_path}")
+        
+        if not ffmpeg_path:
+            raise RuntimeError(
+                "FFmpeg not found. Please ensure FFmpeg is installed and in PATH, "
+                "or bundled in resources/ffmpeg/ directory."
+            )
         
         # Determine base video path
         base_video_path = self._get_base_video_path(session)
         
-        # Get base video FPS using ffprobe
+        # Get base video FPS and check for audio using ffprobe
         target_fps = 30  # Default
+        has_audio = False
         try:
-            ffprobe_path = shutil.which("ffprobe")
+            # Try bundled ffprobe first
+            possible_ffprobe_locations = [
+                project_root / "ffmpeg" / "ffprobe.exe",
+                project_root / "resources" / "ffmpeg" / "ffprobe.exe",
+                Path(__file__).parent.parent.parent.parent / "ffmpeg" / "ffprobe.exe",
+            ]
+            
+            for bundled_ffprobe in possible_ffprobe_locations:
+                if bundled_ffprobe.exists():
+                    ffprobe_path = str(bundled_ffprobe)
+                    break
+            
+            if not ffprobe_path:
+                ffprobe_path = shutil.which("ffprobe")
             if ffprobe_path:
+                # Get FPS
                 probe_result = subprocess.run(
                     [ffprobe_path, "-v", "error", "-select_streams", "v:0", 
                      "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", str(base_video_path)],
@@ -727,8 +790,20 @@ class VideoRenderer:
                     else:
                         target_fps = int(float(fps_str))
                     logger.info(f"Detected base video FPS: {target_fps}")
+                
+                # Check for audio stream
+                audio_probe = subprocess.run(
+                    [ffprobe_path, "-v", "error", "-select_streams", "a:0",
+                     "-show_entries", "stream=codec_name,sample_rate,channels", "-of", "csv=p=0", str(base_video_path)],
+                    capture_output=True, text=True, timeout=10
+                )
+                if audio_probe.returncode == 0 and audio_probe.stdout.strip():
+                    has_audio = True
+                    logger.info(f"Base video has audio: {audio_probe.stdout.strip()}")
+                else:
+                    logger.warning(f"Base video has NO audio stream!")
         except Exception as e:
-            logger.warning(f"Failed to detect FPS, using default {target_fps}: {e}")
+            logger.warning(f"Failed to detect FPS/audio, using default {target_fps}: {e}")
         
         # Prepare output path
         output_path = self.output_dir / f"final_{session.id}.mp4"
@@ -749,7 +824,14 @@ class VideoRenderer:
         
         # Build encoder flags
         # Force yuv420p pixel format for best browser compatibility
-        encoder_flags = ["-c:v", video_encoder, "-preset", encoder_preset, "-pix_fmt", "yuv420p"]
+        # Add movflags=faststart for streaming compatibility (allows progressive download)
+        encoder_flags = [
+            "-c:v", video_encoder, 
+            "-preset", encoder_preset, 
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",  # Enable fast start for web streaming
+            "-f", "mp4"  # Explicitly specify output format
+        ]
         if 'nvenc' in video_encoder:
             # Use VBR mode for NVENC to respect CQ parameter properly
             encoder_flags.extend(["-rc", "vbr", "-cq", str(encoder_quality)])
@@ -762,12 +844,28 @@ class VideoRenderer:
             segment = session.segments[0]
             overlay_video = Path(segment.video_path)
             
-            # Get start_time from scene config (segment index matches)
+            # Get start_time from scene config
+            # Use segment.index to find matching config, but also handle index mismatch
             seg_start_time = 0.0
-            if segment_configs and len(segment_configs) > segment.index:
-                seg_start_time = getattr(segment_configs[segment.index], 'start_time', 0.0) or 0.0
+            matched_config = None
+            if segment_configs:
+                # First try direct index match
+                if len(segment_configs) > segment.index and segment.index >= 0:
+                    matched_config = segment_configs[segment.index]
+                    seg_start_time = getattr(matched_config, 'start_time', 0.0) or 0.0
+                    logger.info(f"Matched segment config by index: segment.index={segment.index}, config.start_time={seg_start_time}")
+                elif len(segment_configs) > 0:
+                    # Fallback: use the first segment config (for single segment case)
+                    matched_config = segment_configs[0]
+                    seg_start_time = getattr(matched_config, 'start_time', 0.0) or 0.0
+                    logger.warning(f"Index mismatch: segment.index={segment.index}, using first config (index 0), start_time={seg_start_time}")
+                else:
+                    logger.warning(f"No segment configs available, using default start_time=0.0")
+            else:
+                logger.warning(f"Scene config has no segments, using default start_time=0.0")
             
-            logger.info(f"Single segment overlay at start_time={seg_start_time}")
+            logger.info(f"Single segment overlay: segment.index={segment.index}, start_time={seg_start_time}, duration={segment.duration}")
+            logger.info(f"Scene config has {len(segment_configs)} segments, overlay will appear from {seg_start_time}s to {seg_start_time + segment.duration}s")
             
             # FFmpeg command based on composition mode
             if composition_mode == 'side_by_side':
@@ -805,12 +903,32 @@ class VideoRenderer:
                 "-i", str(overlay_video),  # Overlay video (WebM from frontend)
                 "-filter_complex", filter_complex,
                 "-map", "[out]",
-                "-map", "0:a?",  # Keep audio from base video if exists
-                *encoder_flags,
-                "-c:a", "aac",
-                "-b:a", "128k",
-                str(output_path)
             ]
+            
+            # Only add audio mapping if base video has audio
+            if has_audio:
+                cmd.extend([
+                    "-map", "0:a",  # Map audio stream (use 0:a instead of 0:a? for better compatibility)
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-ar", "44100",  # Set sample rate for compatibility
+                    "-ac", "2",  # Stereo audio
+                ])
+            else:
+                logger.warning("Base video has no audio stream, output video will be silent")
+                # Add silent audio track for better compatibility
+                cmd.extend([
+                    "-f", "lavfi",
+                    "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-shortest"  # Match video duration
+                ])
+            
+            cmd.extend([
+                *encoder_flags,
+                str(output_path)
+            ])
             
             logger.info(f"Running FFmpeg overlay: {' '.join(cmd)}")
             
@@ -828,6 +946,32 @@ class VideoRenderer:
             if result.returncode != 0:
                 logger.error(f"FFmpeg failed: {result.stderr}")
                 raise RuntimeError(f"FFmpeg overlay failed: {result.stderr}")
+            
+            # Verify output video file exists and is valid
+            if not output_path.exists():
+                raise RuntimeError(f"FFmpeg completed but output file not found: {output_path}")
+            
+            # Verify video file is not empty
+            file_size = output_path.stat().st_size
+            if file_size == 0:
+                raise RuntimeError(f"FFmpeg output file is empty: {output_path}")
+            
+            logger.info(f"Video file created successfully: {output_path} ({file_size / (1024*1024):.2f} MB)")
+            
+            # Try to verify video can be opened (basic validation)
+            try:
+                test_cap = cv2.VideoCapture(str(output_path))
+                if not test_cap.isOpened():
+                    logger.warning(f"Warning: Output video file exists but cannot be opened by OpenCV: {output_path}")
+                else:
+                    test_frames = int(test_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    test_cap.release()
+                    if test_frames == 0:
+                        logger.warning(f"Warning: Output video has 0 frames: {output_path}")
+                    else:
+                        logger.info(f"Video validation passed: {test_frames} frames")
+            except Exception as e:
+                logger.warning(f"Video validation check failed (non-critical): {e}")
         else:
             # Multiple segments - overlay each at its correct time position
             temp_dir = self.output_dir / "temp" / session.id
@@ -846,9 +990,26 @@ class VideoRenderer:
                 inputs.extend(["-i", str(overlay_video)])
                 
                 # Get start_time from scene config
+                # Use segment.index to find matching config, handle index mismatch
                 seg_start_time = 0.0
-                if segment_configs and len(segment_configs) > segment.index:
-                    seg_start_time = getattr(segment_configs[segment.index], 'start_time', 0.0) or 0.0
+                matched_config = None
+                if segment_configs:
+                    # Try direct index match first
+                    if len(segment_configs) > segment.index and segment.index >= 0:
+                        matched_config = segment_configs[segment.index]
+                        seg_start_time = getattr(matched_config, 'start_time', 0.0) or 0.0
+                        logger.info(f"Multi-segment [{i}]: Matched by index, segment.index={segment.index}, start_time={seg_start_time}")
+                    elif len(segment_configs) > i:
+                        # Fallback: use position index
+                        matched_config = segment_configs[i]
+                        seg_start_time = getattr(matched_config, 'start_time', 0.0) or 0.0
+                        logger.warning(f"Multi-segment [{i}]: Index mismatch, using position index {i}, segment.index={segment.index}, start_time={seg_start_time}")
+                    else:
+                        logger.warning(f"Multi-segment [{i}]: No matching config found, using default start_time=0.0")
+                else:
+                    logger.warning(f"Multi-segment [{i}]: No segment configs available, using default start_time=0.0")
+                
+                logger.info(f"Multi-segment overlay [{i}]: segment.index={segment.index}, start_time={seg_start_time}, duration={segment.duration}, overlay from {seg_start_time}s to {seg_start_time + segment.duration}s")
                 
                 input_idx = i + 1  # Input index (0 is base video)
                 
@@ -888,12 +1049,25 @@ class VideoRenderer:
                 *inputs,
                 "-filter_complex", filter_complex,
                 "-map", "[out]",
-                "-map", "0:a?",
-                *encoder_flags,
-                "-c:a", "aac",
-                "-b:a", "128k",
-                str(output_path)
             ]
+            
+            # Only add audio mapping if base video has audio
+            if has_audio:
+                cmd.extend([
+                    "-map", "0:a",  # Map audio stream (use 0:a instead of 0:a? for better compatibility)
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-ar", "44100",  # Set sample rate for compatibility
+                    "-ac", "2",  # Stereo audio
+                ])
+            else:
+                logger.warning("Base video has no audio stream, output video will be silent")
+                # Note: For multi-segment, we don't add silent audio as it complicates the filter graph
+            
+            cmd.extend([
+                *encoder_flags,
+                str(output_path)
+            ])
             
             logger.info(f"Running FFmpeg multi-segment overlay")
             logger.debug(f"FFmpeg command: {' '.join(cmd)}")
@@ -912,6 +1086,32 @@ class VideoRenderer:
             if result.returncode != 0:
                 logger.error(f"FFmpeg failed: {result.stderr}")
                 raise RuntimeError(f"FFmpeg overlay failed: {result.stderr}")
+            
+            # Verify output video file exists and is valid
+            if not output_path.exists():
+                raise RuntimeError(f"FFmpeg completed but output file not found: {output_path}")
+            
+            # Verify video file is not empty
+            file_size = output_path.stat().st_size
+            if file_size == 0:
+                raise RuntimeError(f"FFmpeg output file is empty: {output_path}")
+            
+            logger.info(f"Video file created successfully: {output_path} ({file_size / (1024*1024):.2f} MB)")
+            
+            # Try to verify video can be opened (basic validation)
+            try:
+                test_cap = cv2.VideoCapture(str(output_path))
+                if not test_cap.isOpened():
+                    logger.warning(f"Warning: Output video file exists but cannot be opened by OpenCV: {output_path}")
+                else:
+                    test_frames = int(test_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    test_cap.release()
+                    if test_frames == 0:
+                        logger.warning(f"Warning: Output video has 0 frames: {output_path}")
+                    else:
+                        logger.info(f"Video validation passed: {test_frames} frames")
+            except Exception as e:
+                logger.warning(f"Video validation check failed (non-critical): {e}")
             
             # Cleanup temp files
             try:
@@ -944,47 +1144,54 @@ class VideoRenderer:
         
         # 1. Check for character-specific video by file convention (Fast & Robust)
         if session.character_id:
-            # Check both mp4 and webm
-            for ext in ['.mp4', '.webm']:
-                direct_path = self.project_root / "backend" / "data" / "storylines" / session.scene_id / "videos" / f"{session.character_id}{ext}"
-                if direct_path.exists():
-                    logger.info(f"Found character video by convention: {direct_path}")
-                    return direct_path
+            # Check multiple possible locations:
+            # - resources/data/storylines/... (packaged app)
+            # - resources/backend/data/storylines/... (legacy)
+            # - backend/data/storylines/... (dev mode)
+            possible_bases = [
+                self.project_root / "data",  # Packaged app location
+                self.project_root / "backend" / "data",  # Legacy/Dev mode
+            ]
+            
+            for base_dir in possible_bases:
+                for ext in ['.mp4', '.webm']:
+                    direct_path = base_dir / "storylines" / session.scene_id / "videos" / f"{session.character_id}{ext}"
+                    if direct_path.exists():
+                        logger.info(f"Found character video by convention: {direct_path}")
+                        return direct_path
 
-        # 2. Try DB lookup
-        if session.character_id:
-            try:
-                from ..services.admin.character_video_service import character_video_service
-                from ..database import async_session_maker
-                import asyncio
-                
-                async def get_char_video():
-                    async with async_session_maker() as db:
-                        return await character_video_service.get_character_video_path(
-                            db, session.scene_id, session.character_id
-                        )
-                
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                char_video_path = loop.run_until_complete(get_char_video())
-                loop.close()
-                
-                if char_video_path:
-                    # Path format from DB: "storylines/{id}/videos/{char_id}.mp4"
-                    # Actual file location: {project_root}/backend/data/storylines/{id}/videos/{char_id}.mp4
-                    base_video_path = self.project_root / "backend" / "data" / char_video_path
-                    logger.info(f"Character-specific video path: {base_video_path}")
-                    
-                    if not base_video_path.exists():
-                        logger.warning(f"Character-specific video not found at {base_video_path}")
-                        base_video_path = None
-            except Exception as e:
-                logger.warning(f"Failed to load character-specific video path: {e}")
+        # 2. Try DB lookup (skip if already in async context to avoid event loop conflict)
+        # This will be handled by the caller if needed
+        # For now, we rely on file convention check above
         
         if base_video_path is None or not base_video_path.exists():
-            # scene_config.base_video_path is already prefixed with "backend/data/" in sessions.py
-            base_video_path = self.project_root / self.scene_config.base_video_path
-            logger.info(f"Using base video from scene config: {base_video_path}")
+            # scene_config.base_video_path format: "backend/data/storylines/.../base_video.mp4" or "data/storylines/.../base_video.mp4"
+            # Try multiple possible locations
+            config_path = Path(self.scene_config.base_video_path)
+            
+            # Normalize path: remove "backend/" prefix if present (for compatibility)
+            if len(config_path.parts) > 0 and config_path.parts[0] == "backend":
+                relative_path = Path(*config_path.parts[1:])
+            else:
+                relative_path = config_path
+            
+            # Try multiple locations in order of preference
+            possible_paths = [
+                self.project_root / relative_path,  # Packaged: resources/data/storylines/...
+                self.project_root / "backend" / relative_path,  # Legacy: resources/backend/data/storylines/...
+                self.project_root / relative_path.parts[-1] if len(relative_path.parts) > 0 else relative_path,  # Fallback: just filename
+            ]
+            
+            for path in possible_paths:
+                if path.exists():
+                    base_video_path = path
+                    logger.info(f"Using base video from scene config: {base_video_path}")
+                    break
+            
+            if base_video_path is None:
+                # Set to first option for error message
+                base_video_path = possible_paths[0]
+                logger.info(f"Base video not found, will check: {base_video_path}")
         
         if not base_video_path.exists():
             raise ValueError(f"Base video not found: {base_video_path}")

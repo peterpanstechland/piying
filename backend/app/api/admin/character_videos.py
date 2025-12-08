@@ -326,6 +326,7 @@ async def stream_character_video(
     Raises:
         404: Video not found
     """
+    try:
     video_path = character_video_service.get_character_video_file_path(
         storyline_id, character_id
     )
@@ -384,6 +385,17 @@ async def stream_character_video(
         media_type="video/mp4",
         headers={"Accept-Ranges": "bytes"},
     )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Error] Stream video failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to stream video: {str(e)}"
+        )
 
 
 @router.get(

@@ -9,7 +9,7 @@
   background: var(--bg-gradient);
   display: flex;
   flex-direction: column;
-  padding: 40px;
+  padding: 60px;
   box-sizing: border-box;
 }
 
@@ -107,7 +107,7 @@
 }
 
 .back-button-text {
-  font-size: 28px;
+  font-size: 32px;
   color: #d4af37;
   font-weight: 500;
   font-family: 'Noto Serif SC', 'SimSun', serif;
@@ -119,9 +119,9 @@
 }
 
 .back-button-hint {
-  font-size: 16px;
+  font-size: 18px;
   color: rgba(245, 230, 211, 0.8);
-  margin-left: 12px;
+  margin-left: 14px;
 }
 
 /* 标题区域 */
@@ -134,10 +134,10 @@
 }
 
 .result-title {
-  font-size: 52px;
+  font-size: 60px;
   font-weight: 400;
   color: var(--color-text-primary);
-  margin: 0 0 15px 0;
+  margin: 0 0 20px 0;
   font-family: 'Noto Serif SC', 'SimSun', serif;
   letter-spacing: 0.15em;
   text-shadow: 
@@ -146,7 +146,7 @@
 }
 
 .reset-timer {
-  font-size: 18px;
+  font-size: 22px;
   color: rgba(212, 175, 55, 0.8);
   font-weight: 300;
   font-family: 'Noto Sans SC', sans-serif;
@@ -169,14 +169,14 @@
 /* 视频容器 - 传统边框 */
 .video-container {
   position: relative;
-  width: 90%;
-  max-width: 1400px;
+  width: 95%;
+  max-width: 1600px;
   flex: 1;
   min-height: 0; /* Important for flex child scrolling/sizing */
   background: #000;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 3px solid #d4af37;
+  border: 4px solid #d4af37;
   box-shadow: 
     0 0 30px rgba(255, 180, 80, 0.3),
     0 10px 40px rgba(0, 0, 0, 0.5);

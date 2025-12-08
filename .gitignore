@@ -59,4 +59,6 @@ backend/config/settings.json
 # Electron Build Artifacts
 electron-app/dist*/
 electron-app/resources/backend/
+electron-app/resources/ffmpeg/
+electron-app/resources/data/
 electron-app/out/
