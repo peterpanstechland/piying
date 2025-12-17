@@ -11,6 +11,9 @@
     "build:mac-x64": "electron-builder --mac --x64",
     "build:mac-arm64": "electron-builder --mac --arm64",
     "build:linux": "electron-builder --linux --x64",
+    "build:linux-arm64": "electron-builder --linux --arm64",
+    "build:linux-armv7l": "electron-builder --linux --armv7l",
+    "build:rpi": "electron-builder --linux --arm64 --armv7l",
     "build:all": "electron-builder --win --mac --linux",
     "build:portable": "electron-builder --win portable",
     "pack": "electron-builder --dir"
@@ -165,11 +168,11 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": ["x64", "arm64", "armv7l"]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": ["x64", "arm64", "armv7l"]
         }
       ],
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",

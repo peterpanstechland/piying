@@ -4,12 +4,14 @@
 
 ## 支持的平台
 
-| 平台 | 架构 | 文件格式 |
-|------|------|----------|
-| Windows | x64 | `.exe` (NSIS 安装程序) |
-| macOS | Intel (x64) | `.dmg`, `.zip` |
-| macOS | Apple Silicon (arm64) | `.dmg`, `.zip` |
-| Linux | x64 | `.AppImage`, `.deb` |
+| 平台 | 架构 | 适用设备 | 文件格式 |
+|------|------|----------|----------|
+| Windows | x64 | PC | `.exe` (NSIS 安装程序) |
+| macOS | Intel (x64) | Mac (Intel) | `.dmg`, `.zip` |
+| macOS | Apple Silicon (arm64) | Mac (M1/M2/M3) | `.dmg`, `.zip` |
+| Linux | x64 | PC | `.AppImage`, `.deb` |
+| Linux | ARM64 | **树莓派 4/5** | `.AppImage`, `.deb` |
+| Linux | ARMv7 | **树莓派 3/Zero 2** | `.AppImage`, `.deb` |
 
 ## 触发构建
 
@@ -93,6 +95,45 @@ npm run build:mac
 npm run build:linux
 ```
 
+## 树莓派部署指南
+
+### 硬件要求
+
+| 设备 | 架构 | 内存建议 | 推荐版本 |
+|------|------|----------|----------|
+| 树莓派 5 | ARM64 | 4GB+ | ARM64 版本 |
+| 树莓派 4 | ARM64 | 4GB+ | ARM64 版本 |
+| 树莓派 3B+ | ARMv7 | 1GB+ | ARMv7 版本 |
+| 树莓派 Zero 2 W | ARMv7 | 512MB | ARMv7 版本 |
+
+### 安装步骤
+
+1. 下载对应架构的 `.AppImage` 文件
+2. 传输到树莓派
+3. 赋予执行权限并运行：
+
+```bash
+chmod +x 皮影互动系统-*-linux-arm64.AppImage
+./皮影互动系统-*-linux-arm64.AppImage
+```
+
+### 性能优化
+
+- 使用 **Raspberry Pi OS (64-bit)** 以获得最佳性能
+- 确保使用高速 SD 卡或 SSD
+- 增加 GPU 内存分配：编辑 `/boot/config.txt` 添加 `gpu_mem=256`
+- 禁用不需要的服务以释放内存
+
+### 摄像头配置
+
+树莓派摄像头需要启用：
+
+```bash
+sudo raspi-config
+# 选择 Interface Options → Camera → Enable
+sudo reboot
+```
+
 ## 常见问题
 
 ### Q: 构建失败：找不到 Python 后端
@@ -106,3 +147,13 @@ npm run build:linux
 
 ### Q: Linux AppImage 无法运行
 **A:** 确保文件有执行权限：`chmod +x *.AppImage`
+
+### Q: 树莓派上运行缓慢
+**A:** 
+- 确保使用 64-bit 系统（针对 Pi 4/5）
+- 增加 GPU 内存
+- 关闭桌面环境，使用轻量级窗口管理器
+- 降低视频分辨率
+
+### Q: ARM 构建失败
+**A:** ARM 构建使用 QEMU 模拟，可能需要较长时间（30-60分钟）。如果超时，可以增加 GitHub Actions 的超时时间。

@@ -345,9 +345,9 @@ jobs:
           retention-days: 5
 
   # ============================================
-  # Build Electron App for Linux
+  # Build Electron App for Linux x64
   # ============================================
-  build-electron-linux:
+  build-electron-linux-x64:
     needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
     
@@ -398,21 +398,211 @@ jobs:
           cd electron-app
           npm run build -- --linux --x64
 
-      - name: Upload Linux artifact
+      - name: Upload Linux x64 artifact
         uses: actions/upload-artifact@v4
         with:
           name: electron-linux-x64
           path: |
             electron-app/dist_v4/*.AppImage
             electron-app/dist_v4/*.deb
-            electron-app/dist_v4/*.rpm
+          retention-days: 5
+
+  # ============================================
+  # Build Electron App for Linux ARM64 (Raspberry Pi 4/5)
+  # ============================================
+  build-electron-linux-arm64:
+    needs: [build-frontend]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for ARM64 emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: temp-frontend/
+
+      - name: Move frontend files
+        run: |
+          mkdir -p frontend/dist admin-frontend/dist
+          cp -r temp-frontend/frontend/dist/* frontend/dist/
+          cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
+
+      - name: Build Python backend for ARM64
+        uses: docker://arm64v8/python:3.12-slim
+        with:
+          args: |
+            bash -c "
+              apt-get update && apt-get install -y build-essential libffi-dev
+              pip install --upgrade pip
+              pip install pyinstaller
+              pip install -r requirements.txt
+              cd backend
+              pyinstaller --clean --noconfirm \
+                --name backend \
+                --onefile \
+                --add-data 'app:app' \
+                --hidden-import=uvicorn.logging \
+                --hidden-import=uvicorn.loops \
+                --hidden-import=uvicorn.loops.auto \
+                --hidden-import=uvicorn.protocols \
+                --hidden-import=uvicorn.protocols.http \
+                --hidden-import=uvicorn.protocols.http.auto \
+                --hidden-import=uvicorn.protocols.websockets \
+                --hidden-import=uvicorn.protocols.websockets.auto \
+                --hidden-import=uvicorn.lifespan \
+                --hidden-import=uvicorn.lifespan.on \
+                run.py
+            "
+
+      - name: Move backend to resources
+        run: |
+          mkdir -p electron-app/resources/backend
+          cp backend/dist/backend electron-app/resources/backend/
+
+      - name: Download FFmpeg for ARM64
+        run: |
+          # Download static FFmpeg for ARM64
+          mkdir -p electron-app/resources/ffmpeg
+          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz
+          tar -xf ffmpeg-release-arm64-static.tar.xz
+          cp ffmpeg-*-arm64-static/ffmpeg electron-app/resources/ffmpeg/
+          cp ffmpeg-*-arm64-static/ffprobe electron-app/resources/ffmpeg/
+          chmod +x electron-app/resources/ffmpeg/*
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron-app
+          npm ci
+
+      - name: Build Electron app (Linux ARM64)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd electron-app
+          npm run build -- --linux --arm64
+
+      - name: Upload Linux ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux-arm64
+          path: |
+            electron-app/dist_v4/*.AppImage
+            electron-app/dist_v4/*.deb
+          retention-days: 5
+
+  # ============================================
+  # Build Electron App for Linux ARMv7 (Raspberry Pi 3/Zero 2)
+  # ============================================
+  build-electron-linux-armv7:
+    needs: [build-frontend]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for ARM emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: temp-frontend/
+
+      - name: Move frontend files
+        run: |
+          mkdir -p frontend/dist admin-frontend/dist
+          cp -r temp-frontend/frontend/dist/* frontend/dist/
+          cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
+
+      - name: Build Python backend for ARMv7
+        uses: docker://arm32v7/python:3.12-slim
+        with:
+          args: |
+            bash -c "
+              apt-get update && apt-get install -y build-essential libffi-dev
+              pip install --upgrade pip
+              pip install pyinstaller
+              pip install -r requirements.txt
+              cd backend
+              pyinstaller --clean --noconfirm \
+                --name backend \
+                --onefile \
+                --add-data 'app:app' \
+                --hidden-import=uvicorn.logging \
+                --hidden-import=uvicorn.loops \
+                --hidden-import=uvicorn.loops.auto \
+                --hidden-import=uvicorn.protocols \
+                --hidden-import=uvicorn.protocols.http \
+                --hidden-import=uvicorn.protocols.http.auto \
+                --hidden-import=uvicorn.protocols.websockets \
+                --hidden-import=uvicorn.protocols.websockets.auto \
+                --hidden-import=uvicorn.lifespan \
+                --hidden-import=uvicorn.lifespan.on \
+                run.py
+            "
+
+      - name: Move backend to resources
+        run: |
+          mkdir -p electron-app/resources/backend
+          cp backend/dist/backend electron-app/resources/backend/
+
+      - name: Download FFmpeg for ARMv7
+        run: |
+          mkdir -p electron-app/resources/ffmpeg
+          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-armhf-static.tar.xz
+          tar -xf ffmpeg-release-armhf-static.tar.xz
+          cp ffmpeg-*-armhf-static/ffmpeg electron-app/resources/ffmpeg/
+          cp ffmpeg-*-armhf-static/ffprobe electron-app/resources/ffmpeg/
+          chmod +x electron-app/resources/ffmpeg/*
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron-app
+          npm ci
+
+      - name: Build Electron app (Linux ARMv7)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd electron-app
+          npm run build -- --linux --armv7l
+
+      - name: Upload Linux ARMv7 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux-armv7l
+          path: |
+            electron-app/dist_v4/*.AppImage
+            electron-app/dist_v4/*.deb
           retention-days: 5
 
   # ============================================
   # Create GitHub Release
   # ============================================
   create-release:
-    needs: [build-electron-windows, build-electron-macos-x64, build-electron-macos-arm64, build-electron-linux]
+    needs: [build-electron-windows, build-electron-macos-x64, build-electron-macos-arm64, build-electron-linux-x64, build-electron-linux-arm64, build-electron-linux-armv7]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     
@@ -440,9 +630,17 @@ jobs:
           cp artifacts/electron-mac-arm64/*.dmg release/ 2>/dev/null || true
           cp artifacts/electron-mac-arm64/*.zip release/ 2>/dev/null || true
           
-          # Linux
+          # Linux x64
           cp artifacts/electron-linux-x64/*.AppImage release/ 2>/dev/null || true
           cp artifacts/electron-linux-x64/*.deb release/ 2>/dev/null || true
+          
+          # Linux ARM64 (Raspberry Pi 4/5)
+          cp artifacts/electron-linux-arm64/*.AppImage release/ 2>/dev/null || true
+          cp artifacts/electron-linux-arm64/*.deb release/ 2>/dev/null || true
+          
+          # Linux ARMv7 (Raspberry Pi 3/Zero 2)
+          cp artifacts/electron-linux-armv7l/*.AppImage release/ 2>/dev/null || true
+          cp artifacts/electron-linux-armv7l/*.deb release/ 2>/dev/null || true
           
           ls -la release/
 
@@ -459,18 +657,30 @@ jobs:
             
             ### 下载
             
-            | 平台 | 架构 | 文件 |
-            |------|------|------|
-            | Windows | x64 | `皮影互动系统-Setup-*.exe` |
-            | macOS | Intel (x64) | `皮影互动系统-*-x64.dmg` |
-            | macOS | Apple Silicon (M1/M2) | `皮影互动系统-*-arm64.dmg` |
-            | Linux | x64 | `皮影互动系统-*.AppImage` 或 `.deb` |
+            | 平台 | 架构 | 适用设备 | 文件 |
+            |------|------|----------|------|
+            | Windows | x64 | PC | `*-win-x64.exe` |
+            | macOS | Intel (x64) | Mac (Intel) | `*-mac-x64.dmg` |
+            | macOS | ARM64 | Mac (M1/M2/M3) | `*-mac-arm64.dmg` |
+            | Linux | x64 | PC | `*-linux-x64.AppImage` |
+            | Linux | ARM64 | **树莓派 4/5** | `*-linux-arm64.AppImage` |
+            | Linux | ARMv7 | **树莓派 3/Zero 2** | `*-linux-armv7l.AppImage` |
             
             ### 安装说明
             
             - **Windows**: 下载 `.exe` 安装程序，双击运行安装
             - **macOS**: 下载 `.dmg` 文件，拖拽到应用程序文件夹
-            - **Linux**: 下载 `.AppImage`，赋予执行权限后运行
+            - **Linux/树莓派**: 下载 `.AppImage`，赋予执行权限后运行
+              ```bash
+              chmod +x *.AppImage
+              ./*.AppImage
+              ```
+            
+            ### 树莓派配置建议
+            
+            - 树莓派 4/5 (4GB+内存) 推荐使用 ARM64 版本
+            - 树莓派 3/Zero 2 使用 ARMv7 版本
+            - 建议使用 Raspberry Pi OS (64-bit) 以获得最佳性能
             
             ### 更新日志
             
