@@ -166,8 +166,8 @@
 [data-theme='light'] .guidance-overlay {
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(240, 230, 210, 0.7) 100%
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(240, 230, 210, 0.3) 100%
   );
 }
 
@@ -338,4 +338,144 @@
 
 .guidance-icon, .guidance-tips, .guidance-footer {
   display: none;
+}
+
+/* ========== 返回按钮样式 - 统一风格（支持手势悬停） ========== */
+.guidance-back-button {
+  position: absolute;
+  bottom: 280px; /* 提高位置，避免与底部"开场动作"重叠 */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 40px;
+  background: linear-gradient(135deg, #3d2418 0%, #2d1810 100%);
+  border: 2px solid #d4af37;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  z-index: 100;
+  min-width: 160px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.guidance-back-button:hover,
+.guidance-back-button.hovering {
+  background: linear-gradient(135deg, #8b0000 0%, #c41e3a 100%);
+  border-color: #f4d03f;
+  box-shadow: 0 0 30px rgba(255, 180, 80, 0.4);
+}
+
+/* Progress bar for gesture hover */
+.guidance-back-button .back-button-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(196, 30, 58, 0.5) 0%, rgba(212, 175, 55, 0.7) 100%);
+  transform-origin: left;
+  transition: transform 0.1s linear;
+  z-index: -1;
+}
+
+.guidance-back-button .back-icon {
+  font-size: 24px;
+  color: #d4af37;
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.guidance-back-button:hover .back-icon,
+.guidance-back-button.hovering .back-icon {
+  color: #f5e6d3;
+  transform: translateX(-4px);
+}
+
+.guidance-back-button .back-text {
+  font-size: 22px;
+  color: #d4af37;
+  font-weight: 500;
+  font-family: 'Noto Serif SC', 'SimSun', serif;
+  letter-spacing: 0.1em;
+  position: relative;
+  z-index: 1;
+}
+
+.guidance-back-button:hover .back-text,
+.guidance-back-button.hovering .back-text {
+  color: #f5e6d3;
+}
+
+.guidance-back-button .back-button-hint {
+  font-size: 16px;
+  color: rgba(245, 230, 211, 0.8);
+  margin-left: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+/* 自动返回倒计时提示 */
+.auto-return-hint {
+  position: absolute;
+  bottom: 220px; /* 调整位置，保持在返回按钮下方 */
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  color: rgba(212, 175, 55, 0.8);
+  font-family: 'Noto Sans SC', sans-serif;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Light theme */
+[data-theme='light'] .guidance-back-button {
+  background: linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%);
+  border-color: #8b4513;
+}
+
+[data-theme='light'] .guidance-back-button .back-icon,
+[data-theme='light'] .guidance-back-button .back-text {
+  color: #8b4513;
+}
+
+[data-theme='light'] .guidance-back-button:hover,
+[data-theme='light'] .guidance-back-button.hovering {
+  background: linear-gradient(135deg, #d4a574 0%, #c49a6c 100%);
+  border-color: #5d3a1a;
+  box-shadow: 0 0 20px rgba(139, 69, 19, 0.3);
+}
+
+[data-theme='light'] .guidance-back-button:hover .back-icon,
+[data-theme='light'] .guidance-back-button:hover .back-text,
+[data-theme='light'] .guidance-back-button.hovering .back-icon,
+[data-theme='light'] .guidance-back-button.hovering .back-text {
+  color: #3d2418;
+}
+
+[data-theme='light'] .guidance-back-button .back-button-progress {
+  background: linear-gradient(90deg, rgba(139, 69, 19, 0.3) 0%, rgba(212, 175, 55, 0.5) 100%);
+}
+
+[data-theme='light'] .auto-return-hint {
+  color: rgba(139, 69, 19, 0.8);
 }

@@ -24,7 +24,7 @@ from ...models.admin.character import (
 from ...models.admin import TokenPayload
 from ...services.admin.character_service import character_service
 from .auth import get_current_user
-from ...utils.path import get_user_data_dir
+from ...utils.path import get_user_data_dir, resolve_relative_path
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Character Management"])
 
@@ -532,8 +532,9 @@ async def get_character_preview(
     
     # Check if thumbnail exists
     if character.thumbnail_path:
-        thumbnail_full_path = str(get_user_data_dir() / character.thumbnail_path)
-        if os.path.exists(thumbnail_full_path):
+        # Use resolve_relative_path to handle dev/prod/script paths
+        thumbnail_full_path = resolve_relative_path(character.thumbnail_path)
+        if thumbnail_full_path.exists():
             # Add cache control headers to prevent browser caching
             import time
             return FileResponse(
@@ -551,8 +552,8 @@ async def get_character_preview(
     # Generate thumbnail if it doesn't exist
     thumbnail_path = await character_service.generate_thumbnail(db, character_id)
     if thumbnail_path:
-        thumbnail_full_path = str(get_user_data_dir() / thumbnail_path)
-        if os.path.exists(thumbnail_full_path):
+        thumbnail_full_path = resolve_relative_path(thumbnail_path)
+        if thumbnail_full_path.exists():
             return FileResponse(
                 thumbnail_full_path,
                 media_type="image/png",
@@ -600,9 +601,10 @@ async def get_character_part_image(
         )
     
     # Get the file path
-    part_full_path = str(get_user_data_dir() / part.file_path)
+    # Use resolve_relative_path to handle dev/prod/script paths
+    part_full_path = resolve_relative_path(part.file_path)
     
-    if not os.path.exists(part_full_path):
+    if not part_full_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Part image file not found",
@@ -736,16 +738,17 @@ async def get_spritesheet_png(
             detail=f"Character with ID '{character_id}' not found",
         )
     
-    spritesheet_path = str(get_user_data_dir() / "characters" / character_id / "spritesheet.png")
+    spritesheet_path = f"characters/{character_id}/spritesheet.png"
+    spritesheet_full_path = resolve_relative_path(spritesheet_path)
     
-    if not os.path.exists(spritesheet_path):
+    if not spritesheet_full_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sprite sheet not generated. Call POST /export/spritesheet first.",
         )
     
     return FileResponse(
-        spritesheet_path,
+        spritesheet_full_path,
         media_type="image/png",
         filename=f"{character.name}_spritesheet.png"
     )
@@ -771,16 +774,17 @@ async def get_spritesheet_json(
             detail=f"Character with ID '{character_id}' not found",
         )
     
-    json_path = str(get_user_data_dir() / "characters" / character_id / "spritesheet.json")
+    json_path = f"characters/{character_id}/spritesheet.json"
+    json_full_path = resolve_relative_path(json_path)
     
-    if not os.path.exists(json_path):
+    if not json_full_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sprite sheet not generated. Call POST /export/spritesheet first.",
         )
     
     return FileResponse(
-        json_path,
+        json_full_path,
         media_type="application/json",
         filename=f"{character.name}_spritesheet.json"
     )

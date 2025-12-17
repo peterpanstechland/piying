@@ -20,6 +20,7 @@ from ...models.admin.storyline import (
 )
 from ...models.admin import TokenPayload
 from ...services.admin.character_video_service import character_video_service
+from ...utils.path import resolve_relative_path
 from .auth import get_current_user
 
 router = APIRouter(
@@ -327,65 +328,73 @@ async def stream_character_video(
         404: Video not found
     """
     try:
-    video_path = character_video_service.get_character_video_file_path(
-        storyline_id, character_id
-    )
-    
-    if not os.path.exists(video_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Character video not found.",
+        # Use resolve_relative_path to find video in any valid data directory
+        # This fixes issues where production script mode uses local data folder
+        relative_path = character_video_service.get_relative_video_path(
+            storyline_id, character_id
         )
-    
-    file_size = os.path.getsize(video_path)
-    
-    # Check for Range header
-    range_header = request.headers.get("range")
-    
-    if range_header:
-        # Parse Range header: "bytes=start-end"
-        range_match = range_header.replace("bytes=", "").split("-")
-        start = int(range_match[0]) if range_match[0] else 0
-        end = int(range_match[1]) if range_match[1] else file_size - 1
+        video_path = resolve_relative_path(relative_path)
         
-        # Ensure valid range
-        if start >= file_size:
-            raise HTTPException(status_code=416, detail="Range not satisfiable")
+        if not os.path.exists(video_path):
+            # Fallback to absolute path from service just in case (though resolve handles user_data)
+            video_path = character_video_service.get_character_video_file_path(
+                storyline_id, character_id
+            )
+            if not os.path.exists(video_path):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Character video not found.",
+                )
         
-        end = min(end, file_size - 1)
-        content_length = end - start + 1
+        file_size = os.path.getsize(video_path)
         
-        async def stream_range():
-            async with aiofiles.open(video_path, "rb") as f:
-                await f.seek(start)
-                remaining = content_length
-                chunk_size = 1024 * 1024  # 1MB chunks
-                while remaining > 0:
-                    read_size = min(chunk_size, remaining)
-                    data = await f.read(read_size)
-                    if not data:
-                        break
-                    remaining -= len(data)
-                    yield data
+        # Check for Range header
+        range_header = request.headers.get("range")
         
-        return StreamingResponse(
-            stream_range(),
-            status_code=206,
+        if range_header:
+            # Parse Range header: "bytes=start-end"
+            range_match = range_header.replace("bytes=", "").split("-")
+            start = int(range_match[0]) if range_match[0] else 0
+            end = int(range_match[1]) if range_match[1] else file_size - 1
+            
+            # Ensure valid range
+            if start >= file_size:
+                raise HTTPException(status_code=416, detail="Range not satisfiable")
+            
+            end = min(end, file_size - 1)
+            content_length = end - start + 1
+            
+            async def stream_range():
+                async with aiofiles.open(video_path, "rb") as f:
+                    await f.seek(start)
+                    remaining = content_length
+                    chunk_size = 1024 * 1024  # 1MB chunks
+                    while remaining > 0:
+                        read_size = min(chunk_size, remaining)
+                        data = await f.read(read_size)
+                        if not data:
+                            break
+                        remaining -= len(data)
+                        yield data
+            
+            return StreamingResponse(
+                stream_range(),
+                status_code=206,
+                media_type="video/mp4",
+                headers={
+                    "Content-Range": f"bytes {start}-{end}/{file_size}",
+                    "Accept-Ranges": "bytes",
+                    "Content-Length": str(content_length),
+                },
+            )
+        
+        # No Range header - return full file
+        return FileResponse(
+            video_path, 
             media_type="video/mp4",
-            headers={
-                "Content-Range": f"bytes {start}-{end}/{file_size}",
-                "Accept-Ranges": "bytes",
-                "Content-Length": str(content_length),
-            },
+            headers={"Accept-Ranges": "bytes"},
         )
-    
-    # No Range header - return full file
-    return FileResponse(
-        video_path, 
-        media_type="video/mp4",
-        headers={"Accept-Ranges": "bytes"},
-    )
-        
+            
     except HTTPException:
         raise
     except Exception as e:
@@ -419,15 +428,22 @@ async def get_character_video_thumbnail(
     Raises:
         404: Thumbnail not found
     """
-    thumbnail_path = character_video_service.get_character_thumbnail_path(
+    # Use resolve_relative_path to find thumbnail
+    relative_path = character_video_service.get_relative_thumbnail_path(
         storyline_id, character_id
     )
+    thumbnail_path = resolve_relative_path(relative_path)
     
     if not os.path.exists(thumbnail_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Character video thumbnail not found.",
+        # Fallback to absolute path from service
+        thumbnail_path = character_video_service.get_character_thumbnail_path(
+            storyline_id, character_id
         )
+        if not os.path.exists(thumbnail_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Character video thumbnail not found.",
+            )
     
     return FileResponse(thumbnail_path, media_type="image/jpeg")
 

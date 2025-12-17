@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import './CoverImageManager.css'
 
 interface CoverImage {
@@ -51,9 +51,18 @@ export default function CoverImageManager({
   const [captureTimestamp, setCaptureTimestamp] = useState<number>(0)
   const [internalVideoTime, setInternalVideoTime] = useState<number>(0)
   const [videoDuration, setVideoDuration] = useState<number>(0)
+  // Cache buster timestamp to force image refresh after capture/upload
+  const [imageCacheBuster, setImageCacheBuster] = useState<number>(Date.now())
   
   // Use external video ref if provided, otherwise use internal
   const videoRef = externalVideoRef || internalVideoRef
+  
+  // Update cache buster when currentCover changes (after parent refetch)
+  useEffect(() => {
+    if (currentCover) {
+      setImageCacheBuster(Date.now())
+    }
+  }, [currentCover?.large_path])
   
   // Handle video time update
   const handleVideoTimeUpdate = useCallback(() => {
@@ -115,6 +124,8 @@ export default function CoverImageManager({
       console.log('[CoverImageManager] Cover image upload successful')
       setPreviewImage(null)
       setPendingFile(null)
+      // Update cache buster to force image refresh
+      setImageCacheBuster(Date.now())
     } catch (error: any) {
       console.error('[CoverImageManager] Failed to upload cover image:', error)
       console.error('[CoverImageManager] Upload error details:', {
@@ -200,6 +211,8 @@ export default function CoverImageManager({
       setShowCapturePreview(false)
       setCapturePreviewImage(null)
       setCaptureTimestamp(0)
+      // Update cache buster to force image refresh
+      setImageCacheBuster(Date.now())
     } catch (error: any) {
       console.error('[CoverImageManager] Failed to capture frame:', error)
       console.error('[CoverImageManager] Error details:', {
@@ -244,10 +257,10 @@ export default function CoverImageManager({
     }
   }
 
-  // Build cover image URL
+  // Build cover image URL with cache buster to prevent stale images
   const getCoverImageUrl = () => {
     if (currentCover?.large_path) {
-      return `/api/admin/storylines/${storylineId}/cover/large`
+      return `/api/admin/storylines/${storylineId}/cover/large?t=${imageCacheBuster}`
     }
     return null
   }

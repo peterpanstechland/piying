@@ -28,7 +28,7 @@ from ...models.admin.storyline import (
 from ...models.admin import TokenPayload
 from ...services.admin.storyline_service import storyline_service
 from .auth import get_current_user
-from ...utils.path import get_user_data_dir
+from ...utils.path import get_user_data_dir, resolve_relative_path
 
 router = APIRouter(prefix="/api/admin/storylines", tags=["Admin Storyline Management"])
 
@@ -303,17 +303,16 @@ async def get_storyline_video(
             detail="No video uploaded for this storyline",
         )
     
-    # Build full path - data directory is user data dir
-    data_dir = get_user_data_dir()
-    full_path = str(data_dir / storyline.base_video_path)
+    # Build full path - use resolve_relative_path for dev/prod flexibility
+    full_path = resolve_relative_path(storyline.base_video_path)
     
-    if not os.path.exists(full_path):
+    if not full_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Video file not found",
         )
     
-    file_size = os.path.getsize(full_path)
+    file_size = full_path.stat().st_size
     
     # Check for Range header
     range_header = request.headers.get("range")
@@ -399,9 +398,9 @@ async def extract_video_frame(
         )
     
     # Get full video path
-    video_full_path = str(get_user_data_dir() / storyline.base_video_path)
+    video_full_path = resolve_relative_path(storyline.base_video_path)
     
-    if not os.path.exists(video_full_path):
+    if not video_full_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Video file not found on disk",
@@ -992,18 +991,17 @@ async def get_cover_image(
                 detail="Cover image not found",
             )
         
-        # Build full path - data directory is user data dir
-        data_dir = get_user_data_dir()
-        full_path = str(data_dir / cover_path)
+        # Build full path - use resolve_relative_path
+        full_path = resolve_relative_path(cover_path)
         
-        if not os.path.exists(full_path):
+        if not full_path.exists():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Cover image file not found at {full_path}",
             )
         
         # Determine media type
-        ext = os.path.splitext(full_path)[1].lower()
+        ext = full_path.suffix.lower()
         media_type = {
             ".jpg": "image/jpeg",
             ".jpeg": "image/jpeg",

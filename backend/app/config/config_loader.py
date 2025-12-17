@@ -81,6 +81,8 @@ class TimeoutsConfig(BaseModel):
     final_result_auto_reset_seconds: int = Field(default=30, ge=0)
     exit_gesture_duration_seconds: int = Field(default=3, ge=0)
     exit_confirmation_duration_seconds: int = Field(default=2, ge=0)
+    inactivity_show_countdown_seconds: int = Field(default=10, ge=0)
+    segment_review_inactivity_seconds: int = Field(default=30, ge=0)
 
 
 class InteractionConfig(BaseModel):

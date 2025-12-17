@@ -3,6 +3,7 @@ import { StateMachine, AppState } from './state/state-machine';
 import { CameraDetectionService, DetectionResult, PoseLandmark } from './services/camera-detection';
 import { MotionCaptureRecorder, SegmentData } from './services/motion-capture';
 import { APIClient } from './services/api-client';
+import { useSystemSettings } from './contexts/SystemSettingsContext';
 
 // Extended segment data with optional video blob
 interface RecordedSegment extends SegmentData {
@@ -85,7 +86,16 @@ function App() {
   const [displayedState, setDisplayedState] = useState<AppState>(AppState.IDLE);
   const previousStateRef = useRef<AppState>(AppState.IDLE);
   
+  // IDLE 页面倒计时状态
+  const [idleCountdown, setIdleCountdown] = useState<{
+    personDetected: boolean;
+    countdownSeconds: number;
+  }>({ personDetected: false, countdownSeconds: 0 });
+  
   const { toasts, showError, showWarning, closeToast } = useToast();
+  
+  // Get system settings (including timeouts)
+  const { timeouts, isLoaded: settingsLoaded } = useSystemSettings();
   
   // Performance monitoring
   const animationFrameRef = useRef<number | null>(null);
@@ -97,6 +107,18 @@ function App() {
   const apiClientRef = useRef<APIClient>(new APIClient());
   const recordedSegmentsRef = useRef<RecordedSegment[]>([]);
   const poseCallbackRef = useRef<((landmarks: PoseLandmark[]) => void) | null>(null);
+  const timeoutsRef = useRef(timeouts);
+  const settingsLoadedRef = useRef(settingsLoaded);
+  const personAbsentTimeRef = useRef<number | null>(null); // Track when person left for inactivity timeout
+  
+  // Keep refs updated with latest values
+  useEffect(() => {
+    timeoutsRef.current = timeouts;
+    settingsLoadedRef.current = settingsLoaded;
+    if (settingsLoaded) {
+      console.log('[App] Settings loaded, idle timeout:', timeouts.idle_to_scene_select_seconds, 'seconds');
+    }
+  }, [timeouts, settingsLoaded]);
 
   // Setup global error handling
   useEffect(() => {
@@ -249,19 +271,44 @@ function App() {
 
     // Handle person detection for IDLE -> SCENE_SELECT transition
     if (currentState === AppState.IDLE) {
+      // Wait for settings to be loaded before allowing transition
+      if (!settingsLoadedRef.current) {
+        return; // Don't process until settings are loaded
+      }
+      
+      const idleTimeoutSec = timeoutsRef.current.idle_to_scene_select_seconds;
+      const idleTimeoutMs = idleTimeoutSec * 1000;
+      
       if (result.presence) {
         if (personDetectedTimeRef.current === null) {
           personDetectedTimeRef.current = Date.now();
+          // 开始倒计时
+          setIdleCountdown({
+            personDetected: true,
+            countdownSeconds: idleTimeoutSec
+          });
         } else {
           const detectionDuration = Date.now() - personDetectedTimeRef.current;
-          // Transition after 1 second of continuous detection
-          if (detectionDuration >= 1000) {
+          // 更新倒计时显示
+          const remainingSeconds = Math.max(0, Math.ceil((idleTimeoutMs - detectionDuration) / 1000));
+          setIdleCountdown({
+            personDetected: true,
+            countdownSeconds: remainingSeconds
+          });
+          
+          if (detectionDuration >= idleTimeoutMs) {
+            console.log(`[App] Person detected for ${detectionDuration}ms >= ${idleTimeoutMs}ms, transitioning to SCENE_SELECT`);
             stateMachineRef.current?.transition(AppState.SCENE_SELECT);
             personDetectedTimeRef.current = null;
+            setIdleCountdown({ personDetected: false, countdownSeconds: 0 });
           }
         }
       } else {
-        personDetectedTimeRef.current = null;
+        // 人离开了，重置倒计时
+        if (personDetectedTimeRef.current !== null) {
+          personDetectedTimeRef.current = null;
+          setIdleCountdown({ personDetected: false, countdownSeconds: 0 });
+        }
       }
     }
 
@@ -308,9 +355,37 @@ function App() {
       }
     }
 
-    // Handle person absence timeout
-    if (currentState === AppState.SCENE_SELECT && !result.presence) {
-      // TODO: Implement timeout logic (10 seconds)
+    // Handle inactivity timeout - return to IDLE when no hand gesture activity for configured duration
+    if (currentState === AppState.SCENE_SELECT || currentState === AppState.CHARACTER_SELECT) {
+      // Check for hand activity (user trying to interact)
+      const hasHandActivity = result.rightHand !== null || result.leftHand !== null;
+      
+      if (hasHandActivity) {
+        // User is interacting - reset inactivity timer
+        if (personAbsentTimeRef.current !== null) {
+          console.log('[App] Hand activity detected, resetting inactivity timer');
+          personAbsentTimeRef.current = null;
+        }
+      } else {
+        // No hand activity - start or check inactivity timer
+        if (personAbsentTimeRef.current === null) {
+          personAbsentTimeRef.current = Date.now();
+          const timeoutSec = timeoutsRef.current.scene_select_inactivity_seconds;
+          console.log(`[App] No hand activity, starting ${timeoutSec}s inactivity timer`);
+        } else {
+          const inactivityDuration = Date.now() - personAbsentTimeRef.current;
+          const inactivityTimeoutMs = timeoutsRef.current.scene_select_inactivity_seconds * 1000;
+          // Log progress every 5 seconds
+          if (Math.floor(inactivityDuration / 5000) !== Math.floor((inactivityDuration - 100) / 5000)) {
+            console.log(`[App] Inactivity: ${Math.floor(inactivityDuration / 1000)}s / ${inactivityTimeoutMs / 1000}s`);
+          }
+          if (inactivityDuration >= inactivityTimeoutMs) {
+            console.log(`[App] Inactivity timeout reached! ${inactivityDuration}ms >= ${inactivityTimeoutMs}ms, returning to IDLE`);
+            personAbsentTimeRef.current = null;
+            stateMachineRef.current?.reset();
+          }
+        }
+      }
     }
     
     // Record detection callback duration for performance monitoring
@@ -513,12 +588,30 @@ function App() {
     }
   }, [selectedScene, createSessionAndStartRecording]);
 
+  // Handle back to IDLE from scene selection
+  const handleBackToIdle = useCallback(() => {
+    console.log('[App] Back button pressed, returning to IDLE');
+    personAbsentTimeRef.current = null; // Reset inactivity timer
+    if (stateMachineRef.current) {
+      stateMachineRef.current.reset();
+    }
+  }, []);
+
   // Handle back from character selection
   const handleBackToSceneSelect = useCallback(() => {
     if (stateMachineRef.current) {
       setSelectedScene(null);
       setAvailableCharacters([]);
       stateMachineRef.current.transition(AppState.SCENE_SELECT);
+    }
+  }, []);
+
+  // Handle back from segment guidance (return to IDLE - simpler and more intuitive)
+  const handleBackFromSegmentGuide = useCallback(() => {
+    console.log('[App] Back from segment guidance, returning to IDLE');
+    personAbsentTimeRef.current = null; // Reset inactivity timer
+    if (stateMachineRef.current) {
+      stateMachineRef.current.reset(); // Go back to IDLE
     }
   }, []);
 
@@ -773,7 +866,12 @@ function App() {
       case AppState.IDLE:
         return (
           <div className={`page-transition-wrapper ${isTransitioning ? 'exiting' : ''}`}>
-            <IdlePage videoElement={videoElement} />
+            <IdlePage 
+              videoElement={videoElement}
+              personDetected={idleCountdown.personDetected}
+              countdownSeconds={idleCountdown.countdownSeconds}
+              totalCountdownSeconds={timeouts.idle_to_scene_select_seconds}
+            />
           </div>
         );
       
@@ -785,7 +883,10 @@ function App() {
               videoElement={videoElement}
               handPosition={handPosition}
               onSceneSelect={handleSceneSelect}
+              onBack={handleBackToIdle}
               apiBaseUrl={apiClientRef.current.getBaseUrl()}
+              inactivityShowCountdownSeconds={timeouts.inactivity_show_countdown_seconds}
+              inactivityAutoBackSeconds={timeouts.scene_select_inactivity_seconds}
             />
           </div>
         );
@@ -800,6 +901,8 @@ function App() {
             onCharacterSelect={handleCharacterSelect}
             onBack={handleBackToSceneSelect}
             apiBaseUrl={apiClientRef.current.getBaseUrl()}
+            inactivityShowCountdownSeconds={timeouts.inactivity_show_countdown_seconds}
+            inactivityAutoBackSeconds={timeouts.scene_select_inactivity_seconds}
           />
         );
       
@@ -812,6 +915,9 @@ function App() {
             currentPose={currentPose} // Pass pose data
             characterId={context?.characterId} // 传递角色ID用于皮影人物渲染
             onGuidanceComplete={handleGuidanceComplete}
+            onBack={handleBackFromSegmentGuide}
+            inactivityShowBackSeconds={timeouts.motion_capture_inactivity_seconds} // 使用配置的超时时间
+            inactivityAutoBackSeconds={timeouts.motion_capture_inactivity_seconds * 2} // 自动返回时间为显示时间的2倍
           />
         );
       
@@ -888,12 +994,15 @@ function App() {
             videoElement={videoElement}
             onReRecord={handleReRecord}
             onContinue={handleContinue}
+            onTimeout={handleBackToIdle} // 超时返回首页
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             uploadError={uploadError}
             cursorPosition={handPosition}
             hoverDurationMs={3000}
             characterId={context?.characterId}
+            inactivityShowCountdownSeconds={timeouts.inactivity_show_countdown_seconds}
+            inactivityAutoBackSeconds={timeouts.segment_review_inactivity_seconds}
           />
         );
       
@@ -908,8 +1017,10 @@ function App() {
         );
       
       case AppState.FINAL_RESULT:
-        // Use video duration for auto-reset, with minimum of 10 seconds
-        const autoResetSeconds = Math.max(Math.ceil(context?.videoDuration || 30), 10);
+        // Use video duration + 5 seconds for auto-reset (minimum 10 seconds)
+        const videoDuration = context?.videoDuration || 30;
+        const autoResetSeconds = Math.max(Math.ceil(videoDuration) + 5, 10);
+        console.log(`[App] FinalResult auto-reset: video ${videoDuration}s + 5s = ${autoResetSeconds}s`);
         return (
           <FinalResultPage
             videoUrl={videoUrl || context?.videoUrl || ''}

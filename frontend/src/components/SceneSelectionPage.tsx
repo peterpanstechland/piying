@@ -38,7 +38,10 @@ interface SceneSelectionPageProps {
   videoElement?: HTMLVideoElement | null;
   handPosition?: { x: number; y: number } | null;
   onSceneSelect?: (sceneId: string) => void;
+  onBack?: () => void; // Callback to return to IDLE
   apiBaseUrl?: string; // Base URL for cover images
+  inactivityShowCountdownSeconds?: number; // 多少秒后显示倒计时（默认10秒）
+  inactivityAutoBackSeconds?: number; // 多少秒后自动返回（默认20秒）
 }
 
 /**
@@ -50,7 +53,10 @@ export const SceneSelectionPage = ({
   videoElement,
   handPosition,
   onSceneSelect,
+  onBack,
   apiBaseUrl = '',
+  inactivityShowCountdownSeconds = 10,
+  inactivityAutoBackSeconds = 20,
 }: SceneSelectionPageProps) => {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
@@ -69,12 +75,62 @@ export const SceneSelectionPage = ({
   const [hoverProgress, setHoverProgress] = useState<number>(0);
   const [cardDimensions, setCardDimensions] = useState<Map<string, { width: number; height: number }>>(new Map());
   const [isEntered, setIsEntered] = useState(false); // For entrance animation
+  
+  // Back button hover state
+  const [backButtonHovered, setBackButtonHovered] = useState(false);
+  const [backButtonProgress, setBackButtonProgress] = useState(0);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  const backButtonHoverStartRef = useRef<number | null>(null);
+
+  // 无操作自动返回状态
+  const [inactivitySeconds, setInactivitySeconds] = useState(0);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const lastInteractionTimeRef = useRef<number>(Date.now());
+  const isReturningRef = useRef(false); // 防止重复调用 onBack
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
 
   // Trigger entrance animation after mount
   useEffect(() => {
     const timer = setTimeout(() => setIsEntered(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  // 无操作计时器 - 页面级别的自动返回
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 如果已经在返回中，停止计时
+      if (isReturningRef.current) return;
+      
+      const elapsed = Math.floor((Date.now() - lastInteractionTimeRef.current) / 1000);
+      setInactivitySeconds(elapsed);
+      
+      // 10秒后显示倒计时
+      if (elapsed >= inactivityShowCountdownSeconds && !showCountdown) {
+        setShowCountdown(true);
+        console.log('[SceneSelection] Showing countdown after', elapsed, 'seconds of inactivity');
+      }
+      
+      // 20秒后自动返回
+      if (elapsed >= inactivityAutoBackSeconds && onBackRef.current && !isReturningRef.current) {
+        console.log('[SceneSelection] Auto-returning after', elapsed, 'seconds of inactivity');
+        isReturningRef.current = true; // 标记正在返回，防止重复调用
+        onBackRef.current();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [inactivityShowCountdownSeconds, inactivityAutoBackSeconds, showCountdown]);
+
+  // 当用户悬停在场景上时重置无操作计时器
+  useEffect(() => {
+    if (hoveredSceneId !== null || backButtonHovered) {
+      // 用户正在交互，重置计时器
+      lastInteractionTimeRef.current = Date.now();
+      setInactivitySeconds(0);
+      setShowCountdown(false);
+    }
+  }, [hoveredSceneId, backButtonHovered]);
 
   // Helper to calculate screen coordinates
   const getScreenCoordinates = useCallback((normalizedX: number, normalizedY: number, canvasWidth: number, canvasHeight: number) => {
@@ -160,8 +216,50 @@ export const SceneSelectionPage = ({
     const viewWidth = window.innerWidth;
     const viewHeight = window.innerHeight;
     let animationFrameId: number;
+    const HOVER_DURATION = 3000; // 3 seconds to trigger
 
     const updateHover = () => {
+      const normalizedPos = controller.getCursorPosition();
+      const screenPos = getScreenCoordinates(
+        normalizedPos.x, 
+        normalizedPos.y, 
+        viewWidth, 
+        viewHeight
+      );
+
+      // Check back button hover
+      if (backButtonRef.current && onBack) {
+        const backRect = backButtonRef.current.getBoundingClientRect();
+        const isOverBackButton = 
+          screenPos.x >= backRect.left &&
+          screenPos.x <= backRect.right &&
+          screenPos.y >= backRect.top &&
+          screenPos.y <= backRect.bottom;
+
+        if (isOverBackButton) {
+          if (backButtonHoverStartRef.current === null) {
+            backButtonHoverStartRef.current = Date.now();
+          }
+          const elapsed = Date.now() - backButtonHoverStartRef.current;
+          const progress = Math.min(elapsed / HOVER_DURATION, 1);
+          setBackButtonHovered(true);
+          setBackButtonProgress(progress);
+          
+          if (progress >= 1) {
+            console.log('Back button triggered via gesture');
+            backButtonHoverStartRef.current = null;
+            setBackButtonProgress(0);
+            onBack();
+            return;
+          }
+        } else {
+          backButtonHoverStartRef.current = null;
+          setBackButtonHovered(false);
+          setBackButtonProgress(0);
+        }
+      }
+
+      // Check scene cards hover
       const sceneCards: SceneCard[] = [];
       
       // Only include enabled scenes for hover detection
@@ -184,35 +282,23 @@ export const SceneSelectionPage = ({
         }
       });
 
-      if (sceneCards.length === 0) {
-        animationFrameId = requestAnimationFrame(updateHover);
-        return;
-      }
-      
-      const normalizedPos = controller.getCursorPosition();
-      
-      const screenPos = getScreenCoordinates(
-        normalizedPos.x, 
-        normalizedPos.y, 
-        viewWidth, 
-        viewHeight
-      );
-      
-      controller.updateHoverStateWithScreenPos(
-        sceneCards,
-        screenPos.x,
-        screenPos.y,
-        3000, // Reduced from 5000ms to 3000ms for faster selection
-        (sceneId) => {
-          console.log('Scene selected via hover:', sceneId);
-          if (onSceneSelect) {
-            onSceneSelect(sceneId);
+      if (sceneCards.length > 0) {
+        controller.updateHoverStateWithScreenPos(
+          sceneCards,
+          screenPos.x,
+          screenPos.y,
+          HOVER_DURATION,
+          (sceneId) => {
+            console.log('Scene selected via hover:', sceneId);
+            if (onSceneSelect) {
+              onSceneSelect(sceneId);
+            }
           }
-        }
-      );
+        );
 
-      setHoveredSceneId(controller.getHoveredCardId());
-      setHoverProgress(controller.getHoverProgress());
+        setHoveredSceneId(controller.getHoveredCardId());
+        setHoverProgress(controller.getHoverProgress());
+      }
 
       animationFrameId = requestAnimationFrame(updateHover);
     };
@@ -222,7 +308,7 @@ export const SceneSelectionPage = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [scenes, onSceneSelect, handPosition, getScreenCoordinates]);
+  }, [scenes, onSceneSelect, onBack, handPosition, getScreenCoordinates]);
 
   // Render video feed
   useEffect(() => {
@@ -388,6 +474,35 @@ export const SceneSelectionPage = ({
           <h1>{t('sceneSelection.title')}</h1>
           <p className="scene-selection-hint">{t('sceneSelection.hover')}</p>
         </div>
+
+        {/* Back button to return to IDLE - supports both mouse click and gesture hover */}
+        {onBack && (
+          <button 
+            ref={backButtonRef}
+            className={`back-to-idle-button ${backButtonHovered ? 'hovering' : ''}`}
+            onClick={onBack}
+            aria-label={t('common.back', '返回')}
+          >
+            <div 
+              className="back-button-progress"
+              style={{ transform: `scaleX(${backButtonProgress})` }}
+            />
+            <span className="back-icon">←</span>
+            <span className="back-text">{t('common.back', '返回')}</span>
+            {backButtonHovered && backButtonProgress > 0 && (
+              <span className="back-button-hint">
+                {Math.ceil((1 - backButtonProgress) * 3)}s
+              </span>
+            )}
+          </button>
+        )}
+
+        {/* 自动返回倒计时提示 - 10秒后显示 */}
+        {showCountdown && onBack && (
+          <div className="auto-return-countdown">
+            {inactivityAutoBackSeconds - inactivitySeconds}s 后自动返回
+          </div>
+        )}
 
         <div className="scene-cards-container" ref={cardsContainerRef}>
           {scenes.map((scene, index) => {

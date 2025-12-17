@@ -13,6 +13,9 @@ interface SegmentGuidancePageProps {
   currentPose?: PoseLandmark[] | null;
   characterId?: string;
   onGuidanceComplete?: () => void;
+  onBack?: () => void; // 返回回调
+  inactivityShowBackSeconds?: number; // 多少秒后显示返回按钮（默认20秒）
+  inactivityAutoBackSeconds?: number; // 多少秒后自动返回（默认40秒）
 }
 
 enum CalibrationStep {
@@ -36,6 +39,9 @@ export const SegmentGuidancePage = ({
   currentPose,
   characterId,
   onGuidanceComplete,
+  onBack,
+  inactivityShowBackSeconds = 20,
+  inactivityAutoBackSeconds = 40,
 }: SegmentGuidancePageProps) => {
   const { t } = useTranslation();
   const [isInBox, setIsInBox] = useState(false);
@@ -47,6 +53,18 @@ export const SegmentGuidancePage = ({
   const [calibrationStep, setCalibrationStep] = useState<CalibrationStep>(CalibrationStep.None);
   const [stepHoldStart, setStepHoldStart] = useState<number | null>(null);
   
+  // 无操作返回状态
+  const [inactivitySeconds, setInactivitySeconds] = useState(0);
+  const [showBackButton, setShowBackButton] = useState(false);
+  const lastActiveTimeRef = useRef<number>(Date.now());
+  const isReturningRef = useRef(false); // 防止重复调用 onBack
+  
+  // 手势悬停返回按钮状态
+  const [backButtonHovered, setBackButtonHovered] = useState(false);
+  const [backButtonProgress, setBackButtonProgress] = useState(0);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  const backButtonHoverStartRef = useRef<number | null>(null);
+  
   // Refs
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CharacterRenderer | null>(null);
@@ -55,6 +73,8 @@ export const SegmentGuidancePage = ({
   // Store callback in ref to avoid dependency issues
   const onGuidanceCompleteRef = useRef(onGuidanceComplete);
   onGuidanceCompleteRef.current = onGuidanceComplete;
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
 
   // Config: Detection Box Area (Normalized 0-1)
   const BOX_CONFIG = {
@@ -124,6 +144,98 @@ export const SegmentGuidancePage = ({
     }
     return () => clearTimeout(timeout);
   }, [isInBox]);
+
+  // 无操作返回检测：当用户有正确动作时重置计时器
+  useEffect(() => {
+    // 检测"正常动作"：在框内且正在进行校准或已完成校准
+    const isActivelyInteracting = isStableInBox && (calibrationStep !== CalibrationStep.None || isCalibrated);
+    
+    if (isActivelyInteracting) {
+      // 重置计时器
+      lastActiveTimeRef.current = Date.now();
+      setInactivitySeconds(0);
+      setShowBackButton(false);
+    }
+  }, [isStableInBox, calibrationStep, isCalibrated]);
+
+  // 无操作计时器
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 如果已经在返回中，停止计时
+      if (isReturningRef.current) return;
+      
+      const elapsed = Math.floor((Date.now() - lastActiveTimeRef.current) / 1000);
+      setInactivitySeconds(elapsed);
+      
+      // 20秒后显示返回按钮
+      if (elapsed >= inactivityShowBackSeconds && !showBackButton) {
+        setShowBackButton(true);
+        console.log('[SegmentGuidance] Showing back button after', elapsed, 'seconds of inactivity');
+      }
+      
+      // 40秒后自动返回
+      if (elapsed >= inactivityAutoBackSeconds && onBackRef.current && !isReturningRef.current) {
+        console.log('[SegmentGuidance] Auto-returning after', elapsed, 'seconds of inactivity');
+        isReturningRef.current = true; // 标记正在返回，防止重复调用
+        onBackRef.current();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [inactivityShowBackSeconds, inactivityAutoBackSeconds, showBackButton]);
+
+  // 手势悬停返回按钮检测
+  useEffect(() => {
+    if (!currentPose || !showBackButton || !backButtonRef.current || !onBack) return;
+    
+    const HOVER_DURATION = 3000; // 3秒触发
+    
+    // 获取手的位置（使用右手腕作为指针）
+    const rightWrist = currentPose[16];
+    const leftWrist = currentPose[15];
+    
+    // 选择可见度更高的手
+    const hand = (rightWrist?.visibility || 0) > (leftWrist?.visibility || 0) ? rightWrist : leftWrist;
+    
+    if (!hand || hand.visibility < 0.5) {
+      backButtonHoverStartRef.current = null;
+      setBackButtonHovered(false);
+      setBackButtonProgress(0);
+      return;
+    }
+
+    // 将归一化坐标转换为屏幕坐标
+    const screenX = (1 - hand.x) * window.innerWidth; // 镜像
+    const screenY = hand.y * window.innerHeight;
+    
+    const backRect = backButtonRef.current.getBoundingClientRect();
+    const isOverBackButton = 
+      screenX >= backRect.left &&
+      screenX <= backRect.right &&
+      screenY >= backRect.top &&
+      screenY <= backRect.bottom;
+
+    if (isOverBackButton) {
+      if (backButtonHoverStartRef.current === null) {
+        backButtonHoverStartRef.current = Date.now();
+      }
+      const elapsed = Date.now() - backButtonHoverStartRef.current;
+      const progress = Math.min(elapsed / HOVER_DURATION, 1);
+      setBackButtonHovered(true);
+      setBackButtonProgress(progress);
+      
+      if (progress >= 1) {
+        console.log('[SegmentGuidance] Back button triggered via gesture');
+        backButtonHoverStartRef.current = null;
+        setBackButtonProgress(0);
+        onBack();
+      }
+    } else {
+      backButtonHoverStartRef.current = null;
+      setBackButtonHovered(false);
+      setBackButtonProgress(0);
+    }
+  }, [currentPose, showBackButton, onBack]);
 
   // 2. Calibration Logic Flow
   useEffect(() => {
@@ -408,6 +520,35 @@ export const SegmentGuidancePage = ({
             {t(`guidance.segment${segmentIndex + 1}.description`)}
           </p>
         </div>
+
+        {/* 返回按钮 - 无操作一段时间后显示 */}
+        {showBackButton && onBack && (
+          <button 
+            ref={backButtonRef}
+            className={`guidance-back-button ${backButtonHovered ? 'hovering' : ''}`}
+            onClick={onBack}
+            aria-label={t('common.back', '返回')}
+          >
+            <div 
+              className="back-button-progress"
+              style={{ transform: `scaleX(${backButtonProgress})` }}
+            />
+            <span className="back-icon">←</span>
+            <span className="back-text">{t('common.back', '返回')}</span>
+            {backButtonHovered && backButtonProgress > 0 && (
+              <span className="back-button-hint">
+                {Math.ceil((1 - backButtonProgress) * 3)}s
+              </span>
+            )}
+          </button>
+        )}
+
+        {/* 自动返回倒计时提示 */}
+        {showBackButton && inactivitySeconds >= inactivityShowBackSeconds && (
+          <div className="auto-return-hint">
+            {inactivityAutoBackSeconds - inactivitySeconds}s 后自动返回
+          </div>
+        )}
       </div>
     </div>
   );

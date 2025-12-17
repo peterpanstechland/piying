@@ -120,7 +120,7 @@ class SessionManager:
         session.updated_at = time.time()
         self.storage_manager.save_session(session)
     
-    def update_status(self, session_id: str, status: SessionStatus, output_path: Optional[str] = None) -> None:
+    def update_status(self, session_id: str, status: SessionStatus, output_path: Optional[str] = None, error_message: Optional[str] = None) -> None:
         """
         Update session status
         
@@ -128,6 +128,7 @@ class SessionManager:
             session_id: Session identifier
             status: New status
             output_path: Optional output video path (for DONE status)
+            error_message: Optional error message (for FAILED status)
             
         Raises:
             ValueError: If session not found
@@ -140,6 +141,8 @@ class SessionManager:
         session.status = status
         if output_path is not None:
             session.output_path = output_path
+        if error_message is not None:
+            session.error_message = error_message
         
         # =====================================================
         # S3 UPLOAD - DO NOT DELETE THIS BLOCK

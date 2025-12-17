@@ -3,7 +3,9 @@
     "back": "Back"
   },
   "idle": {
-    "waiting": "Waiting for user..."
+    "waiting": "Waiting for user...",
+    "enteringStage": "Entering the Stage",
+    "getReady": "Get Ready"
   },
   "sceneSelection": {
     "title": "Select Your Scene",

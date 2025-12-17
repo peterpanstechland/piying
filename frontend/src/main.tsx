@@ -3,6 +3,7 @@ import i18n from 'i18next'
 import { initReactI18next, I18nextProvider } from 'react-i18next'
 import App from './App.tsx'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { SystemSettingsProvider } from './contexts/SystemSettingsContext'
 import './index.css'
 
 import enTranslations from './locales/en.json'
@@ -47,9 +48,11 @@ const initializeI18n = async () => {
   // Note: StrictMode disabled for camera performance
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <I18nextProvider i18n={i18n}>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <SystemSettingsProvider>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </SystemSettingsProvider>
     </I18nextProvider>,
   );
 };

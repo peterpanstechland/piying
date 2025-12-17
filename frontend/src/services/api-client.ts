@@ -57,6 +57,7 @@ export interface SessionStatusResponse {
   output_path?: string;
   video_url?: string;
   segment_count: number;
+  error_message?: string;
 }
 
 /**
@@ -228,11 +229,15 @@ export class APIClient {
       await this.retryRequest(async () => {
         // Always use FormData (backend expects multipart/form-data)
         const formData = new FormData();
+        // segment_data MUST be a string for backend Form() parameter
+        // The backend expects 'segment_data' as a JSON string
         formData.append('segment_data', JSON.stringify(data));
         
         // Add video file if available
         if (videoBlob) {
-          formData.append('video', videoBlob, `segment_${segmentIndex}.webm`);
+          // Use a filename with extension
+          const filename = `segment_${segmentIndex}.webm`;
+          formData.append('video', videoBlob, filename);
         }
         
         const response = await this.client.post(
@@ -240,6 +245,7 @@ export class APIClient {
           formData,
           {
             headers: {
+              // Let browser set boundary
               'Content-Type': 'multipart/form-data',
             },
             onUploadProgress: (progressEvent) => {

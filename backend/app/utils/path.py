@@ -72,6 +72,12 @@ def resolve_relative_path(path_str: str) -> Path:
     full_path = project_root / path
     if full_path.exists():
         return full_path
+        
+    # 2b. Check project root data directory (production script mode)
+    # When running via start-production.bat, data is in project_root/data
+    project_data = project_root / "data" / path
+    if project_data.exists():
+        return project_data
     
     # 3. Check backend/data directory (legacy dev mode paths)
     # Files may be stored in backend/data/storylines/... in dev mode

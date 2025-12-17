@@ -3,79 +3,81 @@
     "back": "返回"
   },
   "idle": {
-    "waiting": "等待体验者..."
+    "waiting": "舞台已就绪，随时欢迎你的出现...",
+    "enteringStage": "即将登上舞台",
+    "getReady": "请做好准备"
   },
   "sceneSelection": {
-    "title": "选择你的场景",
-    "hover": "请用左手食指拖动光标选择场景"
+    "title": "请选择一场皮影戏",
+    "hover": "请用左手食指移动光标，轻轻选择你想开启的故事"
   },
   "guidance": {
-    "title": "准备开始",
-    "segment": "第 {{current}} 段，共 {{total}} 段",
+    "title": "表演即将开始",
+    "segment": "第 {{current}} 段 · 共 {{total}} 段",
     "segment1": {
-      "action": "开场姿势",
-      "description": "摆出你的开场姿势"
+      "action": "开场动作",
+      "description": "请摆出你的开场姿态，为故事拉开序幕"
     },
     "segment2": {
       "action": "主要表演",
-      "description": "展示你最好的动作"
+      "description": "展现你的动作，让故事在光影中延展"
     },
     "segment3": {
-      "action": "结束姿势",
-      "description": "以精彩动作结束"
+      "action": "结束动作",
+      "description": "以你最优雅的姿态，为这一段落画上句点"
     },
     "tips": {
-      "position": "请站在中央位置",
-      "ready": "准备好表演"
+      "position": "请站在画面中央，灯光会更爱你",
+      "ready": "准备好后，保持自然轻松即可"
     },
-    "starting": "即将开始...",
+    "starting": "即将开始，请稍候...",
     "calibration": {
-      "raiseLeftHand": "请举起左手",
-      "raiseRightHand": "请举起右手",
-      "liftLeftFoot": "请抬起左脚",
-      "liftRightFoot": "请抬起右脚",
-      "holdStill": "保持姿势...",
-      "complete": "校准完成！",
-      "step": "步骤 {{current}}/{{total}}"
+      "raiseLeftHand": "请轻轻举起左手",
+      "raiseRightHand": "请轻轻举起右手",
+      "liftLeftFoot": "请抬起左脚，保持平衡",
+      "liftRightFoot": "请抬起右脚，动作轻柔即可",
+      "holdStill": "保持姿势，让系统更好地认识你...",
+      "complete": "校准完成，感谢配合！",
+      "step": "校准步骤 {{current}} / {{total}}"
     }
   },
   "countdown": {
-    "getReady": "准备好！",
-    "go": "开始！"
+    "getReady": "准备好迎接舞台吧",
+    "go": "开始表演！"
   },
   "recording": {
     "recording": "录制中",
     "remaining": "秒剩余",
-    "hint": "继续表演！"
+    "hint": "继续保持你的动作，让故事流动起来"
   },
   "review": {
-    "title": "段落完成！",
-    "segmentComplete": "已录制第 {{current}} 段，共 {{total}} 段",
+    "title": "本段已完成",
+    "segmentComplete": "你已完成第 {{current}} 段 · 共 {{total}} 段",
     "recorded": "已录制",
     "frames": "帧",
     "rerecord": "重新录制",
-    "continue": "继续",
-    "finish": "完成",
+    "continue": "继续下一段",
+    "finish": "完成制作",
     "nextSegment": "下一段：第 {{next}} 段",
-    "allComplete": "所有段落已完成！",
-    "uploading": "上传中",
-    "uploadFailed": "上传失败。请重试。"
+    "allComplete": "所有段落均已完成，精彩极了！",
+    "uploading": "正在为你上传，请稍候...",
+    "uploadFailed": "上传未成功，请再试一次"
   },
   "result": {
-    "processing": "正在生成你的视频...",
-    "processingHint": "这将需要10-20秒",
-    "ready": "你的视频已准备好！",
-    "scanQR": "扫描二维码下载",
-    "autoReset": "{{seconds}} 秒后自动重置"
+    "processing": "正在为你生成专属皮影戏视频...",
+    "processingHint": "请耐心等待，这通常需要 10–20 秒",
+    "ready": "你的视频已完成！",
+    "scanQR": "扫描二维码即可下载",
+    "autoReset": "{{seconds}} 秒后将自动回到初始界面"
   },
   "multiPerson": {
-    "detected": "检测到多人",
-    "trackingCenter": "跟踪中心位置的人",
-    "trackingOriginal": "继续跟踪原始人员"
+    "detected": "检测到多位观众",
+    "trackingCenter": "系统将以画面中央的你为主角",
+    "trackingOriginal": "继续跟随原先定位的你"
   },
   "errors": {
-    "cameraAccess": "摄像头访问被拒绝。请允许摄像头访问。",
-    "networkError": "网络错误。正在重试...",
-    "renderFailed": "视频生成失败。请重试。"
+    "cameraAccess": "无法访问摄像头，请开启权限后重新进入。",
+    "networkError": "网络连接异常，系统会自动重试。",
+    "renderFailed": "视频生成未完成，请再次尝试。"
   }
 }

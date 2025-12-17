@@ -216,9 +216,17 @@ export const RecordingPage = ({
         console.log('Renderers initialized: Display(Transparent), Recording(GreenScreen)');
         
         // 初始化 PoseProcessor
-        const processor = new PoseProcessor(DEFAULT_CONFIG);
+        // 在录制页面禁用自动校准，防止用户表演过程中意外触发重置
+        const recordingConfig = {
+          ...DEFAULT_CONFIG,
+          calibration: {
+            ...DEFAULT_CONFIG.calibration,
+            autoCalibrationFrames: 999999, // 实际上禁用自动校准
+          }
+        };
+        const processor = new PoseProcessor(recordingConfig);
         poseProcessorRef.current = processor;
-        console.log('PoseProcessor initialized');
+        console.log('PoseProcessor initialized (Auto-calibration disabled)');
 
         // Mark renderer as ready to trigger initial positioning
         setIsRendererReady(true);

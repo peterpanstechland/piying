@@ -111,6 +111,13 @@ export class CalibrationManager {
     // 提取当前位置
     const currentPositions = this.extractKeyPositions(landmarks)
 
+    // 验证姿态是否适合校准（必须是 T-Pose 或 A-Pose，双手不能高举）
+    if (!this.isValidCalibrationPose(landmarks)) {
+      this.consecutiveFrames = 0
+      this.lastPosePositions = null
+      return { progress: 0, calibrated: false, data: null }
+    }
+
     // 检查稳定性
     if (this.lastPosePositions) {
       const isStable = this.checkStability(currentPositions, this.lastPosePositions)
@@ -155,6 +162,8 @@ export class CalibrationManager {
       LANDMARK_INDEX.RIGHT_KNEE,
       LANDMARK_INDEX.LEFT_ANKLE,
       LANDMARK_INDEX.RIGHT_ANKLE,
+      LANDMARK_INDEX.LEFT_WRIST,
+      LANDMARK_INDEX.RIGHT_WRIST,
     ]
 
     for (const idx of requiredIndices) {
@@ -163,6 +172,27 @@ export class CalibrationManager {
         return false
       }
     }
+
+    return true
+  }
+
+  /**
+   * 验证姿态是否适合校准
+   * 防止用户在举手动作时触发自动校准，导致参考坐标系错误
+   */
+  private isValidCalibrationPose(landmarks: PoseLandmarks): boolean {
+    const leftShoulder = landmarks[LANDMARK_INDEX.LEFT_SHOULDER]
+    const rightShoulder = landmarks[LANDMARK_INDEX.RIGHT_SHOULDER]
+    const leftWrist = landmarks[LANDMARK_INDEX.LEFT_WRIST]
+    const rightWrist = landmarks[LANDMARK_INDEX.RIGHT_WRIST]
+
+    // 宽松的判定：手腕不应该显著高于肩膀
+    // Y轴向下增加，所以 "高于" 意味着 wrist.y < shoulder.y
+    // 给一点容差 (0.1)，允许 T-Pose 稍微偏高一点点，但禁止投降姿势
+    const tolerance = 0.1 // 约 10% 屏幕高度
+    
+    if (leftWrist.y < leftShoulder.y - tolerance) return false
+    if (rightWrist.y < rightShoulder.y - tolerance) return false
 
     return true
   }

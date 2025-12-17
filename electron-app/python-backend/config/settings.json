@@ -4,7 +4,7 @@
     "fallback_language": "en"
   },
   "camera": {
-    "default_camera_id": null,
+    "default_camera_id": "5c9705bf8d6d33c470594cfe2b464404269e040c73de00ce449c965473ce7c76",
     "min_fps": 20,
     "detection_confidence": 0.5
   },
@@ -18,11 +18,11 @@
   },
   "storage": {
     "mode": "local",
-    "local_path": "data",
-    "s3_bucket": null,
-    "s3_region": null,
-    "s3_access_key": null,
-    "s3_secret_key": null,
+    "local_path": "data/test_complete",
+    "s3_bucket": "piying-temp-video-storage",
+    "s3_region": "ap-southeast-1",
+    "s3_access_key": "YOUR_AWS_ACCESS_KEY",
+    "s3_secret_key": "YOUR_AWS_SECRET_KEY",
     "max_age_days": 7,
     "min_disk_space_gb": 5,
     "emergency_cleanup_threshold_gb": 2,
@@ -36,7 +36,7 @@
   "qr_code": {
     "auto_detect_ip": false,
     "manual_ip": "192.168.1.200",
-    "port": 8080
+    "port": 8000
   },
   "interaction": {
     "hover_selection_duration_seconds": 5,

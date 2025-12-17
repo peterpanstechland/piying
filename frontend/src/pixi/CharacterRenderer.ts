@@ -245,6 +245,10 @@ export class CharacterRenderer {
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
 
+  // Logical dimensions (single frame size)
+  private logicalWidth: number = 0
+  private logicalHeight: number = 0
+
   // Side-by-Side Rendering Support
   private renderMode: 'chromakey' | 'side_by_side' = 'side_by_side'
   // Use Texture type for compatibility with PixiJS 8 RenderTexture.create()
@@ -292,6 +296,10 @@ export class CharacterRenderer {
     let bgColor: number | string | undefined = undefined
     let bgAlpha = 0
     let canvasWidth = width
+    
+    // Store logical dimensions
+    this.logicalWidth = width
+    this.logicalHeight = height
     
     if (this.renderMode === 'chromakey') {
       if (useGreenScreen) {
@@ -570,8 +578,9 @@ export class CharacterRenderer {
     // Calculate scale to fit in canvas with padding
     const contentWidth = hasAssemblyData ? maxX - minX : 400
     const contentHeight = hasAssemblyData ? maxY - minY : 600
-    const canvasWidth = this.app.screen.width
-    const canvasHeight = this.app.screen.height
+    // Use logical dimensions for scale calculation
+    const canvasWidth = this.logicalWidth
+    const canvasHeight = this.logicalHeight
     const padding = 40
     
     const scaleX = (canvasWidth - padding * 2) / contentWidth
@@ -695,8 +704,9 @@ export class CharacterRenderer {
   setPosition(x: number, y: number): void {
     if (!this.container || !this.app) return
     
-    const screenWidth = this.app.screen.width
-    const screenHeight = this.app.screen.height
+    // Use logical dimensions for positioning (single frame size)
+    const screenWidth = this.logicalWidth
+    const screenHeight = this.logicalHeight
     
     this.container.x = x * screenWidth
     this.container.y = y * screenHeight
@@ -719,8 +729,8 @@ export class CharacterRenderer {
     if (!this.container || !this.app) return { x: 0.5, y: 0.5 }
     
     return {
-      x: this.container.x / this.app.screen.width,
-      y: this.container.y / this.app.screen.height
+      x: this.container.x / this.logicalWidth,
+      y: this.container.y / this.logicalHeight
     }
   }
 
@@ -853,10 +863,10 @@ export class CharacterRenderer {
     // Don't move/scale based on body position - just rotate the parts
     // Only set position if not controlled externally (via setPosition)
     if (!this.useExternalPosition) {
-    const canvasWidth = this.app.screen.width
-    const canvasHeight = this.app.screen.height
-    this.container.x = canvasWidth / 2
-    this.container.y = canvasHeight / 2
+      const canvasWidth = this.logicalWidth
+      const canvasHeight = this.logicalHeight
+      this.container.x = canvasWidth / 2
+      this.container.y = canvasHeight / 2
     }
     // Use the global scale from resetPose, don't change it based on detection
     // this.container.scale is already set in resetPose()
@@ -1696,6 +1706,10 @@ export class CharacterRenderer {
    */
   resize(width: number, height: number): void {
     if (!this.app || !this.container) return
+
+    // Update logical dimensions
+    this.logicalWidth = width
+    this.logicalHeight = height
 
     const canvasWidth = this.renderMode === 'side_by_side' ? width * 2 : width
     this.app.renderer.resize(canvasWidth, height)

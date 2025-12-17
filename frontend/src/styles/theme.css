@@ -59,9 +59,9 @@
 /* Light Theme Overrides */
 [data-theme='light'] {
   /* Backgrounds - Rice Paper / Warm Light */
-  --color-bg-dark: #F7F4EB;           /* 宣纸白 */
+  --color-bg-dark: #F0EAD6;           /* 蛋壳色 (Eggshell) - slightly darker than pure white */
   --color-bg-medium: #EBE6D8;         /* 稍深的宣纸色 */
-  --color-bg-light: #FFFDF5;          /* 亮白 */
+  --color-bg-light: #FAF8F0;          /* 暖白 (Warm White) - reduced brightness */
 
   /* Main Background - Light Mode (Image) */
   --main-bg-image: url('/images/background-light.png') center center / cover no-repeat fixed;

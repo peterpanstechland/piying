@@ -255,7 +255,8 @@ async def get_session_status(session_id: str):
         status=session.status,
         output_path=session.output_path,
         video_url=video_url,
-        segment_count=len(session.segments)
+        segment_count=len(session.segments),
+        error_message=getattr(session, 'error_message', None)
     )
 
 
@@ -447,6 +448,7 @@ async def _render_video_background(session_id: str):
             logger.info(f"Loaded scene {session.scene_id} from database")
         
         if scene_config is None:
+            error_msg = f"场景配置未找到: {session.scene_id}，请确认故事线已正确配置"
             log_error_with_context(
                 logger,
                 f"Scene configuration not found for scene {session.scene_id}",
@@ -455,7 +457,7 @@ async def _render_video_background(session_id: str):
                 scene_id=session.scene_id,
                 error_type="scene_not_found"
             )
-            session_manager.update_status(session_id, SessionStatus.FAILED)
+            session_manager.update_status(session_id, SessionStatus.FAILED, error_message=error_msg)
             return
         
         # Initialize renderer with character_id for spritesheet-based rendering
@@ -476,6 +478,7 @@ async def _render_video_background(session_id: str):
         )
         
     except Exception as e:
+        error_message = str(e)
         log_error_with_context(
             logger,
             f"Video rendering failed for session {session_id}",
@@ -484,7 +487,7 @@ async def _render_video_background(session_id: str):
             error_type="render_failed"
         )
         try:
-            session_manager.update_status(session_id, SessionStatus.FAILED)
+            session_manager.update_status(session_id, SessionStatus.FAILED, error_message=error_message)
         except Exception as update_error:
             log_error_with_context(
                 logger,

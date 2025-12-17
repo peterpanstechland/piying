@@ -63,6 +63,7 @@ class Session(BaseModel):
     segments: List[Segment] = Field(default_factory=list, description="Recorded segments")
     output_path: Optional[str] = Field(default=None, description="Path to rendered video file")
     video_url: Optional[str] = Field(default=None, description="Public URL to rendered video (e.g. S3)")
+    error_message: Optional[str] = Field(default=None, description="Error message if status is FAILED")
     created_at: float = Field(default_factory=time.time, description="Creation timestamp (Unix time)")
     updated_at: float = Field(default_factory=time.time, description="Last update timestamp (Unix time)")
 
@@ -120,6 +121,7 @@ class SessionStatusResponse(BaseModel):
     output_path: Optional[str] = Field(default=None, description="Video output path if available")
     video_url: Optional[str] = Field(default=None, description="Public URL to video if available (e.g. S3)")
     segment_count: int = Field(..., description="Number of uploaded segments")
+    error_message: Optional[str] = Field(default=None, description="Error message if status is failed")
 
     class Config:
         json_schema_extra = {
@@ -128,7 +130,8 @@ class SessionStatusResponse(BaseModel):
                 "scene_id": "sceneA",
                 "status": "done",
                 "output_path": "outputs/final_550e8400.mp4",
-                "segment_count": 3
+                "segment_count": 3,
+                "error_message": None
             }
         }
 

@@ -1347,7 +1347,7 @@ class StorylineService:
         
         # Ensure directory exists with better error handling
         try:
-        os.makedirs(storyline_dir, exist_ok=True)
+            os.makedirs(storyline_dir, exist_ok=True)
             # Verify directory was created and is writable
             if not os.path.exists(storyline_dir):
                 error_msg = f"Failed to create storyline directory: {storyline_dir}"
@@ -1382,8 +1382,8 @@ class StorylineService:
         temp_path = os.path.join(storyline_dir, f"cover_temp{ext_lower}")
         print(f"[DEBUG] Saving temporary file to: {temp_path}")
         try:
-        with open(temp_path, "wb") as f:
-            f.write(file_content)
+            with open(temp_path, "wb") as f:
+                f.write(file_content)
             # Verify file was written
             if not os.path.exists(temp_path):
                 error_msg = f"Temporary file was not created: {temp_path}"
@@ -1447,7 +1447,7 @@ class StorylineService:
             print(f"[ERROR] upload_cover_image failed: {error_msg}")
             if os.path.exists(temp_path):
                 try:
-                os.remove(temp_path)
+                    os.remove(temp_path)
                 except:
                     pass
             return None, f"Error processing cover image: {str(e)}"

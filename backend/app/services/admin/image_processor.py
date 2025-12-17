@@ -274,14 +274,19 @@ class ImageProcessor:
         Returns:
             Tuple of (CoverImagePaths or None, error_message)
         """
+        print(f"[DEBUG] generate_cover_images - source_path: {source_path}")
+        print(f"[DEBUG] generate_cover_images - output_dir: {output_dir}")
+        print(f"[DEBUG] generate_cover_images - base_name: {base_name}")
+        
         # Validate source image
         metadata = self.validate_image_format(source_path)
         if not metadata.is_valid:
+            print(f"[ERROR] generate_cover_images - invalid source image: {metadata.error_message}")
             return None, metadata.error_message
         
         # Ensure output directory exists with error handling
         try:
-        os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(output_dir, exist_ok=True)
             if not os.path.exists(output_dir):
                 return None, f"Failed to create output directory: {output_dir}"
             # Test write permission
@@ -336,15 +341,21 @@ class ImageProcessor:
         
         for size_name, (width, height) in COVER_SIZES.items():
             output_path = paths[size_name]
+            print(f"[DEBUG] generate_cover_images - generating {size_name}: {output_path}")
             success, error = self.resize_image(
                 source_path, output_path, width, height, maintain_aspect=True
             )
             if not success:
+                print(f"[ERROR] generate_cover_images - failed to generate {size_name}: {error}")
                 # Clean up any created files
                 for path in paths.values():
                     if os.path.exists(path):
                         os.remove(path)
                 return None, f"Failed to generate {size_name} image: {error}"
+            print(f"[DEBUG] generate_cover_images - {size_name} created successfully: {os.path.exists(output_path)}, size: {os.path.getsize(output_path) if os.path.exists(output_path) else 0}")
+        
+        print(f"[DEBUG] generate_cover_images - all sizes generated successfully")
+        print(f"[DEBUG] generate_cover_images - paths: {paths}")
         
         return CoverImagePaths(
             original_path=paths["original"],
@@ -478,7 +489,7 @@ class ImageProcessor:
                 # Clean up temp file
                 if os.path.exists(temp_frame_path):
                     try:
-                    os.remove(temp_frame_path)
+                        os.remove(temp_frame_path)
                         print(f"[DEBUG] Temp frame file cleaned up: {temp_frame_path}")
                     except Exception as e:
                         print(f"[WARNING] Failed to remove temp frame file: {e}")

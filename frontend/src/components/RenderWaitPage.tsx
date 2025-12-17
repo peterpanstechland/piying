@@ -12,6 +12,7 @@ interface RenderWaitPageProps {
       status: string;
       output_path?: string;
       video_url?: string;
+      error_message?: string;
     }>;
     getVideoUrl: (sessionId: string) => string;
   };
@@ -96,8 +97,10 @@ export const RenderWaitPage = ({
             pollInterval = null;
           }
           
-          console.log('Status is failed, calling onError');
-          onErrorRef.current(t('errors.renderFailed'));
+          // Use backend error message if available, otherwise use default
+          const errorMessage = response.error_message || t('errors.renderFailed');
+          console.log('Status is failed, calling onError with message:', errorMessage);
+          onErrorRef.current(errorMessage);
         } else {
           console.log('Status is:', response.status, '- continuing to poll');
         }

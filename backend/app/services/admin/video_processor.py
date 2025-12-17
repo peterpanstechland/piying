@@ -8,11 +8,18 @@ import base64
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import cv2
+
+# Windows-specific subprocess flags to hide CMD window when running ffprobe
+# On non-Windows platforms, this dict is empty and has no effect
+SUBPROCESS_HIDE_WINDOW_KWARGS = (
+    {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+)
 
 
 @dataclass
@@ -54,7 +61,8 @@ class VideoProcessor:
                 ["ffprobe", "-version"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                **SUBPROCESS_HIDE_WINDOW_KWARGS
             )
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
@@ -114,7 +122,8 @@ class VideoProcessor:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                **SUBPROCESS_HIDE_WINDOW_KWARGS
             )
             
             if result.returncode != 0:

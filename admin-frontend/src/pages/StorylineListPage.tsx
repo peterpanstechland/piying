@@ -37,6 +37,8 @@ export default function StorylineListPage() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
   const dragNodeRef = useRef<HTMLDivElement | null>(null)
+  // Cache buster timestamp to ensure fresh cover images after data load
+  const [imageCacheBuster, setImageCacheBuster] = useState<number>(Date.now())
 
   const loadData = useCallback(async () => {
     try {
@@ -44,6 +46,8 @@ export default function StorylineListPage() {
       setError(null)
       const storylineData = await adminApi.getStorylinesExtendedList()
       setStorylines(storylineData)
+      // Update cache buster to force fresh images
+      setImageCacheBuster(Date.now())
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load storylines'
       setError(errorMessage)
@@ -161,7 +165,8 @@ export default function StorylineListPage() {
 
   const getCoverImageUrl = (storyline: StorylineListItem): string | null => {
     if (storyline.cover_image?.medium_path) {
-      return `/api/admin/storylines/${storyline.id}/cover/medium`
+      // Use imageCacheBuster to force fresh images after data reload
+      return `/api/admin/storylines/${storyline.id}/cover/medium?t=${imageCacheBuster}`
     }
     return null
   }

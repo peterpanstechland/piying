@@ -12,6 +12,7 @@ import logging
 import time
 import subprocess
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional, List, Tuple
 from ..models import Session, Segment, PoseFrame
@@ -21,6 +22,12 @@ from .puppet_renderer import PuppetRenderer, PuppetRendererCache
 from .admin.settings_service import settings_service
 
 logger = logging.getLogger(__name__)
+
+# Windows-specific subprocess flags to hide CMD window when running FFmpeg
+# On non-Windows platforms, this dict is empty and has no effect
+SUBPROCESS_HIDE_WINDOW_KWARGS = (
+    {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+)
 
 
 class CharacterPath:
@@ -780,7 +787,8 @@ class VideoRenderer:
                 probe_result = subprocess.run(
                     [ffprobe_path, "-v", "error", "-select_streams", "v:0", 
                      "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", str(base_video_path)],
-                    capture_output=True, text=True, timeout=10
+                    capture_output=True, text=True, timeout=10,
+                    **SUBPROCESS_HIDE_WINDOW_KWARGS
                 )
                 if probe_result.returncode == 0 and probe_result.stdout.strip():
                     fps_str = probe_result.stdout.strip()
@@ -795,7 +803,8 @@ class VideoRenderer:
                 audio_probe = subprocess.run(
                     [ffprobe_path, "-v", "error", "-select_streams", "a:0",
                      "-show_entries", "stream=codec_name,sample_rate,channels", "-of", "csv=p=0", str(base_video_path)],
-                    capture_output=True, text=True, timeout=10
+                    capture_output=True, text=True, timeout=10,
+                    **SUBPROCESS_HIDE_WINDOW_KWARGS
                 )
                 if audio_probe.returncode == 0 and audio_probe.stdout.strip():
                     has_audio = True
@@ -936,7 +945,8 @@ class VideoRenderer:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
+                **SUBPROCESS_HIDE_WINDOW_KWARGS
             )
             
             # Log any warnings even on success
@@ -1076,7 +1086,8 @@ class VideoRenderer:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300
+                timeout=300,
+                **SUBPROCESS_HIDE_WINDOW_KWARGS
             )
             
             # Log any warnings even on success
@@ -1140,15 +1151,20 @@ class VideoRenderer:
     
     def _get_base_video_path(self, session: Session) -> Path:
         """Get the base video path for a session."""
+        from ..utils.path import get_user_data_dir
+        
         base_video_path = None
+        user_data_dir = get_user_data_dir()
         
         # 1. Check for character-specific video by file convention (Fast & Robust)
         if session.character_id:
             # Check multiple possible locations:
+            # - %APPDATA%/RobomonPiying/data/storylines/... (user uploaded videos - PRIMARY)
             # - resources/data/storylines/... (packaged app)
             # - resources/backend/data/storylines/... (legacy)
             # - backend/data/storylines/... (dev mode)
             possible_bases = [
+                user_data_dir,  # User data directory (where admin uploads go) - PRIMARY
                 self.project_root / "data",  # Packaged app location
                 self.project_root / "backend" / "data",  # Legacy/Dev mode
             ]
@@ -1175,8 +1191,9 @@ class VideoRenderer:
             else:
                 relative_path = config_path
             
-            # Try multiple locations in order of preference
+            # Try multiple locations in order of preference (user_data_dir first for user-uploaded content)
             possible_paths = [
+                user_data_dir / relative_path,  # User data: %APPDATA%/RobomonPiying/data/storylines/...
                 self.project_root / relative_path,  # Packaged: resources/data/storylines/...
                 self.project_root / "backend" / relative_path,  # Legacy: resources/backend/data/storylines/...
                 self.project_root / relative_path.parts[-1] if len(relative_path.parts) > 0 else relative_path,  # Fallback: just filename

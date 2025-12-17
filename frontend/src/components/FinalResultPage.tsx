@@ -245,7 +245,7 @@ export const FinalResultPage = ({
           <div className="qr-wrapper">
             <QRCodeSVG
               value={videoUrl}
-              size={120}
+              size={240}
               level="H"
               includeMargin={true}
               className="qr-code"

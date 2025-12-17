@@ -13,6 +13,8 @@ interface TimeoutSettings {
   final_result_auto_reset_seconds: number
   exit_gesture_duration_seconds: number
   exit_confirmation_duration_seconds: number
+  inactivity_show_countdown_seconds: number
+  segment_review_inactivity_seconds: number
 }
 
 interface RenderingSettings {
@@ -57,6 +59,8 @@ export default function SystemSettingsPage() {
       final_result_auto_reset_seconds: 30,
       exit_gesture_duration_seconds: 3,
       exit_confirmation_duration_seconds: 2,
+      inactivity_show_countdown_seconds: 10,
+      segment_review_inactivity_seconds: 30,
     },
     rendering: {
       target_fps: 30,
@@ -371,6 +375,48 @@ export default function SystemSettingsPage() {
               </div>
               {validationErrors.exit_confirmation_duration_seconds && (
                 <span className="field-error">{validationErrors.exit_confirmation_duration_seconds}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="inactivity_show_countdown">
+                {t('settings.system.inactivityShowCountdown')}
+              </label>
+              <div className="input-with-unit">
+                <input
+                  id="inactivity_show_countdown"
+                  type="number"
+                  min="1"
+                  max="300"
+                  value={settings.timeouts.inactivity_show_countdown_seconds}
+                  onChange={(e) => handleTimeoutChange('inactivity_show_countdown_seconds', e.target.value)}
+                  className={validationErrors.inactivity_show_countdown_seconds ? 'error' : ''}
+                />
+                <span className="unit">{t('settings.system.seconds')}</span>
+              </div>
+              {validationErrors.inactivity_show_countdown_seconds && (
+                <span className="field-error">{validationErrors.inactivity_show_countdown_seconds}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="segment_review_inactivity">
+                {t('settings.system.segmentReviewInactivity')}
+              </label>
+              <div className="input-with-unit">
+                <input
+                  id="segment_review_inactivity"
+                  type="number"
+                  min="1"
+                  max="300"
+                  value={settings.timeouts.segment_review_inactivity_seconds}
+                  onChange={(e) => handleTimeoutChange('segment_review_inactivity_seconds', e.target.value)}
+                  className={validationErrors.segment_review_inactivity_seconds ? 'error' : ''}
+                />
+                <span className="unit">{t('settings.system.seconds')}</span>
+              </div>
+              {validationErrors.segment_review_inactivity_seconds && (
+                <span className="field-error">{validationErrors.segment_review_inactivity_seconds}</span>
               )}
             </div>
           </div>

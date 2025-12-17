@@ -327,68 +327,115 @@ async def get_storyline_video_file(
     """
     import os
     from fastapi.responses import FileResponse
+    from ..utils.path import resolve_relative_path, get_user_data_dir
+    
+    logger.info(f"[VideoFile] Request for storyline={storyline_id}, character={character_id}")
     
     # Get storyline
     storyline = await storyline_service.get_storyline_by_id(db, storyline_id)
     
     if storyline is None:
+        logger.warning(f"[VideoFile] Storyline {storyline_id} not found in database")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Storyline with ID '{storyline_id}' not found",
         )
     
+    logger.info(f"[VideoFile] Storyline found: status={storyline.status}, base_video_path={storyline.base_video_path}")
+    
     # Check if storyline is published
     if storyline.status != StorylineStatus.PUBLISHED.value:
+        logger.warning(f"[VideoFile] Storyline {storyline_id} is not published (status={storyline.status})")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Storyline with ID '{storyline_id}' not found",
+            detail=f"Storyline with ID '{storyline_id}' is not published (status={storyline.status})",
         )
     
     # Determine which video to serve
     video_path = None
+    is_character_specific = False
     
     if character_id:
         # Try to get character-specific video
         character_video_path = await character_video_service.get_character_video_path(
             db, storyline_id, character_id
         )
+        logger.info(f"[VideoFile] Character-specific video path lookup: {character_video_path}")
+        
         if character_video_path:
-            video_path = character_video_path
+            # Check if this specific file actually exists
+            try:
+                # Use resolve_relative_path to find where it SHOULD be
+                from ..utils.path import resolve_relative_path, get_user_data_dir
+                resolved_char_path_obj = resolve_relative_path(character_video_path)
+                resolved_char_path = str(resolved_char_path_obj)
+                
+                if os.path.exists(resolved_char_path):
+                    video_path = character_video_path
+                    is_character_specific = True
+                    logger.info(f"[VideoFile] Found valid character video file: {resolved_char_path}")
+                else:
+                    logger.warning(f"[VideoFile] Character video defined in DB but file missing: {resolved_char_path}. Falling back to base video.")
+                    # Try explicit fallback to user data dir if resolve failed
+                    user_data = get_user_data_dir()
+                    alt_path = str(user_data / character_video_path)
+                    if os.path.exists(alt_path):
+                        video_path = character_video_path
+                        is_character_specific = True
+                        logger.info(f"[VideoFile] Found character video in user data: {alt_path}")
+            except Exception as e:
+                logger.error(f"[VideoFile] Error checking character video existence: {e}")
     
-    # Fall back to base video if no character-specific video
+    # Fall back to base video if no character-specific video or file missing
     if not video_path:
         video_path = storyline.base_video_path
+        logger.info(f"[VideoFile] Using base video path: {video_path}")
     
     if not video_path:
+        logger.error(f"[VideoFile] No video path available for storyline {storyline_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No video available for this storyline",
+            detail=f"No video available for this storyline. Please upload a base video in the admin panel.",
         )
     
     # Resolve full path (check both user data and app assets)
-    from ..utils.path import resolve_relative_path, get_user_data_dir
-    
     try:
+        # If we haven't imported them yet (only imported in if block above)
+        from ..utils.path import resolve_relative_path, get_user_data_dir
+        
         full_path_obj = resolve_relative_path(video_path)
         full_path = str(full_path_obj)
     except Exception as e:
-        logger.error(f"Error resolving video path {video_path}: {e}")
-        # Fallback to simple join if resolution fails (shouldn't happen)
+        logger.error(f"[VideoFile] Error resolving video path {video_path}: {e}")
+        # Fallback to simple join if resolution fails
         data_dir = get_user_data_dir()
         full_path = str(data_dir / video_path)
     
-    # Debug logging
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Video path resolution: video_path={video_path}, full_path={full_path}, exists={os.path.exists(full_path)}")
+    logger.info(f"[VideoFile] Resolved path: video_path={video_path}, full_path={full_path}, exists={os.path.exists(full_path)}, is_character_specific={is_character_specific}")
     
     if not os.path.exists(full_path):
+        # Try alternative paths for debugging
+        user_data = get_user_data_dir()
+        alt_path = str(user_data / video_path)
+        logger.error(f"[VideoFile] File not found at {full_path}")
+        logger.error(f"[VideoFile] Alternative path check: {alt_path}, exists={os.path.exists(alt_path)}")
+        logger.error(f"[VideoFile] User data dir: {user_data}, exists={user_data.exists()}")
+        
+        # List storylines directory for debugging
+        storylines_dir = user_data / "storylines"
+        if storylines_dir.exists():
+            logger.error(f"[VideoFile] Storylines dir contents: {list(storylines_dir.iterdir())[:10]}")
+            specific_dir = storylines_dir / storyline_id
+            if specific_dir.exists():
+                logger.error(f"[VideoFile] Storyline dir contents: {list(specific_dir.iterdir())}")
+        
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Video file not found on disk: {full_path}",
+            detail=f"Video file not found on disk. Path: {video_path}, Resolved: {full_path}",
         )
     
     # Serve video file
+    logger.info(f"[VideoFile] Serving video file: {full_path}")
     return FileResponse(
         full_path,
         media_type="video/mp4",
@@ -613,21 +660,39 @@ async def get_character_video_path(
     
     # Determine which video path to use
     if character_video_path:
-        return CharacterVideoPathResponse(
-            storyline_id=storyline_id,
-            character_id=character_id,
-            video_path=character_video_path,
-            is_character_specific=True,
-        )
-    else:
-        # Fall back to base video
-        base_video_path = storyline.base_video_path or ""
-        return CharacterVideoPathResponse(
-            storyline_id=storyline_id,
-            character_id=character_id,
-            video_path=base_video_path,
-            is_character_specific=False,
-        )
+        # Check if file exists
+        from ..utils.path import resolve_relative_path, get_user_data_dir
+        import os
+        
+        file_exists = False
+        try:
+            resolved_path = resolve_relative_path(character_video_path)
+            if os.path.exists(resolved_path):
+                file_exists = True
+            else:
+                # Try fallback
+                alt_path = get_user_data_dir() / character_video_path
+                if os.path.exists(alt_path):
+                    file_exists = True
+        except:
+            pass
+            
+        if file_exists:
+            return CharacterVideoPathResponse(
+                storyline_id=storyline_id,
+                character_id=character_id,
+                video_path=character_video_path,
+                is_character_specific=True,
+            )
+            
+    # Fall back to base video if character video not found or file missing
+    base_video_path = storyline.base_video_path or ""
+    return CharacterVideoPathResponse(
+        storyline_id=storyline_id,
+        character_id=character_id,
+        video_path=base_video_path,
+        is_character_specific=False,
+    )
 
 
 @router.get("/{storyline_id}/cover/{size}")
