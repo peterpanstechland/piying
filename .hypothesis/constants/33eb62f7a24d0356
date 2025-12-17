@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\sqlalchemy\orm\interfaces.py
-# hypothesis_version: 6.148.2
-
-['%r', '1.4', '2.0', '<%s at 0x%x; %s>', 'Type[LoaderStrategy]', '_DMLColumnArgument', '_T', '_TLS', '_T_co', '_adapt_to_entity', '_attribute_options', '_configure_finished', '_configure_started', '_parententity', '_strategies', '_strategy_keys', '_wildcard_token', 'compare', 'default', 'default_factory', 'doc', 'hash', 'info', 'init', 'is_class_level', 'key', 'kw_only', 'loader', 'metadata', 'no key', 'orm_prop_comparator', 'parent', 'parent_property', 'payload', 'prop', 'repr', 'strategy', 'strategy_key', 'strategy_opts']

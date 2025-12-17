@@ -357,8 +357,8 @@ function App() {
 
     // Handle inactivity timeout - return to IDLE when no hand gesture activity for configured duration
     if (currentState === AppState.SCENE_SELECT || currentState === AppState.CHARACTER_SELECT) {
-      // Check for hand activity (user trying to interact)
-      const hasHandActivity = result.rightHand !== null || result.leftHand !== null;
+      // Check for hand activity (user trying to interact with either hand)
+      const hasHandActivity = result.rightHand != null || result.leftHand != null;
       
       if (hasHandActivity) {
         // User is interacting - reset inactivity timer

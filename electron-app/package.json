@@ -110,7 +110,8 @@
         "zh_CN",
         "en_US"
       ],
-      "language": "2052"
+      "language": "2052",
+      "include": "build/uninstaller.nsh"
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"

@@ -1,4 +1,0 @@
-# file: C:\Users\Twink\AppData\Roaming\Python\Python314\site-packages\jose\backends\cryptography_backend.py
-# hypothesis_version: 6.148.2
-
-[b'-----BEGIN CERTIFICATE-----', b'-----BEGIN PUBLIC KEY-----', b'-----BEGIN RSA PUBLIC KEY-----', b'ssh-rsa', 8.0, 256, 'ASCII', 'EC', 'GCM', 'Invalid JWE Auth Tag', 'Invalid signature', 'P-256', 'P-384', 'P-521', 'PKCS1', 'PKCS8', 'RSA', 'alg', 'big', 'char[]', 'crv', 'd', 'dp', 'dq', 'e', 'k', 'kty', 'n', 'oct', 'p', 'private_bytes', 'public_bytes', 'public_numbers', 'q', 'qi', 'secp256r1', 'secp384r1', 'secp521r1', 'tag cannot be None', 'to_pem', 'utf-8', 'x', 'y']

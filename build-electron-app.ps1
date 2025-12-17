@@ -22,54 +22,60 @@ try {
     exit 1
 }
 
-# 步骤 1: 构建前端
+# 步骤 1: 构建前端（始终重新构建以确保包含最新改动）
 Write-Host "[1/6] 构建用户前端..." -ForegroundColor Yellow
-if (-not (Test-Path "$scriptPath\frontend\dist")) {
-    Push-Location "$scriptPath\frontend"
-    try {
-        cmd /c "npm install"
-        if ($LASTEXITCODE -ne 0) { throw "前端依赖安装失败" }
-        cmd /c "npm run build"
-        if ($LASTEXITCODE -ne 0) { throw "前端构建失败" }
-    } catch {
-        Write-Host "[错误] $($_.Exception.Message)" -ForegroundColor Red
-        Pop-Location
-        Read-Host "按回车键退出..."
-        exit 1
+Push-Location "$scriptPath\frontend"
+try {
+    # 清理旧的构建
+    if (Test-Path "dist") {
+        Write-Host "      清理旧的前端构建..." -ForegroundColor Gray
+        Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
     }
+    cmd /c "npm install"
+    if ($LASTEXITCODE -ne 0) { throw "前端依赖安装失败" }
+    cmd /c "npm run build"
+    if ($LASTEXITCODE -ne 0) { throw "前端构建失败" }
+} catch {
+    Write-Host "[错误] $($_.Exception.Message)" -ForegroundColor Red
     Pop-Location
-    
-    if (-not (Test-Path "$scriptPath\frontend\dist")) {
-        Write-Host "[错误] 前端构建失败，dist 目录未生成" -ForegroundColor Red
-        Read-Host "按回车键退出..."
-        exit 1
-    }
+    Read-Host "按回车键退出..."
+    exit 1
+}
+Pop-Location
+
+if (-not (Test-Path "$scriptPath\frontend\dist")) {
+    Write-Host "[错误] 前端构建失败，dist 目录未生成" -ForegroundColor Red
+    Read-Host "按回车键退出..."
+    exit 1
 }
 Write-Host "      用户前端构建完成 ✓" -ForegroundColor Green
 Write-Host ""
 
-# 步骤 2: 构建管理后台前端
+# 步骤 2: 构建管理后台前端（始终重新构建以确保包含最新改动）
 Write-Host "[2/6] 构建管理后台前端..." -ForegroundColor Yellow
-if (-not (Test-Path "$scriptPath\admin-frontend\dist")) {
-    Push-Location "$scriptPath\admin-frontend"
-    try {
-        cmd /c "npm install"
-        if ($LASTEXITCODE -ne 0) { throw "管理后台依赖安装失败" }
-        cmd /c "npm run build"
-        if ($LASTEXITCODE -ne 0) { throw "管理后台构建失败" }
-    } catch {
-        Write-Host "[错误] $($_.Exception.Message)" -ForegroundColor Red
-        Pop-Location
-        Read-Host "按回车键退出..."
-        exit 1
+Push-Location "$scriptPath\admin-frontend"
+try {
+    # 清理旧的构建
+    if (Test-Path "dist") {
+        Write-Host "      清理旧的管理后台构建..." -ForegroundColor Gray
+        Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
     }
+    cmd /c "npm install"
+    if ($LASTEXITCODE -ne 0) { throw "管理后台依赖安装失败" }
+    cmd /c "npm run build"
+    if ($LASTEXITCODE -ne 0) { throw "管理后台构建失败" }
+} catch {
+    Write-Host "[错误] $($_.Exception.Message)" -ForegroundColor Red
     Pop-Location
+    Read-Host "按回车键退出..."
+    exit 1
+}
+Pop-Location
 
-    if (-not (Test-Path "$scriptPath\admin-frontend\dist")) {
-        Write-Host "[错误] 管理后台构建失败，dist 目录未生成" -ForegroundColor Red
-        Read-Host "按回车键退出..."
-        exit 1
-    }
+if (-not (Test-Path "$scriptPath\admin-frontend\dist")) {
+    Write-Host "[错误] 管理后台构建失败，dist 目录未生成" -ForegroundColor Red
+    Read-Host "按回车键退出..."
+    exit 1
 }
 Write-Host "      管理后台前端构建完成 ✓" -ForegroundColor Green
 Write-Host ""

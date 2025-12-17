@@ -18,6 +18,7 @@ export interface PersonDetection {
 export interface DetectionResult {
   presence: boolean;
   rightHand?: { x: number; y: number };
+  leftHand?: { x: number; y: number };
   pose?: PoseLandmark[];
   exitGesture: boolean;
   multiPerson: boolean;
@@ -278,6 +279,7 @@ export class CameraDetectionService {
     const result: DetectionResult = {
       presence: false,
       rightHand: undefined,
+      leftHand: undefined,
       pose: undefined,
       exitGesture: false,
       multiPerson: false,
@@ -311,15 +313,15 @@ export class CameraDetectionService {
       this.trackedPersonIndex = -1;
     }
 
-    // Extract right hand position for cursor control
+    // Extract hand positions for cursor control and activity detection
+    // Camera is mirrored: user's right hand appears as "Left" in MediaPipe, and vice versa
     if (this.lastHandsResult?.landmarks && this.lastHandsResult.handedness) {
       for (let i = 0; i < this.lastHandsResult.landmarks.length; i++) {
         const handedness = this.lastHandsResult.handedness[i];
         const landmarks = this.lastHandsResult.landmarks[i];
+        const categoryName = handedness[0]?.categoryName;
 
-        // Camera is mirrored: user's right hand appears as "Left" in MediaPipe
-        // So we look for "Left" to get the actual right hand
-        if (handedness[0]?.categoryName === 'Left' && landmarks.length > 0) {
+        if (landmarks.length > 0) {
           // Use wrist (landmark 0) or index finger tip (landmark 8) for cursor
           const wrist = landmarks[0];
           const indexTip = landmarks[8];
@@ -328,12 +330,17 @@ export class CameraDetectionService {
           const cursorPoint = indexTip || wrist;
           
           // Mirror the x coordinate for natural interaction
-          // When user moves hand right, cursor should move right (like a mirror)
-          result.rightHand = {
+          const handPosition = {
             x: 1 - cursorPoint.x,  // Mirror horizontally
             y: cursorPoint.y,
           };
-          break;
+
+          // Camera is mirrored: "Left" in MediaPipe = user's actual right hand
+          if (categoryName === 'Left') {
+            result.rightHand = handPosition;
+          } else if (categoryName === 'Right') {
+            result.leftHand = handPosition;
+          }
         }
       }
     }
