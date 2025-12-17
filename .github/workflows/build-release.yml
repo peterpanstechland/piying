@@ -1,0 +1,482 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (v1.0.0, v1.2.3, etc.)
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      version:
+        description: 'Version to build (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '20'
+
+jobs:
+  # ============================================
+  # Build Python Backend for each platform
+  # ============================================
+  build-backend:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: macos-13
+            platform: mac
+            arch: x64
+          - os: macos-14
+            platform: mac
+            arch: arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend executable
+        shell: bash
+        run: |
+          cd backend
+          pyinstaller --clean --noconfirm \
+            --name backend \
+            --onefile \
+            --add-data "app:app" \
+            --hidden-import=uvicorn.logging \
+            --hidden-import=uvicorn.loops \
+            --hidden-import=uvicorn.loops.auto \
+            --hidden-import=uvicorn.protocols \
+            --hidden-import=uvicorn.protocols.http \
+            --hidden-import=uvicorn.protocols.http.auto \
+            --hidden-import=uvicorn.protocols.websockets \
+            --hidden-import=uvicorn.protocols.websockets.auto \
+            --hidden-import=uvicorn.lifespan \
+            --hidden-import=uvicorn.lifespan.on \
+            --collect-all mediapipe \
+            run.py
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-${{ matrix.platform }}-${{ matrix.arch }}
+          path: backend/dist/
+          retention-days: 1
+
+  # ============================================
+  # Build Frontend (only needs to run once)
+  # ============================================
+  build-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            admin-frontend/package-lock.json
+
+      - name: Build user frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Build admin frontend
+        run: |
+          cd admin-frontend
+          npm ci
+          npm run build
+
+      - name: Upload frontend artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: |
+            frontend/dist/
+            admin-frontend/dist/
+          retention-days: 1
+
+  # ============================================
+  # Build Electron App for Windows
+  # ============================================
+  build-electron-windows:
+    needs: [build-backend, build-frontend]
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-win-x64
+          path: electron-app/resources/backend/
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: temp-frontend/
+
+      - name: Move frontend files
+        shell: bash
+        run: |
+          mkdir -p frontend/dist admin-frontend/dist
+          cp -r temp-frontend/frontend/dist/* frontend/dist/
+          cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
+
+      - name: Download FFmpeg
+        shell: pwsh
+        run: |
+          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+          Invoke-WebRequest -Uri $ffmpegUrl -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg-temp
+          $ffmpegDir = Get-ChildItem -Path ffmpeg-temp -Directory | Select-Object -First 1
+          New-Item -ItemType Directory -Path electron-app/resources/ffmpeg -Force
+          Copy-Item "$($ffmpegDir.FullName)/bin/ffmpeg.exe" electron-app/resources/ffmpeg/
+          Copy-Item "$($ffmpegDir.FullName)/bin/ffprobe.exe" electron-app/resources/ffmpeg/
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron-app
+          npm ci
+
+      - name: Build Electron app (Windows x64)
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd electron-app
+          npm run build:win
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-win-x64
+          path: electron-app/dist_v4/*.exe
+          retention-days: 5
+
+  # ============================================
+  # Build Electron App for macOS (Intel)
+  # ============================================
+  build-electron-macos-x64:
+    needs: [build-backend, build-frontend]
+    runs-on: macos-13
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-mac-x64
+          path: electron-app/resources/backend/
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: temp-frontend/
+
+      - name: Move frontend files
+        run: |
+          mkdir -p frontend/dist admin-frontend/dist
+          cp -r temp-frontend/frontend/dist/* frontend/dist/
+          cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
+
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+          mkdir -p electron-app/resources/ffmpeg
+          cp $(which ffmpeg) electron-app/resources/ffmpeg/
+          cp $(which ffprobe) electron-app/resources/ffmpeg/
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron-app
+          npm ci
+
+      - name: Import Code Signing Certificate
+        if: ${{ env.APPLE_CERTIFICATE != '' }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          security create-keychain -p actions temp.keychain
+          security default-keychain -s temp.keychain
+          security unlock-keychain -p actions temp.keychain
+          security import certificate.p12 -k temp.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions temp.keychain
+
+      - name: Build Electron app (macOS x64)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd electron-app
+          npm run build -- --mac --x64
+
+      - name: Upload macOS x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-mac-x64
+          path: |
+            electron-app/dist_v4/*.dmg
+            electron-app/dist_v4/*.zip
+          retention-days: 5
+
+  # ============================================
+  # Build Electron App for macOS (Apple Silicon)
+  # ============================================
+  build-electron-macos-arm64:
+    needs: [build-backend, build-frontend]
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-mac-arm64
+          path: electron-app/resources/backend/
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: temp-frontend/
+
+      - name: Move frontend files
+        run: |
+          mkdir -p frontend/dist admin-frontend/dist
+          cp -r temp-frontend/frontend/dist/* frontend/dist/
+          cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
+
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+          mkdir -p electron-app/resources/ffmpeg
+          cp $(which ffmpeg) electron-app/resources/ffmpeg/
+          cp $(which ffprobe) electron-app/resources/ffmpeg/
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron-app
+          npm ci
+
+      - name: Import Code Signing Certificate
+        if: ${{ env.APPLE_CERTIFICATE != '' }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          security create-keychain -p actions temp.keychain
+          security default-keychain -s temp.keychain
+          security unlock-keychain -p actions temp.keychain
+          security import certificate.p12 -k temp.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions temp.keychain
+
+      - name: Build Electron app (macOS arm64)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd electron-app
+          npm run build -- --mac --arm64
+
+      - name: Upload macOS arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-mac-arm64
+          path: |
+            electron-app/dist_v4/*.dmg
+            electron-app/dist_v4/*.zip
+          retention-days: 5
+
+  # ============================================
+  # Build Electron App for Linux
+  # ============================================
+  build-electron-linux:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-linux-x64
+          path: electron-app/resources/backend/
+
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: temp-frontend/
+
+      - name: Move frontend files
+        run: |
+          mkdir -p frontend/dist admin-frontend/dist
+          cp -r temp-frontend/frontend/dist/* frontend/dist/
+          cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          mkdir -p electron-app/resources/ffmpeg
+          cp $(which ffmpeg) electron-app/resources/ffmpeg/
+          cp $(which ffprobe) electron-app/resources/ffmpeg/
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron-app
+          npm ci
+
+      - name: Build Electron app (Linux x64)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd electron-app
+          npm run build -- --linux --x64
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux-x64
+          path: |
+            electron-app/dist_v4/*.AppImage
+            electron-app/dist_v4/*.deb
+            electron-app/dist_v4/*.rpm
+          retention-days: 5
+
+  # ============================================
+  # Create GitHub Release
+  # ============================================
+  create-release:
+    needs: [build-electron-windows, build-electron-macos-x64, build-electron-macos-arm64, build-electron-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          
+          # Windows
+          cp artifacts/electron-win-x64/*.exe release/ 2>/dev/null || true
+          
+          # macOS x64
+          cp artifacts/electron-mac-x64/*.dmg release/ 2>/dev/null || true
+          cp artifacts/electron-mac-x64/*.zip release/ 2>/dev/null || true
+          
+          # macOS arm64
+          cp artifacts/electron-mac-arm64/*.dmg release/ 2>/dev/null || true
+          cp artifacts/electron-mac-arm64/*.zip release/ 2>/dev/null || true
+          
+          # Linux
+          cp artifacts/electron-linux-x64/*.AppImage release/ 2>/dev/null || true
+          cp artifacts/electron-linux-x64/*.deb release/ 2>/dev/null || true
+          
+          ls -la release/
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "皮影互动系统 v${{ steps.get_version.outputs.VERSION }}"
+          body: |
+            ## 皮影互动系统 v${{ steps.get_version.outputs.VERSION }}
+            
+            ### 下载
+            
+            | 平台 | 架构 | 文件 |
+            |------|------|------|
+            | Windows | x64 | `皮影互动系统-Setup-*.exe` |
+            | macOS | Intel (x64) | `皮影互动系统-*-x64.dmg` |
+            | macOS | Apple Silicon (M1/M2) | `皮影互动系统-*-arm64.dmg` |
+            | Linux | x64 | `皮影互动系统-*.AppImage` 或 `.deb` |
+            
+            ### 安装说明
+            
+            - **Windows**: 下载 `.exe` 安装程序，双击运行安装
+            - **macOS**: 下载 `.dmg` 文件，拖拽到应用程序文件夹
+            - **Linux**: 下载 `.AppImage`，赋予执行权限后运行
+            
+            ### 更新日志
+            
+            请查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md)
+          files: release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
