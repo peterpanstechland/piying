@@ -36,7 +36,7 @@
   "homepage": "https://github.com/peterpanstechland/piying",
   "build": {
     "appId": "com.shadowpuppet.system",
-    "productName": "皮影互动系统",
+    "productName": "PiYing-Shadow-Puppets",
     "copyright": "Copyright © 2024",
     "directories": {
       "output": "dist_v4",
