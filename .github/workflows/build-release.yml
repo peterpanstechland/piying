@@ -2,8 +2,6 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - master  # Trigger on push to master branch
     tags:
       - 'v*'  # Trigger on version tags (v1.0.0, v1.2.3, etc.)
   workflow_dispatch:  # Allow manual trigger
@@ -174,10 +172,15 @@ jobs:
           cd electron-app
           npm ci
 
+      - name: Create placeholder .env file
+        shell: bash
+        run: |
+          echo "# Environment configuration" > .env
+          echo "NODE_ENV=production" >> .env
+
       - name: Build Electron app (Windows x64)
         env:
-          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd electron-app
@@ -236,8 +239,13 @@ jobs:
           cd electron-app
           npm ci
 
+      - name: Create placeholder .env file
+        run: |
+          echo "# Environment configuration" > .env
+          echo "NODE_ENV=production" >> .env
+
       - name: Import Code Signing Certificate
-        if: ${{ env.APPLE_CERTIFICATE != '' }}
+        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -251,9 +259,7 @@ jobs:
 
       - name: Build Electron app (macOS x64)
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd electron-app
@@ -314,8 +320,13 @@ jobs:
           cd electron-app
           npm ci
 
+      - name: Create placeholder .env file
+        run: |
+          echo "# Environment configuration" > .env
+          echo "NODE_ENV=production" >> .env
+
       - name: Import Code Signing Certificate
-        if: ${{ env.APPLE_CERTIFICATE != '' }}
+        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -329,9 +340,7 @@ jobs:
 
       - name: Build Electron app (macOS arm64)
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd electron-app
@@ -392,6 +401,11 @@ jobs:
         run: |
           cd electron-app
           npm ci
+
+      - name: Create placeholder .env file
+        run: |
+          echo "# Environment configuration" > .env
+          echo "NODE_ENV=production" >> .env
 
       - name: Build Electron app (Linux x64)
         env:

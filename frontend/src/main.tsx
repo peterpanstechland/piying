@@ -49,9 +49,9 @@ const initializeI18n = async () => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <I18nextProvider i18n={i18n}>
       <SystemSettingsProvider>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
       </SystemSettingsProvider>
     </I18nextProvider>,
   );

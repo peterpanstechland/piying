@@ -55,3 +55,4 @@ exports.default = async function notarizing(context) {
     throw error;
   }
 };
+
