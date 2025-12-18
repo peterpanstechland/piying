@@ -229,12 +229,25 @@ jobs:
           cp -r temp-frontend/frontend/dist/* frontend/dist/
           cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and ImageMagick
         run: |
-          brew install ffmpeg
+          brew install ffmpeg imagemagick
           mkdir -p electron-app/resources/ffmpeg
           cp $(which ffmpeg) electron-app/resources/ffmpeg/
           cp $(which ffprobe) electron-app/resources/ffmpeg/
+
+      - name: Ensure icon is at least 512x512
+        run: |
+          cd electron-app/build
+          SIZE=$(identify -format "%wx%h" icon.png 2>/dev/null || echo "0x0")
+          WIDTH=$(echo $SIZE | cut -d'x' -f1)
+          if [ "$WIDTH" -lt 512 ]; then
+            echo "Icon is ${SIZE}, resizing to 512x512..."
+            convert icon.png -resize 512x512 -background transparent -gravity center -extent 512x512 icon_512.png
+            mv icon_512.png icon.png
+          else
+            echo "Icon size is ${SIZE}, no resize needed"
+          fi
 
       - name: Install Electron dependencies
         run: |
@@ -312,12 +325,25 @@ jobs:
           cp -r temp-frontend/frontend/dist/* frontend/dist/
           cp -r temp-frontend/admin-frontend/dist/* admin-frontend/dist/
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and ImageMagick
         run: |
-          brew install ffmpeg
+          brew install ffmpeg imagemagick
           mkdir -p electron-app/resources/ffmpeg
           cp $(which ffmpeg) electron-app/resources/ffmpeg/
           cp $(which ffprobe) electron-app/resources/ffmpeg/
+
+      - name: Ensure icon is at least 512x512
+        run: |
+          cd electron-app/build
+          SIZE=$(identify -format "%wx%h" icon.png 2>/dev/null || echo "0x0")
+          WIDTH=$(echo $SIZE | cut -d'x' -f1)
+          if [ "$WIDTH" -lt 512 ]; then
+            echo "Icon is ${SIZE}, resizing to 512x512..."
+            convert icon.png -resize 512x512 -background transparent -gravity center -extent 512x512 icon_512.png
+            mv icon_512.png icon.png
+          else
+            echo "Icon size is ${SIZE}, no resize needed"
+          fi
 
       - name: Install Electron dependencies
         run: |
