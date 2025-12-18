@@ -1,16 +1,12 @@
-; Custom uninstaller script - Clean all user data on uninstall
+; Custom uninstaller script - Clean application user data on uninstall
 
 !macro customUnInstall
-  ; Clean user data in APPDATA
-  RMDir /r "$APPDATA\RobomonPiying"
-  RMDir /r "$APPDATA\shadow-puppet-system"
-  RMDir /r "$APPDATA\Electron"
+  ; Clean user data in APPDATA (uses productName from package.json)
+  RMDir /r "$APPDATA\皮影互动系统"
   
   ; Clean user data in LOCALAPPDATA
-  RMDir /r "$LOCALAPPDATA\shadow-puppet-system"
-  RMDir /r "$LOCALAPPDATA\electron"
+  RMDir /r "$LOCALAPPDATA\皮影互动系统"
+  RMDir /r "$LOCALAPPDATA\皮影互动系统-updater"
   
-  ; Show message
-  MessageBox MB_OK "All user data has been removed."
+  ; Note: Do NOT delete $APPDATA\Electron - it's shared by all Electron apps
 !macroend
-
