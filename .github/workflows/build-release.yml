@@ -180,9 +180,11 @@ jobs:
 
       - name: Build Electron app (Windows x64)
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: |
+          # Skip code signing if no certificate provided
+          $env:CSC_LINK = ""
           cd electron-app
           npm run build:win
 
@@ -245,11 +247,14 @@ jobs:
           echo "NODE_ENV=production" >> .env
 
       - name: Import Code Signing Certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "No Apple certificate configured, skipping code signing setup"
+            exit 0
+          fi
           echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
           security create-keychain -p actions temp.keychain
           security default-keychain -s temp.keychain
@@ -326,11 +331,14 @@ jobs:
           echo "NODE_ENV=production" >> .env
 
       - name: Import Code Signing Certificate
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "No Apple certificate configured, skipping code signing setup"
+            exit 0
+          fi
           echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
           security create-keychain -p actions temp.keychain
           security default-keychain -s temp.keychain
