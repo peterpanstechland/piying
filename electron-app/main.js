@@ -21,6 +21,15 @@ let tray = null;
 let backendProcess = null;
 let splashWindow = null;
 
+// Set consistent userData path to match backend's data directory
+// This ensures Electron logs and backend data are in the same location
+// Must be called before app is ready
+const appDataPath = process.env.APPDATA || (process.platform === 'darwin' 
+  ? path.join(require('os').homedir(), 'Library', 'Application Support')
+  : path.join(require('os').homedir(), '.config'));
+const userDataPath = path.join(appDataPath, 'RobomonPiying');
+app.setPath('userData', userDataPath);
+
 // 获取资源路径
 const isDev = !app.isPackaged;
 const appPath = isDev ? path.join(__dirname, '..') : path.dirname(app.getPath('exe'));

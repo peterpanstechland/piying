@@ -37,7 +37,7 @@
   "build": {
     "appId": "com.shadowpuppet.system",
     "productName": "PiYing-Shadow-Puppets",
-    "copyright": "Copyright © 2024",
+    "copyright": "Copyright © 2025",
     "directories": {
       "output": "dist_v4",
       "buildResources": "build"
