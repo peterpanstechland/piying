@@ -118,6 +118,17 @@ const resources = {
         overwriteHint: 'If checked, items with the same ID will be replaced. Otherwise, they will be skipped.',
         cancel: 'Cancel',
         confirm: 'Import',
+        // New keys for export options dialog
+        selectExportContent: 'Select Export Content',
+        loadingContent: 'Loading available content...',
+        loadContentError: 'Failed to load exportable content',
+        systemSettings: 'System Settings',
+        noCharacters: 'No characters available',
+        noStorylines: 'No storylines available',
+        requiredByStoryline: 'Required by selected storyline',
+        dependsOn: 'Depends on',
+        confirmExport: 'Export Selected',
+        selectedSummary: '{{characters}} characters, {{storylines}} storylines, {{settings}} settings selected',
       },
       settings: {
         storage: {
@@ -313,7 +324,7 @@ const resources = {
         previewTitle: '将要导入的项目',
         previewError: '分析备份文件失败',
         invalidFile: '无效的备份文件格式',
-        characters: '人物',
+        characters: '皮影人物',
         storylines: '故事线',
         settingsIncluded: '包含系统设置',
         importButton: '导入',
@@ -325,6 +336,17 @@ const resources = {
         overwriteHint: '如果勾选，具有相同 ID 的项目将被替换。否则，它们将被跳过。',
         cancel: '取消',
         confirm: '导入',
+        // 导出选项对话框新增
+        selectExportContent: '选择导出内容',
+        loadingContent: '正在加载可导出内容...',
+        loadContentError: '加载可导出内容失败',
+        systemSettings: '系统设置',
+        noCharacters: '没有可用的人物',
+        noStorylines: '没有可用的故事线',
+        requiredByStoryline: '被所选故事线依赖',
+        dependsOn: '依赖',
+        confirmExport: '确认导出',
+        selectedSummary: '已选择 {{characters}} 个人物、{{storylines}} 个故事线、{{settings}} 项设置',
       },
       settings: {
         storage: {

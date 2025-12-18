@@ -13,6 +13,37 @@ interface ApiError {
   status?: number
 }
 
+// Export/Import types
+export interface ExportCharacterItem {
+  id: string
+  name: string
+  thumbnail_path: string | null
+}
+
+export interface ExportStorylineItem {
+  id: string
+  name: string
+  name_en: string
+  icon: string
+  required_character_ids: string[]
+}
+
+export interface ExportableContent {
+  characters: ExportCharacterItem[]
+  storylines: ExportStorylineItem[]
+  settings_available: boolean
+}
+
+export interface ExportOptions {
+  character_ids: string[]
+  storyline_ids: string[]
+  include_settings: boolean
+}
+
+export interface DependencyCalculation {
+  required_character_ids: string[]
+}
+
 class AdminApiClient {
   private client: AxiosInstance
 
@@ -654,13 +685,30 @@ class AdminApiClient {
   }
 
   // Export/Import
-  async exportConfiguration(): Promise<{
+  
+  async getExportableContent(): Promise<ExportableContent> {
+    const response = await this.client.get('/export/content')
+    return response.data
+  }
+  
+  async calculateExportDependencies(
+    selectedCharacterIds: string[],
+    selectedStorylineIds: string[]
+  ): Promise<DependencyCalculation> {
+    const response = await this.client.post('/export/dependencies', {
+      selected_character_ids: selectedCharacterIds,
+      selected_storyline_ids: selectedStorylineIds
+    })
+    return response.data
+  }
+  
+  async exportConfiguration(options?: ExportOptions): Promise<{
     success: boolean
     filename: string
     download_url: string
     message: string
   }> {
-    const response = await this.client.post('/export')
+    const response = await this.client.post('/export', options || null)
     return response.data
   }
 

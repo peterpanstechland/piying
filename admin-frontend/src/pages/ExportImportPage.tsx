@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,26 @@ interface ImportResult {
   settings_imported: boolean
 }
 
+interface ExportCharacter {
+  id: string
+  name: string
+  thumbnail_path: string | null
+}
+
+interface ExportStoryline {
+  id: string
+  name: string
+  name_en: string
+  icon: string
+  required_character_ids: string[]
+}
+
+interface ExportableContent {
+  characters: ExportCharacter[]
+  storylines: ExportStoryline[]
+  settings_available: boolean
+}
+
 export default function ExportImportPage() {
   const { user, logout } = useAuth()
   const { t } = useTranslation()
@@ -32,6 +52,19 @@ export default function ExportImportPage() {
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
   const [exportSuccess, setExportSuccess] = useState('')
+  
+  // Export options dialog state
+  const [showExportOptionsDialog, setShowExportOptionsDialog] = useState(false)
+  const [loadingContent, setLoadingContent] = useState(false)
+  const [exportableContent, setExportableContent] = useState<ExportableContent | null>(null)
+  const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(new Set())
+  const [selectedStorylineIds, setSelectedStorylineIds] = useState<Set<string>>(new Set())
+  const [includeSettings, setIncludeSettings] = useState(true)
+  const [requiredCharacterIds, setRequiredCharacterIds] = useState<Set<string>>(new Set())
+  const [expandedSections, setExpandedSections] = useState<{ characters: boolean; storylines: boolean }>({
+    characters: true,
+    storylines: true
+  })
   
   // Import state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -43,14 +76,133 @@ export default function ExportImportPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [overwriteExisting, setOverwriteExisting] = useState(false)
 
-  const handleExport = async () => {
+  // Calculate required characters when storyline selection changes
+  const updateRequiredCharacters = useCallback(() => {
+    if (!exportableContent) return
+    
+    const required = new Set<string>()
+    exportableContent.storylines.forEach(storyline => {
+      if (selectedStorylineIds.has(storyline.id)) {
+        storyline.required_character_ids.forEach(charId => required.add(charId))
+      }
+    })
+    setRequiredCharacterIds(required)
+    
+    // Auto-select required characters
+    setSelectedCharacterIds(prev => {
+      const newSet = new Set(prev)
+      required.forEach(id => newSet.add(id))
+      return newSet
+    })
+  }, [exportableContent, selectedStorylineIds])
+
+  useEffect(() => {
+    updateRequiredCharacters()
+  }, [updateRequiredCharacters])
+
+  // Load exportable content when dialog opens
+  const loadExportableContent = async () => {
+    try {
+      setLoadingContent(true)
+      const content = await adminApi.getExportableContent()
+      setExportableContent(content)
+      
+      // Select all by default
+      setSelectedCharacterIds(new Set(content.characters.map(c => c.id)))
+      setSelectedStorylineIds(new Set(content.storylines.map(s => s.id)))
+      setIncludeSettings(content.settings_available)
+    } catch (err: any) {
+      setExportError(err.detail || err.message || t('exportImport.loadContentError'))
+    } finally {
+      setLoadingContent(false)
+    }
+  }
+
+  const handleOpenExportOptions = async () => {
+    setExportError('')
+    setExportSuccess('')
+    setShowExportOptionsDialog(true)
+    await loadExportableContent()
+  }
+
+  const handleCloseExportOptions = () => {
+    setShowExportOptionsDialog(false)
+    setExportableContent(null)
+  }
+
+  const handleSelectAllCharacters = (checked: boolean) => {
+    if (!exportableContent) return
+    if (checked) {
+      setSelectedCharacterIds(new Set(exportableContent.characters.map(c => c.id)))
+    } else {
+      // Only deselect non-required characters
+      setSelectedCharacterIds(new Set(requiredCharacterIds))
+    }
+  }
+
+  const handleSelectAllStorylines = (checked: boolean) => {
+    if (!exportableContent) return
+    if (checked) {
+      setSelectedStorylineIds(new Set(exportableContent.storylines.map(s => s.id)))
+    } else {
+      setSelectedStorylineIds(new Set())
+    }
+  }
+
+  const handleToggleCharacter = (characterId: string) => {
+    // Don't allow deselecting required characters
+    if (requiredCharacterIds.has(characterId)) return
+    
+    setSelectedCharacterIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(characterId)) {
+        newSet.delete(characterId)
+      } else {
+        newSet.add(characterId)
+      }
+      return newSet
+    })
+  }
+
+  const handleToggleStoryline = (storylineId: string) => {
+    setSelectedStorylineIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(storylineId)) {
+        newSet.delete(storylineId)
+      } else {
+        newSet.add(storylineId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSection = (section: 'characters' | 'storylines') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const isExportDisabled = () => {
+    return selectedCharacterIds.size === 0 && selectedStorylineIds.size === 0 && !includeSettings
+  }
+
+  const handleConfirmExport = async () => {
     try {
       setExporting(true)
       setExportError('')
       setExportSuccess('')
+      setShowExportOptionsDialog(false)
+      
+      // Build export options
+      const options = {
+        character_ids: Array.from(selectedCharacterIds),
+        storyline_ids: Array.from(selectedStorylineIds),
+        include_settings: includeSettings
+      }
       
       // Request export
-      const result = await adminApi.exportConfiguration()
+      const result = await adminApi.exportConfiguration(options)
       
       if (result.success) {
         // Download the file
@@ -194,7 +346,7 @@ export default function ExportImportPage() {
           
           <button
             className="export-btn"
-            onClick={handleExport}
+            onClick={handleOpenExportOptions}
             disabled={exporting}
           >
             {exporting ? t('exportImport.exporting') : t('exportImport.exportButton')}
@@ -333,6 +485,176 @@ export default function ExportImportPage() {
               </button>
               <button className="confirm-btn" onClick={handleConfirmImport}>
                 {t('exportImport.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Options Dialog */}
+      {showExportOptionsDialog && (
+        <div className="dialog-overlay">
+          <div className="export-options-dialog">
+            <h3>{t('exportImport.selectExportContent')}</h3>
+            
+            {loadingContent ? (
+              <div className="loading-content">
+                <span className="loading-spinner">⏳</span>
+                <span>{t('exportImport.loadingContent')}</span>
+              </div>
+            ) : exportableContent ? (
+              <div className="export-options-content">
+                {/* Characters Section */}
+                <div className="export-section">
+                  <div 
+                    className="section-header" 
+                    onClick={() => toggleSection('characters')}
+                  >
+                    <span className={`expand-icon ${expandedSections.characters ? 'expanded' : ''}`}>▶</span>
+                    <span className="section-icon">👤</span>
+                    <span className="section-title">
+                      {t('exportImport.characters')} ({exportableContent.characters.length})
+                    </span>
+                    <label className="checkbox-label section-checkbox" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCharacterIds.size === exportableContent.characters.length}
+                        onChange={(e) => handleSelectAllCharacters(e.target.checked)}
+                      />
+                    </label>
+                  </div>
+                  
+                  {expandedSections.characters && (
+                    <div className="section-items">
+                      {exportableContent.characters.map(character => {
+                        const isRequired = requiredCharacterIds.has(character.id)
+                        const isSelected = selectedCharacterIds.has(character.id)
+                        
+                        return (
+                          <label 
+                            key={character.id} 
+                            className={`item-checkbox ${isRequired ? 'required' : ''}`}
+                            title={isRequired ? t('exportImport.requiredByStoryline') : ''}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleCharacter(character.id)}
+                              disabled={isRequired}
+                            />
+                            <span className="item-name">{character.name}</span>
+                            {isRequired && (
+                              <span className="required-badge" title={t('exportImport.requiredByStoryline')}>
+                                🔒
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                      {exportableContent.characters.length === 0 && (
+                        <div className="no-items">{t('exportImport.noCharacters')}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Storylines Section */}
+                <div className="export-section">
+                  <div 
+                    className="section-header" 
+                    onClick={() => toggleSection('storylines')}
+                  >
+                    <span className={`expand-icon ${expandedSections.storylines ? 'expanded' : ''}`}>▶</span>
+                    <span className="section-icon">🎬</span>
+                    <span className="section-title">
+                      {t('exportImport.storylines')} ({exportableContent.storylines.length})
+                    </span>
+                    <label className="checkbox-label section-checkbox" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStorylineIds.size === exportableContent.storylines.length}
+                        onChange={(e) => handleSelectAllStorylines(e.target.checked)}
+                      />
+                    </label>
+                  </div>
+                  
+                  {expandedSections.storylines && (
+                    <div className="section-items">
+                      {exportableContent.storylines.map(storyline => {
+                        const isSelected = selectedStorylineIds.has(storyline.id)
+                        const dependsOn = storyline.required_character_ids.length > 0
+                          ? exportableContent.characters
+                              .filter(c => storyline.required_character_ids.includes(c.id))
+                              .map(c => c.name)
+                              .join(', ')
+                          : null
+                        
+                        return (
+                          <label key={storyline.id} className="item-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleStoryline(storyline.id)}
+                            />
+                            <span className="item-icon">{storyline.icon}</span>
+                            <span className="item-name">{storyline.name}</span>
+                            {dependsOn && (
+                              <span className="dependency-info" title={`${t('exportImport.dependsOn')}: ${dependsOn}`}>
+                                ({t('exportImport.dependsOn')}: {dependsOn})
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                      {exportableContent.storylines.length === 0 && (
+                        <div className="no-items">{t('exportImport.noStorylines')}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Settings Section */}
+                {exportableContent.settings_available && (
+                  <div className="export-section settings-section">
+                    <label className="item-checkbox settings-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={includeSettings}
+                        onChange={(e) => setIncludeSettings(e.target.checked)}
+                      />
+                      <span className="section-icon">⚙️</span>
+                      <span className="item-name">{t('exportImport.systemSettings')}</span>
+                    </label>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div className="export-summary">
+                  <span>
+                    {t('exportImport.selectedSummary', {
+                      characters: selectedCharacterIds.size,
+                      storylines: selectedStorylineIds.size,
+                      settings: includeSettings ? 1 : 0
+                    })}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="error-content">
+                <span>{t('exportImport.loadContentError')}</span>
+              </div>
+            )}
+            
+            <div className="dialog-actions">
+              <button className="cancel-btn" onClick={handleCloseExportOptions}>
+                {t('exportImport.cancel')}
+              </button>
+              <button 
+                className="confirm-btn" 
+                onClick={handleConfirmExport}
+                disabled={isExportDisabled() || loadingContent || exporting}
+              >
+                {exporting ? t('exportImport.exporting') : t('exportImport.confirmExport')}
               </button>
             </div>
           </div>

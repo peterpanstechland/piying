@@ -457,3 +457,185 @@
 .confirm-btn:hover {
   opacity: 0.9;
 }
+
+.confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Export Options Dialog */
+.export-options-dialog {
+  background: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px var(--shadow-card);
+}
+
+.export-options-dialog h3 {
+  color: var(--accent-gold-light);
+  font-size: 1.2rem;
+  margin: 0 0 1rem 0;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  font-size: 2rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.export-options-content {
+  margin-bottom: 1rem;
+}
+
+.error-content {
+  padding: 2rem;
+  text-align: center;
+  color: var(--error);
+}
+
+/* Export Section */
+.export-section {
+  margin-bottom: 1rem;
+  background: var(--bg-base);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.section-header:hover {
+  background: var(--bg-hover);
+}
+
+.expand-icon {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.section-icon {
+  font-size: 1.1rem;
+}
+
+.section-title {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.section-checkbox {
+  margin-left: auto;
+}
+
+.section-items {
+  padding: 0.5rem 1rem 1rem 2.5rem;
+  border-top: 1px solid var(--divider);
+}
+
+.item-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.item-checkbox:hover {
+  color: var(--text-primary);
+}
+
+.item-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+}
+
+.item-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.item-checkbox.required {
+  color: var(--text-muted);
+}
+
+.item-icon {
+  font-size: 1rem;
+}
+
+.item-name {
+  flex: 1;
+}
+
+.required-badge {
+  font-size: 0.8rem;
+  color: var(--accent-gold);
+}
+
+.dependency-info {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+
+.no-items {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.settings-section {
+  padding: 0.75rem 1rem;
+}
+
+.settings-checkbox {
+  padding: 0;
+}
+
+.settings-checkbox .section-icon {
+  margin-left: 0.5rem;
+}
+
+/* Export Summary */
+.export-summary {
+  padding: 0.75rem 1rem;
+  background: var(--bg-hover);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 1rem;
+}
