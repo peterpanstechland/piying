@@ -181,10 +181,9 @@ jobs:
       - name: Build Electron app (Windows x64)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          WIN_CSC_LINK: ""
         run: |
-          # Skip code signing if no certificate provided
-          $env:CSC_LINK = ""
           cd electron-app
           npm run build:win
 
