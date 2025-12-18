@@ -62,3 +62,6 @@ electron-app/resources/backend/
 electron-app/resources/ffmpeg/
 electron-app/resources/data/
 electron-app/out/
+
+# But keep electron-app/build (contains required build resources)
+!electron-app/build/
