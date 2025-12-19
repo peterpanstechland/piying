@@ -14,6 +14,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from .api import sessions_router, videos_router, public_storylines_router, characters_router as public_characters_router
 from .api.system import router as public_system_router
 from .api.admin import auth_router, users_router, characters_router, storylines_router, settings_router, dashboard_router, export_import_router, character_videos_router
+from .api.admin.settings import public_router as ota_settings_router
 from .config import ConfigLoader
 from .database import init_db
 from .services.admin.auth_service import auth_service
@@ -175,6 +176,7 @@ if admin_frontend_dist.exists():
 app.include_router(sessions_router)
 app.include_router(videos_router)
 app.include_router(public_system_router) # Public system settings API (no auth required)
+app.include_router(ota_settings_router)  # Public OTA settings API (no auth required)
 app.include_router(public_storylines_router)  # Public storylines API (no auth required)
 app.include_router(public_characters_router)  # Public characters API (no auth required)
 app.include_router(auth_router)

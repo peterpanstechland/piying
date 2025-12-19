@@ -448,3 +448,76 @@
   border-color: var(--border);
   color: var(--text-muted);
 }
+
+/* Checkbox Label Styles */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 12px 16px;
+  background: var(--bg-base);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+[data-theme='light'] .checkbox-label {
+  background: #FFFFFF;
+  border-color: rgba(42, 35, 31, 0.25);
+}
+
+.checkbox-label:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"]:checked + span {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.checkbox-label:has(input[type="checkbox"]:checked) {
+  border-color: var(--accent-primary);
+  background: rgba(184, 59, 59, 0.05);
+}
+
+.checkbox-label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkbox-label:has(input[type="checkbox"]:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* OTA Config Sections */
+.github-config,
+.custom-config {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+[data-theme='light'] .github-config,
+[data-theme='light'] .custom-config {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.github-config .form-group:last-child,
+.custom-config .form-group:last-child {
+  margin-bottom: 0;
+}

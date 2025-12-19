@@ -19,6 +19,7 @@ from ...models.admin.settings import (
     LANIPResponse,
     CameraListResponse,
     CameraDevice,
+    OTASettings,
 )
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -339,3 +340,38 @@ async def get_lan_ip(
     Requirements: 8.1, 8.2, 8.3, 8.4
     """
     return settings_service.get_lan_ip()
+
+
+# ============================================================================
+# OTA Settings Endpoints
+# ============================================================================
+
+@router.get("/ota", response_model=OTASettings)
+async def get_ota_settings(
+    current_user: Annotated[TokenPayload, Depends(get_current_user)],
+) -> OTASettings:
+    """
+    Get OTA (Over-The-Air) update settings.
+    
+    Returns configuration for automatic updates including:
+    - Whether OTA is enabled
+    - Update source (GitHub or custom)
+    - Repository/URL configuration
+    """
+    settings = settings_service.get_settings()
+    return settings.ota
+
+
+# Public endpoint for Electron app (no authentication required)
+public_router = APIRouter(prefix="/api/settings", tags=["Public Settings"])
+
+@public_router.get("/ota", response_model=OTASettings)
+async def get_ota_settings_public() -> OTASettings:
+    """
+    Get OTA settings (public endpoint for Electron app).
+    
+    This endpoint does not require authentication and is used by
+    the Electron app to fetch update configuration at startup.
+    """
+    settings = settings_service.get_settings()
+    return settings.ota

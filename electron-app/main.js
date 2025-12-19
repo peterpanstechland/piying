@@ -7,6 +7,7 @@ const net = require('net');
 const { autoUpdater } = require('electron-updater');
 const logger = require('electron-log');
 const treeKill = require('tree-kill');
+const https = require('https');
 
 // 使 log 既可以作为函数调用，又拥有 electron-log 的所有方法
 const log = Object.assign((message) => logger.info(message), logger);
@@ -20,6 +21,24 @@ let mainWindow = null;
 let tray = null;
 let backendProcess = null;
 let splashWindow = null;
+
+// 更新状态跟踪
+let updateDownloaded = false;
+let latestUpdateInfo = null;
+
+// OTA 配置 (默认值，可从后端加载)
+let otaSettings = {
+  enabled: true,
+  check_on_startup: true,
+  source_type: 'github',
+  github_owner: 'peterpanstechland',
+  github_repo: 'piying',
+  custom_update_url: null,
+  custom_release_url: null
+};
+
+// 网络状态
+let networkAvailable = true;
 
 // Set consistent userData path to match backend's data directory
 // This ensures Electron logs and backend data are in the same location
@@ -60,30 +79,395 @@ function createSplashScreen() {
   splashWindow.center();
 }
 
+// 向 launcher 发送更新状态
+function sendUpdateStatusToLauncher(channel, data) {
+  if (launcherWindow && !launcherWindow.isDestroyed()) {
+    launcherWindow.webContents.send(channel, data);
+  }
+}
+
+// 从后端加载 OTA 设置
+async function loadOTASettings() {
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: 'localhost',
+      port: 8000,
+      path: '/api/settings/ota',
+      method: 'GET',
+      timeout: 5000
+    }, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const settings = JSON.parse(data);
+            otaSettings = { ...otaSettings, ...settings };
+            log.info('OTA settings loaded from backend: ' + JSON.stringify(otaSettings));
+            
+            // 根据设置配置 autoUpdater
+            configureAutoUpdater();
+            resolve(true);
+          } else {
+            log.warn('Failed to load OTA settings, using defaults');
+            resolve(false);
+          }
+        } catch (error) {
+          log.error('Error parsing OTA settings: ' + error.message);
+          resolve(false);
+        }
+      });
+    });
+    
+    req.on('error', (error) => {
+      log.warn('Cannot connect to backend for OTA settings: ' + error.message);
+      resolve(false);
+    });
+    
+    req.on('timeout', () => {
+      req.destroy();
+      log.warn('OTA settings request timeout');
+      resolve(false);
+    });
+    
+    req.end();
+  });
+}
+
+// 配置 autoUpdater 
+function configureAutoUpdater() {
+  if (otaSettings.source_type === 'github') {
+    // GitHub Release 模式
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: otaSettings.github_owner,
+      repo: otaSettings.github_repo
+    });
+    log.info(`AutoUpdater configured for GitHub: ${otaSettings.github_owner}/${otaSettings.github_repo}`);
+  } else if (otaSettings.source_type === 'custom' && otaSettings.custom_update_url) {
+    // 自定义服务器模式
+    autoUpdater.setFeedURL({
+      provider: 'generic',
+      url: otaSettings.custom_update_url
+    });
+    log.info(`AutoUpdater configured for custom URL: ${otaSettings.custom_update_url}`);
+  }
+}
+
+// 检查网络连接
+function checkNetworkConnection() {
+  return new Promise((resolve) => {
+    const testUrl = otaSettings.source_type === 'github' 
+      ? 'api.github.com' 
+      : (otaSettings.custom_update_url ? new URL(otaSettings.custom_update_url).hostname : 'api.github.com');
+    
+    const req = https.request({
+      hostname: testUrl,
+      port: 443,
+      path: '/',
+      method: 'HEAD',
+      timeout: 5000
+    }, (res) => {
+      networkAvailable = true;
+      resolve(true);
+    });
+    
+    req.on('error', () => {
+      networkAvailable = false;
+      resolve(false);
+    });
+    
+    req.on('timeout', () => {
+      req.destroy();
+      networkAvailable = false;
+      resolve(false);
+    });
+    
+    req.end();
+  });
+}
+
+// 从配置的源获取最新 release 信息
+function fetchReleaseInfo() {
+  return new Promise(async (resolve, reject) => {
+    // 先检查网络
+    const hasNetwork = await checkNetworkConnection();
+    if (!hasNetwork) {
+      resolve({
+        success: false,
+        error: 'network_unavailable',
+        message: '无法连接到更新服务器，请检查网络连接'
+      });
+      return;
+    }
+    
+    // 如果OTA未启用
+    if (!otaSettings.enabled) {
+      resolve({
+        success: false,
+        error: 'ota_disabled',
+        message: 'OTA更新已禁用'
+      });
+      return;
+    }
+    
+    // 根据配置选择数据源
+    if (otaSettings.source_type === 'custom' && otaSettings.custom_release_url) {
+      // 自定义 release info URL
+      fetchCustomReleaseInfo(otaSettings.custom_release_url)
+        .then(resolve)
+        .catch(reject);
+    } else {
+      // GitHub Release
+      fetchGitHubReleaseInfo()
+        .then(resolve)
+        .catch(reject);
+    }
+  });
+}
+
+// 从 GitHub API 获取 release 信息
+function fetchGitHubReleaseInfo() {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${otaSettings.github_owner}/${otaSettings.github_repo}/releases/latest`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'PiYing-Electron-App',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      timeout: 10000
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const releaseInfo = JSON.parse(data);
+            networkAvailable = true;
+            resolve({
+              success: true,
+              version: releaseInfo.tag_name,
+              name: releaseInfo.name,
+              body: releaseInfo.body,
+              publishedAt: releaseInfo.published_at,
+              htmlUrl: releaseInfo.html_url,
+              assets: releaseInfo.assets.map(asset => ({
+                name: asset.name,
+                downloadUrl: asset.browser_download_url,
+                size: asset.size
+              }))
+            });
+          } else if (res.statusCode === 404) {
+            resolve({
+              success: false,
+              error: 'no_releases',
+              message: '未找到任何发布版本'
+            });
+          } else if (res.statusCode === 403) {
+            resolve({
+              success: false,
+              error: 'rate_limited',
+              message: 'GitHub API 请求频率超限，请稍后再试'
+            });
+          } else {
+            resolve({
+              success: false,
+              error: 'api_error',
+              message: `GitHub API 错误: ${res.statusCode}`
+            });
+          }
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      networkAvailable = false;
+      resolve({
+        success: false,
+        error: 'network_error',
+        message: '网络连接错误: ' + error.message
+      });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        success: false,
+        error: 'timeout',
+        message: '请求超时，请检查网络连接'
+      });
+    });
+
+    req.end();
+  });
+}
+
+// 从自定义 URL 获取 release 信息
+function fetchCustomReleaseInfo(url) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const protocol = parsedUrl.protocol === 'https:' ? https : http;
+    
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'PiYing-Electron-App',
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    };
+
+    const req = protocol.request(options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 200) {
+            const releaseInfo = JSON.parse(data);
+            networkAvailable = true;
+            resolve({
+              success: true,
+              version: releaseInfo.version || releaseInfo.tag_name,
+              name: releaseInfo.name || releaseInfo.title,
+              body: releaseInfo.body || releaseInfo.notes || releaseInfo.changelog,
+              publishedAt: releaseInfo.publishedAt || releaseInfo.published_at || releaseInfo.date,
+              htmlUrl: releaseInfo.htmlUrl || releaseInfo.url,
+              assets: releaseInfo.assets || []
+            });
+          } else {
+            resolve({
+              success: false,
+              error: 'api_error',
+              message: `服务器错误: ${res.statusCode}`
+            });
+          }
+        } catch (error) {
+          resolve({
+            success: false,
+            error: 'parse_error',
+            message: '解析响应数据失败'
+          });
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      networkAvailable = false;
+      resolve({
+        success: false,
+        error: 'network_error',
+        message: '网络连接错误: ' + error.message
+      });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        success: false,
+        error: 'timeout',
+        message: '请求超时，请检查网络连接'
+      });
+    });
+
+    req.end();
+  });
+}
+
 // 检查更新
-function checkForUpdates() {
+async function checkForUpdates(silent = false) {
+  // 检查OTA是否启用
+  if (!otaSettings.enabled) {
+    log.info('OTA updates are disabled');
+    if (!silent) {
+      sendUpdateStatusToLauncher('update-check-result', {
+        status: 'disabled',
+        message: 'OTA更新已禁用'
+      });
+    }
+    return;
+  }
+
   if (isDev) {
     log.info('Skipping update check in development mode');
+    if (!silent) {
+      sendUpdateStatusToLauncher('update-check-result', {
+        status: 'dev-mode',
+        message: '开发模式下跳过更新检查'
+      });
+    }
+    return;
+  }
+
+  // 先检查网络连接
+  const hasNetwork = await checkNetworkConnection();
+  if (!hasNetwork) {
+    log.warn('Network unavailable, skipping update check');
+    if (!silent) {
+      sendUpdateStatusToLauncher('update-error', {
+        error: '无法连接到更新服务器，请检查网络连接'
+      });
+    }
     return;
   }
 
   log.info('Checking for updates...');
-  autoUpdater.checkForUpdatesAndNotify();
+  sendUpdateStatusToLauncher('update-checking', {});
+  
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    log.error('Update check failed: ' + error.message);
+    sendUpdateStatusToLauncher('update-error', {
+      error: error.message
+    });
+  }
 }
 
 autoUpdater.on('checking-for-update', () => {
   log.info('Checking for update...');
+  sendUpdateStatusToLauncher('update-checking', {});
 });
 
 autoUpdater.on('update-available', (info) => {
   log.info('Update available: ' + info.version);
+  latestUpdateInfo = info;
   if (splashWindow) {
     splashWindow.webContents.send('update-message', '发现新版本，正在下载...');
   }
+  sendUpdateStatusToLauncher('update-available', {
+    version: info.version,
+    releaseDate: info.releaseDate,
+    releaseName: info.releaseName,
+    releaseNotes: info.releaseNotes
+  });
 });
 
 autoUpdater.on('update-not-available', (info) => {
   log.info('Update not available.');
+  sendUpdateStatusToLauncher('update-not-available', {
+    currentVersion: app.getVersion()
+  });
 });
 
 autoUpdater.on('error', (err) => {
@@ -91,6 +475,9 @@ autoUpdater.on('error', (err) => {
   if (splashWindow) {
     splashWindow.webContents.send('update-message', '更新检查失败，继续启动...');
   }
+  sendUpdateStatusToLauncher('update-error', {
+    error: err.message || String(err)
+  });
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
@@ -101,15 +488,27 @@ autoUpdater.on('download-progress', (progressObj) => {
   if (splashWindow) {
     splashWindow.webContents.send('update-message', `正在下载更新... ${Math.round(progressObj.percent)}%`);
   }
+  sendUpdateStatusToLauncher('update-download-progress', {
+    percent: progressObj.percent,
+    bytesPerSecond: progressObj.bytesPerSecond,
+    transferred: progressObj.transferred,
+    total: progressObj.total
+  });
 });
 
 autoUpdater.on('update-downloaded', (info) => {
   log.info('Update downloaded');
+  updateDownloaded = true;
+  latestUpdateInfo = info;
   if (splashWindow) {
     splashWindow.webContents.send('update-message', '更新下载完成，下次启动时安装');
   }
-  // 这里可以选择立即安装并重启，或者下次启动时安装
-  // autoUpdater.quitAndInstall(); 
+  sendUpdateStatusToLauncher('update-downloaded', {
+    version: info.version,
+    releaseDate: info.releaseDate,
+    releaseName: info.releaseName,
+    releaseNotes: info.releaseNotes
+  });
 });
 
 // 检查端口是否被占用
@@ -606,9 +1005,6 @@ app.whenReady().then(async () => {
     // 显示启动画面
     createSplashScreen();
 
-    // 检查更新
-    checkForUpdates();
-
     // 启动后端
     try {
       await startBackend();
@@ -620,6 +1016,16 @@ app.whenReady().then(async () => {
 
     // 等待后端完全启动
     await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 从后端加载 OTA 设置
+    await loadOTASettings();
+
+    // 根据设置决定是否在启动时检查更新
+    if (otaSettings.enabled && otaSettings.check_on_startup) {
+      checkForUpdates(true); // silent mode
+    } else {
+      log.info('Startup update check skipped (disabled in settings)');
+    }
 
     // 默认直接进入体验界面 (Kiosk模式)
     log('Auto-launching Main Window (Interactive Interface)...');
@@ -783,4 +1189,73 @@ ipcMain.handle('open-logs-folder', async () => {
 
 ipcMain.handle('get-app-version', async () => {
   return app.getVersion();
+});
+
+// ============== 更新相关 IPC 处理器 ==============
+
+// 手动检查更新
+ipcMain.handle('check-for-updates', async () => {
+  log.info('Manual update check triggered');
+  checkForUpdates(false);
+  return { success: true };
+});
+
+// 获取 GitHub Release 信息
+ipcMain.handle('get-release-info', async () => {
+  try {
+    const releaseInfo = await fetchReleaseInfo();
+    return releaseInfo;
+  } catch (error) {
+    log.error(`Failed to fetch release info: ${error.message}`);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+// 安装已下载的更新
+ipcMain.handle('install-update', async () => {
+  if (updateDownloaded) {
+    log.info('Installing update and restarting...');
+    setImmediate(() => {
+      autoUpdater.quitAndInstall(false, true);
+    });
+    return { success: true };
+  } else {
+    return { success: false, error: 'No update downloaded' };
+  }
+});
+
+// 获取更新状态
+ipcMain.handle('get-update-status', async () => {
+  return {
+    updateDownloaded: updateDownloaded,
+    latestUpdateInfo: latestUpdateInfo,
+    currentVersion: app.getVersion()
+  };
+});
+
+// 获取网络状态
+ipcMain.handle('get-network-status', async () => {
+  const hasNetwork = await checkNetworkConnection();
+  return {
+    available: hasNetwork,
+    otaEnabled: otaSettings.enabled,
+    sourceType: otaSettings.source_type
+  };
+});
+
+// 获取 OTA 设置
+ipcMain.handle('get-ota-settings', async () => {
+  return otaSettings;
+});
+
+// 刷新 OTA 设置
+ipcMain.handle('refresh-ota-settings', async () => {
+  const success = await loadOTASettings();
+  return {
+    success: success,
+    settings: otaSettings
+  };
 });

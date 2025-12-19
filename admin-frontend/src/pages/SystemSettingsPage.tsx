@@ -27,12 +27,23 @@ interface RenderingSettings {
   encoder_quality: number
 }
 
+interface OTASettings {
+  enabled: boolean
+  check_on_startup: boolean
+  source_type: string
+  github_owner: string
+  github_repo: string
+  custom_update_url: string | null
+  custom_release_url: string | null
+}
+
 interface SystemSettings {
   theme: string
   language: string
   fallback_language: string
   timeouts: TimeoutSettings
   rendering: RenderingSettings
+  ota: OTASettings
 }
 
 const VALID_CODECS = ['H264', 'H265', 'VP9']
@@ -70,6 +81,15 @@ export default function SystemSettingsPage() {
       video_encoder: 'h264_nvenc',
       encoder_preset: 'slow',
       encoder_quality: 19,
+    },
+    ota: {
+      enabled: true,
+      check_on_startup: true,
+      source_type: 'github',
+      github_owner: 'peterpanstechland',
+      github_repo: 'piying',
+      custom_update_url: null,
+      custom_release_url: null,
     }
   })
   const [loading, setLoading] = useState(true)
@@ -93,6 +113,15 @@ export default function SystemSettingsPage() {
         fallback_language: data.fallback_language,
         timeouts: data.timeouts,
         rendering: data.rendering,
+        ota: data.ota || {
+          enabled: true,
+          check_on_startup: true,
+          source_type: 'github',
+          github_owner: 'peterpanstechland',
+          github_repo: 'piying',
+          custom_update_url: null,
+          custom_release_url: null,
+        },
       })
       // Sync theme with global state
       if (data.theme && data.theme !== theme) {
@@ -142,6 +171,13 @@ export default function SystemSettingsPage() {
     }))
   }
 
+  const handleOTAChange = (field: keyof OTASettings, value: string | boolean | null) => {
+    setSettings(prev => ({
+      ...prev,
+      ota: { ...prev.ota, [field]: value },
+    }))
+  }
+
   const handleSave = async () => {
     // Validate all timeout values
     const timeoutFields = Object.entries(settings.timeouts)
@@ -163,6 +199,7 @@ export default function SystemSettingsPage() {
         fallback_language: settings.fallback_language,
         timeouts: settings.timeouts,
         rendering: settings.rendering,
+        ota: settings.ota,
       })
       
       // Update the UI language immediately
@@ -530,6 +567,107 @@ export default function SystemSettingsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* OTA Update Settings */}
+        <div className="settings-card">
+          <h2>OTA 更新设置</h2>
+          <p className="card-description">配置应用程序的自动更新检测和更新源</p>
+          
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.ota.enabled}
+                onChange={(e) => handleOTAChange('enabled', e.target.checked)}
+              />
+              <span>启用 OTA 更新检测</span>
+            </label>
+            <span className="field-hint">关闭后将不会检测和提示更新</span>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.ota.check_on_startup}
+                onChange={(e) => handleOTAChange('check_on_startup', e.target.checked)}
+                disabled={!settings.ota.enabled}
+              />
+              <span>启动时自动检查更新</span>
+            </label>
+            <span className="field-hint">程序启动时自动检测是否有新版本</span>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="source_type">更新源类型</label>
+            <select
+              id="source_type"
+              value={settings.ota.source_type}
+              onChange={(e) => handleOTAChange('source_type', e.target.value)}
+              disabled={!settings.ota.enabled}
+            >
+              <option value="github">GitHub Release</option>
+              <option value="custom">自定义服务器</option>
+            </select>
+            <span className="field-hint">选择更新文件的来源</span>
+          </div>
+
+          {settings.ota.source_type === 'github' && (
+            <div className="github-config">
+              <div className="form-group">
+                <label htmlFor="github_owner">GitHub 仓库所有者</label>
+                <input
+                  id="github_owner"
+                  type="text"
+                  value={settings.ota.github_owner}
+                  onChange={(e) => handleOTAChange('github_owner', e.target.value)}
+                  disabled={!settings.ota.enabled}
+                  placeholder="peterpanstechland"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="github_repo">GitHub 仓库名称</label>
+                <input
+                  id="github_repo"
+                  type="text"
+                  value={settings.ota.github_repo}
+                  onChange={(e) => handleOTAChange('github_repo', e.target.value)}
+                  disabled={!settings.ota.enabled}
+                  placeholder="piying"
+                />
+              </div>
+            </div>
+          )}
+
+          {settings.ota.source_type === 'custom' && (
+            <div className="custom-config">
+              <div className="form-group">
+                <label htmlFor="custom_update_url">自定义更新服务器 URL</label>
+                <input
+                  id="custom_update_url"
+                  type="url"
+                  value={settings.ota.custom_update_url || ''}
+                  onChange={(e) => handleOTAChange('custom_update_url', e.target.value || null)}
+                  disabled={!settings.ota.enabled}
+                  placeholder="https://your-server.com/updates"
+                />
+                <span className="field-hint">electron-updater 兼容的更新服务器地址</span>
+              </div>
+              <div className="form-group">
+                <label htmlFor="custom_release_url">自定义版本信息 URL</label>
+                <input
+                  id="custom_release_url"
+                  type="url"
+                  value={settings.ota.custom_release_url || ''}
+                  onChange={(e) => handleOTAChange('custom_release_url', e.target.value || null)}
+                  disabled={!settings.ota.enabled}
+                  placeholder="https://your-server.com/releases/latest.json"
+                />
+                <span className="field-hint">用于获取版本信息和更新日志的 API 地址</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="action-buttons">

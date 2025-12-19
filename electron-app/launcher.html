@@ -26,21 +26,21 @@
         
         .container {
             text-align: center;
-            max-width: 800px;
-            padding: 40px;
+            max-width: 900px;
+            padding: 30px;
         }
         
         .logo {
-            font-size: 80px;
-            margin-bottom: 20px;
+            font-size: 70px;
+            margin-bottom: 15px;
             animation: float 3s ease-in-out infinite;
             filter: drop-shadow(0 0 20px rgba(255, 200, 100, 0.5));
         }
         
         h1 {
-            font-size: 42px;
+            font-size: 38px;
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             background: linear-gradient(90deg, #ffd700, #ff8c00);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -48,22 +48,23 @@
         }
         
         .subtitle {
-            font-size: 18px;
+            font-size: 16px;
             color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 50px;
+            margin-bottom: 30px;
             letter-spacing: 3px;
         }
         
         .buttons {
             display: flex;
-            gap: 40px;
+            gap: 30px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-bottom: 25px;
         }
         
         .btn {
-            width: 280px;
-            height: 200px;
+            width: 260px;
+            height: 180px;
             border: none;
             border-radius: 20px;
             cursor: pointer;
@@ -93,12 +94,12 @@
         }
         
         .btn:hover {
-            transform: translateY(-10px) scale(1.02);
+            transform: translateY(-8px) scale(1.02);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
         
         .btn:active {
-            transform: translateY(-5px) scale(0.98);
+            transform: translateY(-4px) scale(0.98);
         }
         
         .btn-frontend {
@@ -112,39 +113,194 @@
         }
         
         .btn-icon {
-            font-size: 60px;
-            margin-bottom: 15px;
+            font-size: 50px;
+            margin-bottom: 12px;
         }
         
         .btn-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
             color: white;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         .btn-desc {
-            font-size: 14px;
+            font-size: 13px;
             color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Release Notes Section */
+        .release-notes-section {
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+        
+        .release-notes-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 16px 20px;
+            text-align: left;
+        }
+        
+        .release-notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .release-notes-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .release-notes-title .icon {
+            font-size: 16px;
+        }
+        
+        /* Version Badges */
+        .version-badges {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .version-badge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 8px;
+            min-width: 70px;
+        }
+        
+        .version-badge .version-label {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 2px;
+        }
+        
+        .version-badge .version-number {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .version-badge.current {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .version-badge.latest {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+        }
+        
+        .version-badge.latest.has-update {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            animation: pulse-badge 2s infinite;
+        }
+        
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .version-arrow {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        }
+        
+        .version-arrow.has-update {
+            color: #fbbf24;
+        }
+        
+        .update-status-text {
+            font-size: 12px;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .update-status-text.show {
+            display: block;
+        }
+        
+        .update-status-text.up-to-date {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+        }
+        
+        .update-status-text.has-update {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+        }
+        
+        .release-notes-content {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            max-height: 80px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .release-notes-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .release-notes-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+        
+        .release-notes-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+        
+        .release-date {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
+        }
+        
+        .release-loading {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            padding: 10px;
         }
         
         .footer {
             position: fixed;
-            bottom: 30px;
+            bottom: 25px;
             display: flex;
-            gap: 30px;
+            gap: 15px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90%;
         }
         
         .footer-btn {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: rgba(255, 255, 255, 0.7);
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.3s ease;
+            white-space: nowrap;
         }
         
         .footer-btn:hover {
@@ -152,10 +308,102 @@
             color: white;
         }
         
-        .status {
+        /* Update Button Styles */
+        .footer-btn.update-btn {
+            position: relative;
+        }
+        
+        .footer-btn.update-btn.checking {
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.5);
+        }
+        
+        .footer-btn.update-btn.available {
+            background: rgba(74, 222, 128, 0.2);
+            border-color: #4ade80;
+            color: #4ade80;
+        }
+        
+        .footer-btn.update-btn.downloading {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+        
+        .footer-btn.update-btn.ready {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            border-color: #4ade80;
+            color: white;
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+        }
+        
+        .update-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 14px;
+            height: 14px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .update-badge.show {
+            display: block;
+        }
+        
+        /* Update Progress Bar */
+        .update-progress-container {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            display: none;
+        }
+        
+        .update-progress-container.show {
+            display: block;
+        }
+        
+        .update-progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .update-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .update-progress-text {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            margin-top: 6px;
+        }
+        
+        .status-container {
             position: fixed;
             top: 20px;
             right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .status {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -182,6 +430,33 @@
             background: #fbbf24;
         }
         
+        /* Network Status */
+        .network-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+        }
+        
+        .network-status .network-icon {
+            font-size: 14px;
+        }
+        
+        .network-status.online {
+            color: #4ade80;
+        }
+        
+        .network-status.offline {
+            color: #f87171;
+        }
+        
+        .network-status.disabled {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-15px); }
@@ -194,9 +469,9 @@
         
         .version {
             position: fixed;
-            bottom: 10px;
+            bottom: 8px;
             right: 20px;
-            font-size: 12px;
+            font-size: 11px;
             color: rgba(255, 255, 255, 0.4);
         }
 
@@ -240,9 +515,15 @@
     </style>
 </head>
 <body>
-    <div class="status">
-        <div class="status-dot loading" id="statusDot"></div>
-        <span id="statusText">检查服务状态...</span>
+    <div class="status-container">
+        <div class="status">
+            <div class="status-dot loading" id="statusDot"></div>
+            <span id="statusText">检查服务状态...</span>
+        </div>
+        <div class="network-status" id="networkStatus">
+            <span class="network-icon" id="networkIcon">🌐</span>
+            <span id="networkText">检查网络...</span>
+        </div>
     </div>
     
     <div class="container">
@@ -263,17 +544,58 @@
                 <span class="btn-desc">系统配置与管理</span>
             </button>
         </div>
+        
+        <!-- Release Notes Section -->
+        <div class="release-notes-section">
+            <div class="release-notes-card" id="releaseNotesCard">
+                <div class="release-loading" id="releaseLoading">正在获取版本信息...</div>
+                <div id="releaseContent" style="display: none;">
+                    <div class="release-notes-header">
+                        <span class="release-notes-title">
+                            <span class="icon">📢</span>
+                            <span id="releaseTitle">版本信息</span>
+                        </span>
+                        <div class="version-badges">
+                            <span class="version-badge current" id="currentVersionBadge">
+                                <span class="version-label">当前</span>
+                                <span class="version-number" id="currentVersionNumber">v1.0.0</span>
+                            </span>
+                            <span class="version-arrow" id="versionArrow">→</span>
+                            <span class="version-badge latest" id="latestVersionBadge">
+                                <span class="version-label">最新</span>
+                                <span class="version-number" id="latestVersionNumber">v1.0.0</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="update-status-text" id="updateStatusText"></div>
+                    <div class="release-notes-content" id="releaseNotes">暂无更新日志</div>
+                    <div class="release-date" id="releaseDate"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Update Progress Bar -->
+    <div class="update-progress-container" id="updateProgressContainer">
+        <div class="update-progress-bar">
+            <div class="update-progress-fill" id="updateProgressFill"></div>
+        </div>
+        <div class="update-progress-text" id="updateProgressText">准备下载...</div>
     </div>
     
     <div class="footer">
-        <button class="footer-btn" onclick="restartBackend()">🔄 重启服务</button>
-        <button class="footer-btn" onclick="toggleDevTools()">🔧 开发者工具</button>
+        <button class="footer-btn update-btn" id="updateBtn" onclick="handleUpdateClick()">
+            <span id="updateBtnText">🔄 检查更新</span>
+            <div class="update-badge" id="updateBadge"></div>
+        </button>
+        <button class="footer-btn" onclick="restartBackend()">🔧 重启服务</button>
+        <button class="footer-btn" onclick="toggleDevTools()">🛠️ 开发者工具</button>
         <button class="footer-btn" onclick="openLogsFolder()">📋 查看日志</button>
         <button class="footer-btn" onclick="openHelp()">❓ 帮助文档</button>
         <button class="footer-btn" onclick="exitApp()">🚪 退出程序</button>
     </div>
     
-    <div class="version">v1.0.0</div>
+    <div class="version" id="versionText">v1.0.0</div>
     
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
@@ -282,6 +604,59 @@
 
     <script>
         const API_BASE = 'http://localhost:8000';
+        
+        // 更新状态
+        let updateState = {
+            status: 'idle', // idle, checking, available, downloading, ready, error, disabled
+            downloadPercent: 0,
+            newVersion: null,
+            error: null
+        };
+        
+        // 网络状态
+        let networkState = {
+            available: true,
+            otaEnabled: true,
+            sourceType: 'github'
+        };
+        
+        // 检查网络状态
+        async function checkNetworkStatus() {
+            const networkStatus = document.getElementById('networkStatus');
+            const networkIcon = document.getElementById('networkIcon');
+            const networkText = document.getElementById('networkText');
+            
+            if (!window.electronAPI || !window.electronAPI.getNetworkStatus) {
+                networkStatus.className = 'network-status disabled';
+                networkIcon.textContent = '🌐';
+                networkText.textContent = '网络状态未知';
+                return;
+            }
+            
+            try {
+                const status = await window.electronAPI.getNetworkStatus();
+                networkState = status;
+                
+                if (!status.otaEnabled) {
+                    networkStatus.className = 'network-status disabled';
+                    networkIcon.textContent = '⏸️';
+                    networkText.textContent = 'OTA 更新已禁用';
+                } else if (status.available) {
+                    networkStatus.className = 'network-status online';
+                    networkIcon.textContent = '🌐';
+                    networkText.textContent = `更新服务: ${status.sourceType === 'github' ? 'GitHub' : '自定义'}`;
+                } else {
+                    networkStatus.className = 'network-status offline';
+                    networkIcon.textContent = '📡';
+                    networkText.textContent = '无法连接更新服务器';
+                }
+            } catch (error) {
+                console.log('Network status check failed:', error);
+                networkStatus.className = 'network-status offline';
+                networkIcon.textContent = '❌';
+                networkText.textContent = '网络检查失败';
+            }
+        }
         
         // 检查后端状态
         async function checkBackendStatus() {
@@ -402,11 +777,362 @@
             }
         }
         
+        // ============== 更新相关功能 ==============
+        
+        // 更新按钮点击处理
+        async function handleUpdateClick() {
+            const btn = document.getElementById('updateBtn');
+            
+            switch (updateState.status) {
+                case 'disabled':
+                    // OTA 已禁用，提示用户
+                    alert('OTA 更新已在设置中禁用。\n请前往管理后台 → 系统设置 → OTA 更新设置 中启用。');
+                    break;
+                    
+                case 'idle':
+                case 'error':
+                    // 先检查网络状态
+                    if (!networkState.available) {
+                        const retry = confirm('无法连接到更新服务器。\n是否仍要尝试检查更新？');
+                        if (!retry) return;
+                    }
+                    
+                    // 检查更新
+                    if (window.electronAPI) {
+                        window.electronAPI.checkForUpdates();
+                    }
+                    break;
+                    
+                case 'ready':
+                    // 安装更新
+                    if (confirm('更新已下载完成，是否立即安装并重启？')) {
+                        if (window.electronAPI) {
+                            window.electronAPI.installUpdate();
+                        }
+                    }
+                    break;
+                    
+                default:
+                    // 其他状态不处理
+                    break;
+            }
+        }
+        
+        // 更新按钮UI
+        function updateButtonUI() {
+            const btn = document.getElementById('updateBtn');
+            const btnText = document.getElementById('updateBtnText');
+            const badge = document.getElementById('updateBadge');
+            
+            // 清除所有状态类
+            btn.classList.remove('checking', 'available', 'downloading', 'ready');
+            badge.classList.remove('show');
+            
+            switch (updateState.status) {
+                case 'checking':
+                    btn.classList.add('checking');
+                    btnText.textContent = '⏳ 检查中...';
+                    break;
+                    
+                case 'available':
+                    btn.classList.add('available');
+                    btnText.textContent = `📥 下载更新 ${updateState.newVersion || ''}`;
+                    badge.classList.add('show');
+                    break;
+                    
+                case 'downloading':
+                    btn.classList.add('downloading');
+                    btnText.textContent = `⬇️ 下载中 ${Math.round(updateState.downloadPercent)}%`;
+                    break;
+                    
+                case 'ready':
+                    btn.classList.add('ready');
+                    btnText.textContent = '🚀 安装更新';
+                    badge.classList.add('show');
+                    break;
+                    
+                case 'error':
+                    btnText.textContent = '❌ 检查失败，点击重试';
+                    break;
+                    
+                default:
+                    btnText.textContent = '🔄 检查更新';
+            }
+        }
+        
+        // 更新进度条UI
+        function updateProgressUI() {
+            const container = document.getElementById('updateProgressContainer');
+            const fill = document.getElementById('updateProgressFill');
+            const text = document.getElementById('updateProgressText');
+            
+            if (updateState.status === 'downloading') {
+                container.classList.add('show');
+                fill.style.width = `${updateState.downloadPercent}%`;
+                text.textContent = `下载进度: ${Math.round(updateState.downloadPercent)}%`;
+            } else {
+                container.classList.remove('show');
+            }
+        }
+        
+        // 比较版本号
+        function compareVersions(v1, v2) {
+            // 移除 v 前缀
+            const clean = (v) => v.replace(/^v/, '');
+            const parts1 = clean(v1).split('.').map(Number);
+            const parts2 = clean(v2).split('.').map(Number);
+            
+            for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+                const p1 = parts1[i] || 0;
+                const p2 = parts2[i] || 0;
+                if (p1 > p2) return 1;
+                if (p1 < p2) return -1;
+            }
+            return 0;
+        }
+        
+        // 获取并显示 Release 信息
+        async function fetchAndDisplayReleaseInfo() {
+            const loadingEl = document.getElementById('releaseLoading');
+            const contentEl = document.getElementById('releaseContent');
+            const titleEl = document.getElementById('releaseTitle');
+            const currentVersionEl = document.getElementById('currentVersionNumber');
+            const latestVersionEl = document.getElementById('latestVersionNumber');
+            const latestBadge = document.getElementById('latestVersionBadge');
+            const versionArrow = document.getElementById('versionArrow');
+            const updateStatusEl = document.getElementById('updateStatusText');
+            const notesEl = document.getElementById('releaseNotes');
+            const dateEl = document.getElementById('releaseDate');
+            
+            if (!window.electronAPI) {
+                loadingEl.textContent = '无法获取版本信息';
+                return;
+            }
+            
+            // 先获取当前版本
+            let currentVersion = 'v1.0.0';
+            try {
+                currentVersion = 'v' + await window.electronAPI.getAppVersion();
+            } catch (e) {
+                currentVersion = document.getElementById('versionText').textContent;
+            }
+            
+            try {
+                const result = await window.electronAPI.getReleaseInfo();
+                
+                if (result.success) {
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+                    
+                    titleEl.textContent = result.name || '版本信息';
+                    
+                    // 显示当前版本和最新版本
+                    currentVersionEl.textContent = currentVersion;
+                    const latestVersion = result.version || currentVersion;
+                    latestVersionEl.textContent = latestVersion;
+                    
+                    // 比较版本
+                    const comparison = compareVersions(latestVersion, currentVersion);
+                    
+                    if (comparison > 0) {
+                        // 有新版本
+                        latestBadge.classList.add('has-update');
+                        versionArrow.classList.add('has-update');
+                        updateStatusEl.textContent = '🎉 发现新版本！点击下方按钮更新';
+                        updateStatusEl.className = 'update-status-text show has-update';
+                    } else {
+                        // 已是最新
+                        latestBadge.classList.remove('has-update');
+                        versionArrow.classList.remove('has-update');
+                        updateStatusEl.textContent = '✓ 已是最新版本';
+                        updateStatusEl.className = 'update-status-text show up-to-date';
+                    }
+                    
+                    // 处理 release notes (简单处理 markdown)
+                    let notes = result.body || '暂无更新日志';
+                    // 移除 markdown 链接语法，只保留文字
+                    notes = notes.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+                    // 移除其他 markdown 标记
+                    notes = notes.replace(/#{1,6}\s*/g, '');
+                    notes = notes.replace(/\*\*([^*]+)\*\*/g, '$1');
+                    notes = notes.replace(/\*([^*]+)\*/g, '$1');
+                    notesEl.textContent = notes;
+                    
+                    // 格式化日期
+                    if (result.publishedAt) {
+                        const date = new Date(result.publishedAt);
+                        dateEl.textContent = `发布于 ${date.toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        })}`;
+                    }
+                } else {
+                    // 根据错误类型显示友好信息
+                    let errorMsg = '获取版本信息失败';
+                    switch (result.error) {
+                        case 'network_unavailable':
+                        case 'network_error':
+                            errorMsg = '⚠️ 无法连接到更新服务器';
+                            break;
+                        case 'ota_disabled':
+                            errorMsg = 'OTA 更新已禁用';
+                            break;
+                        case 'rate_limited':
+                            errorMsg = '⏳ 请求过于频繁，请稍后再试';
+                            break;
+                        case 'no_releases':
+                            errorMsg = '暂无发布版本';
+                            break;
+                        case 'timeout':
+                            errorMsg = '⏱️ 请求超时，请检查网络';
+                            break;
+                        default:
+                            errorMsg = result.message || result.error || '获取版本信息失败';
+                    }
+                    loadingEl.textContent = errorMsg;
+                }
+            } catch (error) {
+                console.error('Failed to fetch release info:', error);
+                loadingEl.textContent = '⚠️ 获取版本信息失败';
+            }
+        }
+        
+        // 设置更新事件监听
+        function setupUpdateListeners() {
+            if (!window.electronAPI) return;
+            
+            // 检查中
+            window.electronAPI.onUpdateChecking(() => {
+                updateState.status = 'checking';
+                updateState.error = null;
+                updateButtonUI();
+            });
+            
+            // 有可用更新
+            window.electronAPI.onUpdateAvailable((data) => {
+                updateState.status = 'available';
+                updateState.newVersion = data.version;
+                updateButtonUI();
+                
+                // 更新版本信息显示
+                const latestVersionEl = document.getElementById('latestVersionNumber');
+                const latestBadge = document.getElementById('latestVersionBadge');
+                const versionArrow = document.getElementById('versionArrow');
+                const updateStatusEl = document.getElementById('updateStatusText');
+                
+                if (data.version) {
+                    if (latestVersionEl) latestVersionEl.textContent = data.version;
+                    if (latestBadge) latestBadge.classList.add('has-update');
+                    if (versionArrow) versionArrow.classList.add('has-update');
+                    if (updateStatusEl) {
+                        updateStatusEl.textContent = '🎉 发现新版本！点击下方按钮下载更新';
+                        updateStatusEl.className = 'update-status-text show has-update';
+                    }
+                }
+            });
+            
+            // 无可用更新
+            window.electronAPI.onUpdateNotAvailable(() => {
+                updateState.status = 'idle';
+                updateButtonUI();
+                
+                // 更新状态文本
+                const updateStatusEl = document.getElementById('updateStatusText');
+                const latestBadge = document.getElementById('latestVersionBadge');
+                const versionArrow = document.getElementById('versionArrow');
+                
+                if (updateStatusEl) {
+                    updateStatusEl.textContent = '✓ 已是最新版本';
+                    updateStatusEl.className = 'update-status-text show up-to-date';
+                }
+                if (latestBadge) latestBadge.classList.remove('has-update');
+                if (versionArrow) versionArrow.classList.remove('has-update');
+            });
+            
+            // 下载进度
+            window.electronAPI.onUpdateDownloadProgress((data) => {
+                updateState.status = 'downloading';
+                updateState.downloadPercent = data.percent;
+                updateButtonUI();
+                updateProgressUI();
+            });
+            
+            // 下载完成
+            window.electronAPI.onUpdateDownloaded((data) => {
+                updateState.status = 'ready';
+                updateState.newVersion = data.version;
+                updateButtonUI();
+                updateProgressUI();
+                
+                // 更新状态文本
+                const updateStatusEl = document.getElementById('updateStatusText');
+                if (updateStatusEl) {
+                    updateStatusEl.textContent = '🚀 更新已下载完成，点击下方按钮安装';
+                    updateStatusEl.className = 'update-status-text show has-update';
+                }
+            });
+            
+            // 更新错误
+            window.electronAPI.onUpdateError((data) => {
+                updateState.status = 'error';
+                updateState.error = data.error;
+                updateButtonUI();
+                console.error('Update error:', data.error);
+            });
+        }
+        
         // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 检查后端状态
             checkBackendStatus();
             // 每 10 秒检查一次状态
             setInterval(checkBackendStatus, 10000);
+            
+            // 检查网络状态
+            checkNetworkStatus();
+            // 每 30 秒检查一次网络状态
+            setInterval(checkNetworkStatus, 30000);
+
+            // 获取并显示版本号
+            if (window.electronAPI) {
+                try {
+                    const version = await window.electronAPI.getAppVersion();
+                    document.getElementById('versionText').textContent = `v${version}`;
+                } catch (e) {
+                    console.error('Failed to get app version:', e);
+                }
+                
+                // 获取更新状态
+                try {
+                    const status = await window.electronAPI.getUpdateStatus();
+                    if (status.updateDownloaded) {
+                        updateState.status = 'ready';
+                        updateState.newVersion = status.latestUpdateInfo?.version;
+                        updateButtonUI();
+                    }
+                } catch (e) {
+                    console.error('Failed to get update status:', e);
+                }
+                
+                // 获取 OTA 设置，如果禁用则更新按钮状态
+                try {
+                    const otaSettings = await window.electronAPI.getOTASettings();
+                    if (!otaSettings.enabled) {
+                        updateState.status = 'disabled';
+                        const btnText = document.getElementById('updateBtnText');
+                        btnText.textContent = '⏸️ 更新已禁用';
+                    }
+                } catch (e) {
+                    console.error('Failed to get OTA settings:', e);
+                }
+            }
+            
+            // 设置更新事件监听
+            setupUpdateListeners();
+            
+            // 获取 Release 信息
+            fetchAndDisplayReleaseInfo();
 
             // 监听状态重置事件
             if (window.electronAPI && window.electronAPI.onResetState) {

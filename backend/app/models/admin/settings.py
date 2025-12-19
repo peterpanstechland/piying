@@ -154,6 +154,47 @@ class CameraSettings(BaseModel):
         }
 
 
+class OTASettings(BaseModel):
+    """Settings for OTA (Over-The-Air) update configuration."""
+    enabled: bool = Field(default=True, description="Enable OTA update checking")
+    check_on_startup: bool = Field(default=True, description="Check for updates on app startup")
+    source_type: str = Field(default="github", description="Update source type: 'github' or 'custom'")
+    github_owner: str = Field(default="peterpanstechland", description="GitHub repository owner")
+    github_repo: str = Field(default="piying", description="GitHub repository name")
+    custom_update_url: Optional[str] = Field(default=None, description="Custom update server URL")
+    custom_release_url: Optional[str] = Field(default=None, description="Custom release info URL")
+
+    @field_validator('source_type')
+    @classmethod
+    def validate_source_type(cls, v: str) -> str:
+        valid_types = ['github', 'custom']
+        if v not in valid_types:
+            raise ValueError(f"OTA source type must be one of: {valid_types}")
+        return v
+
+    @field_validator('custom_update_url', 'custom_release_url')
+    @classmethod
+    def validate_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v != "":
+            # Basic URL validation
+            if not (v.startswith('http://') or v.startswith('https://')):
+                raise ValueError("URL must start with http:// or https://")
+        return v
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "enabled": True,
+                "check_on_startup": True,
+                "source_type": "github",
+                "github_owner": "peterpanstechland",
+                "github_repo": "piying",
+                "custom_update_url": None,
+                "custom_release_url": None
+            }
+        }
+
+
 class SystemSettings(BaseModel):
     """Complete system settings model."""
     theme: str = Field(default="dark", description="UI Theme")
@@ -164,6 +205,7 @@ class SystemSettings(BaseModel):
     camera: CameraSettings = Field(default_factory=CameraSettings, description="Camera configuration")
     timeouts: TimeoutSettings = Field(default_factory=TimeoutSettings, description="Timeout configurations")
     rendering: RenderingSettings = Field(default_factory=RenderingSettings, description="Rendering settings")
+    ota: OTASettings = Field(default_factory=OTASettings, description="OTA update settings")
 
     @field_validator('theme')
     @classmethod
@@ -268,6 +310,24 @@ class CameraSettingsUpdate(BaseModel):
     detection_confidence: Optional[float] = Field(default=None, ge=0.1, le=1.0)
 
 
+class OTASettingsUpdate(BaseModel):
+    """Schema for updating OTA settings."""
+    enabled: Optional[bool] = Field(default=None, description="Enable OTA update checking")
+    check_on_startup: Optional[bool] = Field(default=None, description="Check for updates on app startup")
+    source_type: Optional[str] = Field(default=None, description="Update source type: 'github' or 'custom'")
+    github_owner: Optional[str] = Field(default=None, description="GitHub repository owner")
+    github_repo: Optional[str] = Field(default=None, description="GitHub repository name")
+    custom_update_url: Optional[str] = Field(default=None, description="Custom update server URL")
+    custom_release_url: Optional[str] = Field(default=None, description="Custom release info URL")
+
+    @field_validator('source_type')
+    @classmethod
+    def validate_source_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ['github', 'custom']:
+            raise ValueError("OTA source type must be 'github' or 'custom'")
+        return v
+
+
 class SystemSettingsUpdate(BaseModel):
     """Schema for updating system settings."""
     theme: Optional[str] = Field(default=None, description="UI Theme")
@@ -278,6 +338,7 @@ class SystemSettingsUpdate(BaseModel):
     camera: Optional[CameraSettingsUpdate] = Field(default=None)
     timeouts: Optional[TimeoutSettingsUpdate] = Field(default=None)
     rendering: Optional[RenderingSettingsUpdate] = Field(default=None)
+    ota: Optional[OTASettingsUpdate] = Field(default=None)
 
 
 class S3ConnectionTestRequest(BaseModel):
