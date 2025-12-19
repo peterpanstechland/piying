@@ -1,6 +1,6 @@
 {
   "name": "shadow-puppet-system",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "皮影互动系统 - Shadow Puppet Interactive System",
   "main": "main.js",
   "scripts": {

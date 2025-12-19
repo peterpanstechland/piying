@@ -134,6 +134,62 @@ const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
   // 所有部件默认为 0，由用户通过编辑器设置具体值
 }
 
+// 默认连接点配置（用于没有骨骼数据时的 fallback）
+// 定义子部件如何连接到父部件
+// parentConnection: 父部件上的连接点（0-1 坐标）
+// childConnection: 子部件上的连接点（0-1 坐标）
+const DEFAULT_CONNECTION_POINTS: Record<string, {
+  parentConnection: { x: number; y: number };
+  childConnection: { x: number; y: number };
+}> = {
+  // 手连接到手臂末端
+  'left-hand': {
+    parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
+    childConnection: { x: 0.5, y: 0.1 },    // 手顶部（手腕位置）
+  },
+  'right-hand': {
+    parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
+    childConnection: { x: 0.5, y: 0.1 },    // 手顶部（手腕位置）
+  },
+  // 头连接到身体顶部
+  'head': {
+    parentConnection: { x: 0.5, y: 0.1 },   // 身体顶部（脖子位置）
+    childConnection: { x: 0.5, y: 0.9 },    // 头底部（脖子位置）
+  },
+  // 手臂连接到身体肩部
+  'left-arm': {
+    parentConnection: { x: 0.3, y: 0.15 },  // 身体左肩位置
+    childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）
+  },
+  'right-arm': {
+    parentConnection: { x: 0.7, y: 0.15 },  // 身体右肩位置
+    childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）
+  },
+  // 裙子/下身连接到身体底部
+  'skirt': {
+    parentConnection: { x: 0.5, y: 0.9 },   // 身体底部（腰部）
+    childConnection: { x: 0.5, y: 0.1 },    // 裙子顶部
+  },
+  // 大腿连接到身体/裙子底部
+  'left-thigh': {
+    parentConnection: { x: 0.4, y: 0.9 },   // 身体左髋位置
+    childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部
+  },
+  'right-thigh': {
+    parentConnection: { x: 0.6, y: 0.9 },   // 身体右髋位置
+    childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部
+  },
+  // 脚连接到大腿/裙子底部
+  'left-foot': {
+    parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
+    childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）
+  },
+  'right-foot': {
+    parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
+    childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）
+  },
+}
+
 /**
  * 皮影部件默认 Z-Index 层级系统
  * 
@@ -1346,17 +1402,20 @@ export class CharacterRenderer {
    * 1. Find connected joints between parent and child from skeleton.bones
    * 2. When parent rotates, calculate where the parent's connection joint moves to
    * 3. Move the child so its connection joint aligns with parent's connection joint
+   * 
+   * If no skeleton data exists, uses DEFAULT_CONNECTION_POINTS as fallback
    */
   private updateChildPositions(shouldLog: boolean): void {
-    if (!this.config?.skeleton) {
-      if (shouldLog) console.log('No skeleton data, config:', this.config)
-      return
+    const hasSkeleton = this.config?.skeleton?.joints && this.config?.skeleton?.bones
+    
+    if (shouldLog && !hasSkeleton) {
+      console.log('No skeleton data, using default connection points')
     }
 
-    const joints = this.config.skeleton.joints
-    const bones = this.config.skeleton.bones
+    const joints = this.config?.skeleton?.joints || []
+    const bones = this.config?.skeleton?.bones || []
     
-    if (shouldLog) {
+    if (shouldLog && hasSkeleton) {
       console.log('updateChildPositions - skeleton data:', {
         jointsCount: joints?.length,
         bonesCount: bones?.length,
@@ -1388,57 +1447,73 @@ export class CharacterRenderer {
         continue
       }
 
-      // Find a bone that connects parent to child (in either direction)
-      // Bone format: { from: "partName:jointId", to: "partName:jointId" }
-      let parentJointId: string | null = null
-      let childJointId: string | null = null
-      
-      for (const bone of bones) {
-        const [fromPart, fromJoint] = bone.from.split(':')
-        const [toPart, toJoint] = bone.to.split(':')
-        
-        if (fromPart === parentName && toPart === childName) {
-          parentJointId = fromJoint
-          childJointId = toJoint
-          break
-        } else if (fromPart === childName && toPart === parentName) {
-          childJointId = fromJoint
-          parentJointId = toJoint
-          break
-        }
-      }
-
-      if (!parentJointId || !childJointId) {
-        if (shouldLog) {
-          console.log(`${childName}: no bone connection to ${parentName}`, {
-            bonesChecked: bones.map(b => `${b.from} -> ${b.to}`)
-          })
-        }
-        continue
-      }
-      
-      if (shouldLog) {
-        console.log(`${childName} -> ${parentName}: found bone connection`, {
-          parentJointId,
-          childJointId
-        })
-      }
-
-      // Find the actual joint objects
-      const parentJoint = joints.find(j => j.part === parentName && j.id === parentJointId)
-      const childJoint = joints.find(j => j.part === childName && j.id === childJointId)
-
-      if (!parentJoint || !childJoint) {
-        if (shouldLog) {
-          console.log(`${childName}: joints not found - parent:${parentJointId}, child:${childJointId}`)
-        }
-        continue
-      }
-
       // Get assembly data
       const parentAssembly = this.assemblyData.get(parentName)
       const childAssembly = this.assemblyData.get(childName)
       if (!parentAssembly || !childAssembly) continue
+
+      // 尝试从骨骼数据获取连接点，否则使用默认值
+      let parentConnectionPoint: { x: number; y: number } | null = null
+      let childConnectionPoint: { x: number; y: number } | null = null
+
+      if (hasSkeleton && bones.length > 0) {
+        // Find a bone that connects parent to child (in either direction)
+        // Bone format: { from: "partName:jointId", to: "partName:jointId" }
+        let parentJointId: string | null = null
+        let childJointId: string | null = null
+        
+        for (const bone of bones) {
+          const [fromPart, fromJoint] = bone.from.split(':')
+          const [toPart, toJoint] = bone.to.split(':')
+          
+          if (fromPart === parentName && toPart === childName) {
+            parentJointId = fromJoint
+            childJointId = toJoint
+            break
+          } else if (fromPart === childName && toPart === parentName) {
+            childJointId = fromJoint
+            parentJointId = toJoint
+            break
+          }
+        }
+
+        if (parentJointId && childJointId) {
+          // Find the actual joint objects
+          const parentJoint = joints.find(j => j.part === parentName && j.id === parentJointId)
+          const childJoint = joints.find(j => j.part === childName && j.id === childJointId)
+
+          if (parentJoint && childJoint) {
+            parentConnectionPoint = parentJoint.position
+            childConnectionPoint = childJoint.position
+            
+            if (shouldLog) {
+              console.log(`${childName} -> ${parentName}: using skeleton bone connection`, {
+                parentJointId,
+                childJointId
+              })
+            }
+          }
+        }
+      }
+
+      // Fallback: 使用默认连接点
+      if (!parentConnectionPoint || !childConnectionPoint) {
+        const defaultConnection = DEFAULT_CONNECTION_POINTS[childName]
+        if (defaultConnection) {
+          parentConnectionPoint = defaultConnection.parentConnection
+          childConnectionPoint = defaultConnection.childConnection
+          
+          if (shouldLog) {
+            console.log(`${childName} -> ${parentName}: using default connection points`)
+          }
+        } else {
+          // 如果没有默认配置，跳过这个子部件
+          if (shouldLog) {
+            console.log(`${childName}: no connection point config, skipping`)
+          }
+          continue
+        }
+      }
 
       // Use parent container's CURRENT position (not initial position)
       // This ensures child follows parent even when parent has moved
@@ -1453,18 +1528,18 @@ export class CharacterRenderer {
       const parentPivotX = parentFrameData?.jointPivot?.x ?? DEFAULT_JOINT_PIVOTS[parentName]?.x ?? 0.5
       const parentPivotY = parentFrameData?.jointPivot?.y ?? DEFAULT_JOINT_PIVOTS[parentName]?.y ?? 0.5
 
-      // Calculate parent joint position relative to parent's PIVOT (not center)
-      // Joint position is in 0-1 coordinates, pivot is also in 0-1 coordinates
-      const parentJointFromPivotX = (parentJoint.position.x - parentPivotX) * parentAssembly.width * this.globalScale
-      const parentJointFromPivotY = (parentJoint.position.y - parentPivotY) * parentAssembly.height * this.globalScale
+      // Calculate parent connection point position relative to parent's PIVOT (not center)
+      // Connection point position is in 0-1 coordinates, pivot is also in 0-1 coordinates
+      const parentJointFromPivotX = (parentConnectionPoint.x - parentPivotX) * parentAssembly.width * this.globalScale
+      const parentJointFromPivotY = (parentConnectionPoint.y - parentPivotY) * parentAssembly.height * this.globalScale
 
-      // Rotate the parent joint position by parent's rotation
+      // Rotate the parent connection point position by parent's rotation
       const cos = Math.cos(parentRotation)
       const sin = Math.sin(parentRotation)
       const rotatedParentJointX = parentJointFromPivotX * cos - parentJointFromPivotY * sin
       const rotatedParentJointY = parentJointFromPivotX * sin + parentJointFromPivotY * cos
 
-      // Parent joint's world position after rotation
+      // Parent connection point's world position after rotation
       // Use current container position instead of initial position
       const parentJointWorldX = parentCurrentX + rotatedParentJointX
       const parentJointWorldY = parentCurrentY + rotatedParentJointY
@@ -1474,21 +1549,21 @@ export class CharacterRenderer {
       const childPivotX = childFrameData?.jointPivot?.x ?? DEFAULT_JOINT_PIVOTS[childName]?.x ?? 0.5
       const childPivotY = childFrameData?.jointPivot?.y ?? DEFAULT_JOINT_PIVOTS[childName]?.y ?? 0.5
 
-      // Child joint position relative to child's PIVOT (before rotation)
-      const childJointFromPivotX = (childJoint.position.x - childPivotX) * childAssembly.width * this.globalScale
-      const childJointFromPivotY = (childJoint.position.y - childPivotY) * childAssembly.height * this.globalScale
+      // Child connection point position relative to child's PIVOT (before rotation)
+      const childJointFromPivotX = (childConnectionPoint.x - childPivotX) * childAssembly.width * this.globalScale
+      const childJointFromPivotY = (childConnectionPoint.y - childPivotY) * childAssembly.height * this.globalScale
 
       // Get child's current rotation to rotate the joint offset
       const childSprite = this.parts.get(childName)
       const childRotation = childSprite?.rotation ?? 0
       
-      // Rotate child joint offset by child's rotation
+      // Rotate child connection point offset by child's rotation
       const childCos = Math.cos(childRotation)
       const childSin = Math.sin(childRotation)
       const rotatedChildJointX = childJointFromPivotX * childCos - childJointFromPivotY * childSin
       const rotatedChildJointY = childJointFromPivotX * childSin + childJointFromPivotY * childCos
 
-      // Child's new pivot position: move child so its joint aligns with parent's joint
+      // Child's new pivot position: move child so its connection point aligns with parent's connection point
       // childNewPivot + rotatedChildJoint = parentJointWorld
       // childNewPivot = parentJointWorld - rotatedChildJoint
       const newChildX = parentJointWorldX - rotatedChildJointX
@@ -1497,7 +1572,7 @@ export class CharacterRenderer {
       childContainer.position.set(newChildX, newChildY)
 
       if (shouldLog) {
-        console.log(`${childName}: parentJoint=${parentJoint.name}(${parentJoint.position.x.toFixed(2)},${parentJoint.position.y.toFixed(2)}), childJoint=${childJoint.name}, parentRot=${(parentRotation * 180 / Math.PI).toFixed(1)}°, newPos=(${newChildX.toFixed(1)}, ${newChildY.toFixed(1)})`)
+        console.log(`${childName}: parentConn=(${parentConnectionPoint.x.toFixed(2)},${parentConnectionPoint.y.toFixed(2)}), childConn=(${childConnectionPoint.x.toFixed(2)},${childConnectionPoint.y.toFixed(2)}), parentRot=${(parentRotation * 180 / Math.PI).toFixed(1)}°, newPos=(${newChildX.toFixed(1)}, ${newChildY.toFixed(1)})`)
       }
     }
   }
