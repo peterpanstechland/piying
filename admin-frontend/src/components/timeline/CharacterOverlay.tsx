@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { CharacterRenderer } from '../../pixi/CharacterRenderer'
+import { CharacterRenderer } from '@renderer'
 import { adminApi } from '../../services/api'
 import { TimelineSegment, ScaleConfig } from '../../contexts/TimelineEditorContext'
 import './CharacterOverlay.css'

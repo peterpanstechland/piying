@@ -330,10 +330,12 @@ export class PoseProcessor {
       
       // 应用约束
       if (angles['right-arm'] !== undefined) {
+        // 放宽右手限制，允许反向弯曲（负值差异）
+        // 因为右手的几何计算会导致在某些动作下出现负向的角度差
         const constrained = this.constrainJointAngle(
           angles['right-arm'],
           normalizedRightHand,
-          -0.2,
+          -2.8, // 允许反向弯曲
           2.8
         )
         angles['right-hand'] = constrained

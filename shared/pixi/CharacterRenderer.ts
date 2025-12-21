@@ -23,8 +23,6 @@ import {
   Graphics,
   Text,
   TextStyle,
-  RenderTexture,
-  ColorMatrixFilter,
 } from 'pixi.js'
 import type {
   CharacterConfig,
@@ -80,7 +78,7 @@ const DEFAULT_JOINT_PIVOTS: Record<string, { x: number; y: number }> = {
   'left-arm': { x: 0.5, y: 0.1 },   // 左肩
   'right-arm': { x: 0.5, y: 0.1 },  // 右肩
   'left-hand': { x: 0.9, y: 0.5 },  // 左手腕
-  'right-hand': { x: 0.1, y: 0.5 }, // 右手腕
+  'right-hand': { x: 0.9, y: 0.5 }, // 右手腕
   'skirt': { x: 0.5, y: 0.1 },      // 裙子顶部
   'left-thigh': { x: 0.5, y: 0.1 }, // 左大腿顶部
   'right-thigh': { x: 0.5, y: 0.1 },// 右大腿顶部
@@ -108,8 +106,7 @@ const DEFAULT_JOINT_PIVOTS: Record<string, { x: number; y: number }> = {
   const DEFAULT_ROTATION_OFFSETS: Record<string, number> = {
     'head': 0,                    // 头部不旋转
     'body': 0,                    // 身体不旋转
-    // 手臂和手的默认偏移设为 0，让配置文件中的值生效
-    // 如果配置文件没有设置，则不做额外偏移
+    // 手臂和手的默认偏移
     'left-arm': 0,
     'right-arm': 0,
     'left-hand': 0,
@@ -135,6 +132,66 @@ const DEFAULT_JOINT_PIVOTS: Record<string, { x: number; y: number }> = {
 const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
   // 所有部件默认为 0，由用户通过编辑器设置具体值
 }
+
+// 默认连接点配置（用于没有骨骼数据时的 fallback）
+// 定义子部件如何连接到父部件
+// parentConnection: 父部件上的连接点（0-1 坐标）
+// childConnection: 子部件上的连接点（0-1 坐标）
+// 
+// 重要：childConnection 应该与该部件的旋转轴点（pivot）一致
+// 这样旋转时连接点才能保持正确位置
+// const DEFAULT_CONNECTION_POINTS: Record<string, {
+//   parentConnection: { x: number; y: number };
+//   childConnection: { x: number; y: number };
+// }> = {
+//   // 手连接到手臂末端
+//   // 注意：手的连接点需要与 DEFAULT_JOINT_PIVOTS 中的 pivot 一致
+//   'left-hand': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
+//     childConnection: { x: 0.9, y: 0.5 },    // 左手的 pivot 在右侧（手腕位置）
+//   },
+//   'right-hand': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
+//     childConnection: { x: 0.9, y: 0.5 },    // 右手的 pivot 在右侧
+//   },
+//   // 头连接到身体顶部
+//   'head': {
+//     parentConnection: { x: 0.5, y: 0.1 },   // 身体顶部（脖子位置）
+//     childConnection: { x: 0.5, y: 0.9 },    // 头底部（脖子位置）- 与 pivot 一致
+//   },
+//   // 手臂连接到身体肩部
+//   'left-arm': {
+//     parentConnection: { x: 0.3, y: 0.15 },  // 身体左肩位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）- 与 pivot 一致
+//   },
+//   'right-arm': {
+//     parentConnection: { x: 0.7, y: 0.15 },  // 身体右肩位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）- 与 pivot 一致
+//   },
+//   // 裙子/下身连接到身体底部
+//   'skirt': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 身体底部（腰部）
+//     childConnection: { x: 0.5, y: 0.1 },    // 裙子顶部 - 与 pivot 一致
+//   },
+//   // 大腿连接到身体/裙子底部
+//   'left-thigh': {
+//     parentConnection: { x: 0.4, y: 0.9 },   // 身体左髋位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部 - 与 pivot 一致
+//   },
+//   'right-thigh': {
+//     parentConnection: { x: 0.6, y: 0.9 },   // 身体右髋位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部 - 与 pivot 一致
+//   },
+//   // 脚连接到大腿/裙子底部
+//   'left-foot': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
+//     childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）- 与 pivot 一致
+//   },
+//   'right-foot': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
+//     childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）- 与 pivot 一致
+//   },
+// }
 
 /**
  * 皮影部件默认 Z-Index 层级系统
@@ -179,8 +236,12 @@ const Z_INDEX_LAYERS = {
  * - 背后的手臂/手在头部后面（z-index < HEAD）
  * - 腿/脚在身体后面
  */
-function calculatePartZIndex(partName: string, defaultFacing: CharacterFacing): number {
-  // 判断是否为"背后"部件
+function calculatePartZIndex(partName: string, defaultFacing: CharacterFacing, _isFlipped: boolean = false): number {
+  // 重要：Z-index 只基于默认朝向，不因转身而改变！
+  // 原因：转身是通过 scale.x = -1 实现的，所有精灵一起翻转
+  // 所以视觉上的前后关系已经自动正确了，不需要调整 z-index
+  
+  // 判断是否为"背后"部件（基于默认朝向）
   // 面朝右：左侧是背后；面朝左：右侧是背后
   const isBackSide = (defaultFacing === 'right' && partName.startsWith('left-')) ||
                      (defaultFacing === 'left' && partName.startsWith('right-'))
@@ -245,90 +306,79 @@ export class CharacterRenderer {
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
 
-  // Logical dimensions (single frame size)
-  private logicalWidth: number = 0
-  private logicalHeight: number = 0
+  private canvas: HTMLCanvasElement | null = null
+  private width: number = 800
+  private height: number = 600
+  private imageUrl: string | null = null
+  private onPartSelected: ((partName: string) => void) | null = null
 
-  // Side-by-Side Rendering Support
-  private renderMode: 'chromakey' | 'side_by_side' = 'side_by_side'
-  // Use Texture type for compatibility with PixiJS 8 RenderTexture.create()
-  private renderTexture: Texture | null = null
-  private previewSprite: Sprite | null = null
-  private maskSprite: Sprite | null = null
-  private colorMatrix: ColorMatrixFilter | null = null
+  constructor(options: {
+    canvas?: HTMLCanvasElement
+    width?: number
+    height?: number
+    config?: CharacterConfig
+    spritesheetData?: SpritesheetData
+    imageUrl?: string
+    onPartSelected?: (partName: string) => void
+  } = {}) {
+    console.log('[CharacterRenderer] Constructor called with:', {
+      hasCanvas: !!options.canvas,
+      hasConfig: !!options.config,
+      hasSpritesheetData: !!options.spritesheetData,
+      imageUrl: options.imageUrl
+    })
+
+    if (options.canvas) this.canvas = options.canvas
+    if (options.width) this.width = options.width
+    if (options.height) this.height = options.height
+    if (options.config) this.config = options.config
+    if (options.spritesheetData) this.spritesheetData = options.spritesheetData
+    if (options.imageUrl) this.imageUrl = options.imageUrl
+    if (options.onPartSelected) this.onPartSelected = options.onPartSelected
+  }
 
   /**
    * Initialize the PixiJS application
+   * Supports legacy signature: init(canvas, width, height, options)
+   * And new signature: init(options) - relies on constructor props
    */
   async init(
-    canvas: HTMLCanvasElement, 
-    width: number, 
-    height: number,
-    options: Record<string, any> = {}
+    arg1?: HTMLCanvasElement | Record<string, any>,
+    arg2?: number,
+    arg3?: number,
+    arg4: Record<string, any> = {}
   ): Promise<void> {
+    // Handle overload
+    let options = arg4
+    
+    if (arg1 instanceof HTMLCanvasElement) {
+      // Legacy: init(canvas, width, height, options)
+      this.canvas = arg1
+      if (arg2) this.width = arg2
+      if (arg3) this.height = arg3
+    } else if (arg1) {
+      // New: init(options)
+      options = { ...arg1, ...arg4 }
+    }
+
+    if (!this.canvas) throw new Error('Canvas not provided')
+    
     console.log('CharacterRenderer.init called, initialized:', this.initialized)
     
-    // 如果已经初始化过，先销毁
     if (this.initialized || this.app) {
-      console.log('Destroying previous instance...')
       await this.destroy()
-      console.log('Previous instance destroyed')
     }
 
-    console.log('Creating new PixiJS Application...')
-    
-    // 创建新的 Application 实例
     const app = new Application()
     
-    console.log('Calling app.init...')
-    
-    // Determine Render Mode
-    // Default to 'chromakey' (single view) unless explicitly set to 'side_by_side'
-    // Also support legacy 'useGreenScreen' option
-    const compositionMode = options.compositionMode || 'chromakey'
-    this.renderMode = compositionMode as 'chromakey' | 'side_by_side'
-    
-    // 绿幕模式：录制时使用绿色背景（用于 FFmpeg chromakey）
-    // 预览模式：使用透明背景
-    // 检查 options 中的 useGreenScreen 参数
     const useGreenScreen = options.useGreenScreen === true
+    const bgColor = useGreenScreen ? 0x00ff00 : undefined
+    const bgAlpha = useGreenScreen ? 1 : 0
     
-    let bgColor: number | string | undefined = undefined
-    let bgAlpha = 0
-    let canvasWidth = width
-    
-    // Store logical dimensions
-    this.logicalWidth = width
-    this.logicalHeight = height
-    
-    if (this.renderMode === 'chromakey') {
-      if (useGreenScreen) {
-        bgColor = 0x00ff00
-        bgAlpha = 1
-      } else {
-        bgAlpha = 0
-      }
-    } else {
-      // side_by_side mode
-      // Double the width: Left = Color, Right = Mask
-      canvasWidth = width * 2
-      // Background must be pure black for the mask to work correctly
-      bgColor = 0x000000
-      bgAlpha = 1
-    }
-    
-    console.log('CharacterRenderer config:', { 
-      renderMode: this.renderMode,
-      useGreenScreen, 
-      bgColor, 
-      bgAlpha,
-      canvasWidth 
-    })
-
     await app.init({
-      canvas,
-      width: canvasWidth,
-      height,
+      canvas: this.canvas,
+      width: this.width,
+      height: this.height,
       backgroundColor: bgColor,
       backgroundAlpha: bgAlpha,
       antialias: true,
@@ -336,133 +386,140 @@ export class CharacterRenderer {
       autoDensity: true,
       ...options
     })
-    console.log('app.init completed, stage:', app.stage)
 
-    // 确保 app.stage 存在
     if (!app.stage) {
       app.destroy()
       throw new Error('PixiJS Application stage not initialized')
     }
 
-    // 初始化成功后再赋值给实例变量
     this.app = app
     this.container = new Container()
-    this.container.x = width / 2
-    this.container.y = height / 2
-    // 开启 Z轴排序，防止层级错乱
+    this.container.x = this.width / 2
+    this.container.y = this.height / 2
     this.container.sortableChildren = true
-    
-    if (this.renderMode === 'chromakey') {
-      this.app.stage.addChild(this.container)
-    } else {
-      // Side-by-Side Setup
-      console.log('Setting up Side-by-Side rendering...')
-      
-      // 1. Create RenderTexture (single frame size)
-      const rt = RenderTexture.create({ width, height })
-      this.renderTexture = rt
-      
-      // 2. Create Sprites
-      // Left: Color Preview
-      this.previewSprite = new Sprite(rt)
-      this.app.stage.addChild(this.previewSprite)
-      
-      // Right: Alpha Mask
-      this.maskSprite = new Sprite(rt)
-      this.maskSprite.x = width // Offset to right half
-      
-      // 3. Apply Filter for Mask
-      // Convert Alpha to Grayscale (R=A, G=A, B=A)
-      this.colorMatrix = new ColorMatrixFilter()
-      this.colorMatrix.matrix = [
-        0, 0, 0, 1, 0,
-        0, 0, 0, 1, 0,
-        0, 0, 0, 1, 0,
-        0, 0, 0, 1, 0
-      ]
-      this.maskSprite.filters = [this.colorMatrix]
-      this.app.stage.addChild(this.maskSprite)
-      
-      // 4. Hook into Ticker
-      this.app.ticker.add(this.renderToTexture, this)
-    }
+    this.app.stage.addChild(this.container)
 
     this.initialized = true
+    
+    console.log('[CharacterRenderer.init] Checking data availability:', {
+      hasConfig: !!this.config,
+      hasSpritesheetData: !!this.spritesheetData
+    })
+
+    // Initialize if data is available (from constructor)
+    if (this.config && this.spritesheetData) {
+      await this.loadBaseTexture()
+      this.createParts()
+      this.updateChildPositions(true)
+    }
+    
     console.log('CharacterRenderer.init completed successfully')
   }
 
-  /**
-   * Render the character container to the render texture
-   * Used in side-by-side mode
-   */
-  private renderToTexture(): void {
-    if (!this.app || !this.container || !this.renderTexture) return
+  private async loadBaseTexture(): Promise<void> {
+    console.log('[loadBaseTexture] START', { imageUrl: this.imageUrl, configImage: this.config?.spritesheetImage })
+    if (this.baseTexture) return
     
-    // Manually render the container to the texture
-    this.app.renderer.render({
-      container: this.container,
-      target: this.renderTexture,
-      clear: true
-    })
+    try {
+      if (this.imageUrl) {
+        console.log('[loadBaseTexture] Loading from imageUrl:', this.imageUrl)
+        this.baseTexture = await Assets.load(this.imageUrl)
+      } else if (this.config?.spritesheetImage) {
+        console.log('[loadBaseTexture] Loading from config:', this.config.spritesheetImage)
+        this.baseTexture = await Assets.load(this.config.spritesheetImage)
+      } else {
+        console.warn('No image URL found for base texture')
+      }
+      console.log('[loadBaseTexture] Done, texture:', !!this.baseTexture)
+    } catch (e) {
+      console.error('Failed to load base texture:', e)
+    }
   }
 
   /**
-   * Load character from config URL
+   * Check if a part is rendered behind the body (based on renderOrder)
+   * Used to determine which limbs are "inner/back" and need rotation inversion
    */
-  async loadCharacter(configUrl: string): Promise<void> {
-    if (!this.app || !this.container) {
-      throw new Error('Renderer not initialized')
+  private isPartBehindBody(partName: string): boolean {
+    if (!this.config?.renderOrder) return false
+    
+    const bodyIndex = this.config.renderOrder.indexOf('body')
+    const partIndex = this.config.renderOrder.indexOf(partName)
+    
+    // If either part not found, assume false
+    if (bodyIndex === -1 || partIndex === -1) return false
+    
+    // In renderOrder array: earlier index = rendered first = behind
+    return partIndex < bodyIndex
+  }
+
+  /**
+   * Get the pivot point for a part.
+   * Prioritizes spritesheet data (jointPivot or pivot).
+   * Falls back to DEFAULT_JOINT_PIVOTS.
+   * Handles mirroring for right-facing characters if using defaults.
+   */
+  private getPartPivot(partName: string): { x: number, y: number } {
+    const frameData = this.spritesheetData?.frames[partName] as FrameDataWithAssembly | undefined
+    
+    // 1. Try explicit jointPivot from spritesheet (Highest Priority)
+    if (frameData?.jointPivot) {
+      return frameData.jointPivot
+    }
+    
+    // 2. Try default joint pivot
+    const defaultPivot = DEFAULT_JOINT_PIVOTS[partName]
+    if (defaultPivot) {
+      // If using default and character faces RIGHT, we mirror the X coordinate
+      // Defaults are assumed to be for LEFT facing characters
+      if (this.defaultFacing === 'right') {
+        return { x: 1 - defaultPivot.x, y: defaultPivot.y }
+      }
+      return defaultPivot
+    }
+    
+    // 3. Fallback to sprite pivot or center
+    return { 
+      x: frameData?.pivot?.x ?? 0.5, 
+      y: frameData?.pivot?.y ?? 0.5 
+    }
+  }
+
+  private createParts(): void {
+    console.log('[createParts] Checking requirements:', {
+        hasConfig: !!this.config,
+        hasSpritesheetData: !!this.spritesheetData,
+        hasBaseTexture: !!this.baseTexture,
+        hasContainer: !!this.container
+    })
+
+    if (!this.config || !this.spritesheetData || !this.baseTexture || !this.container) {
+        console.warn('[createParts] Requirements not met, skipping creation')
+        return
     }
 
-    console.log('=== loadCharacter START ===')
-    console.log('Container children BEFORE clear:', this.container.children.length)
-    console.log('Parts map size BEFORE clear:', this.parts.size)
-
+    console.log('=== createParts START ===')
+    
     // Clear existing parts
     this.clearParts()
     
-    console.log('Container children AFTER clear:', this.container.children.length)
-    console.log('Parts map size AFTER clear:', this.parts.size)
-
-    // Load config
-    const configResponse = await fetch(configUrl)
-    this.config = await configResponse.json()
-
-    if (!this.config) {
-      throw new Error('Failed to load character config')
-    }
-
-    console.log('=== Loaded Character Config ===')
-    console.log('defaultFacing:', this.config.defaultFacing)
-    console.log('restPoseOffsets:', this.config.restPoseOffsets)
-
-    // 设置角色默认朝向
+    // Set default facing
     if (this.config.defaultFacing) {
       this.defaultFacing = this.config.defaultFacing as CharacterFacing
-      console.log('Set defaultFacing to:', this.defaultFacing)
-    } else {
-      console.warn('No defaultFacing in config, using default:', this.defaultFacing)
     }
     
-    // 更新骨骼映射
     this.updateBoneMap()
-    console.log('Bone Map updated:', this.boneMap)
 
-    // Load spritesheet JSON
-    const sheetResponse = await fetch(this.config.spritesheet)
-    this.spritesheetData = await sheetResponse.json()
-
-    // Load spritesheet image
-    this.baseTexture = await Assets.load(this.config.spritesheetImage)
-
-    // Step 1: Create all sprites and their containers
     const tempSprites: Map<string, { sprite: Sprite, container: Container }> = new Map()
     
-    for (const partName of this.config.renderOrder) {
-      const frameData = this.spritesheetData?.frames[partName] as FrameDataWithAssembly
-      if (!frameData || !this.baseTexture) continue
+    // Ensure renderOrder exists
+    const renderOrder = this.config.renderOrder || Object.keys(this.spritesheetData.frames)
+    console.log('Rendering parts in order:', renderOrder)
 
-      // Create texture from spritesheet region
+    for (const partName of renderOrder) {
+      const frameData = this.spritesheetData?.frames[partName] as FrameDataWithAssembly
+      if (!frameData) continue
+
       const texture = new Texture({
         source: this.baseTexture.source,
         frame: new Rectangle(
@@ -475,33 +532,25 @@ export class CharacterRenderer {
 
       const sprite = new Sprite(texture)
 
-      // 使用 JSON 中配置的 jointPivot（关节锚点），否则用默认值
-      const jointPivot = frameData.jointPivot
-      const defaultPivot = DEFAULT_JOINT_PIVOTS[partName]
-      const pivotX = jointPivot?.x ?? defaultPivot?.x ?? frameData.pivot?.x ?? 0.5
-      const pivotY = jointPivot?.y ?? defaultPivot?.y ?? frameData.pivot?.y ?? 0.5
-      sprite.anchor.set(pivotX, pivotY)
+      // Joint Pivot
+      const pivot = this.getPartPivot(partName)
+      sprite.anchor.set(pivot.x, pivot.y)
+      
+      // Interaction
+      sprite.eventMode = 'static'
+      sprite.cursor = 'pointer'
+      sprite.on('pointerdown', () => {
+        if (this.onPartSelected) this.onPartSelected!(partName)
+      })
 
-      // Create a container for this part (for hierarchical transforms)
       const partContainer = new Container()
       partContainer.addChild(sprite)
       
-      // 应用 Z-Index：始终使用计算值来保证三明治层级结构
-      // 这样可以确保：前手 > 头 > 背手，无论 spritesheet.json 中的 zIndex 是什么
-      const configZIndex = frameData.zIndex
-      const calculatedZIndex = calculatePartZIndex(partName, this.defaultFacing)
-      const zIndex = calculatedZIndex  // 始终使用计算值
-      
-      // 调试：显示所有关键部件的 z-index
-      const isBackSide = (this.defaultFacing === 'right' && partName.startsWith('left-')) || 
-                         (this.defaultFacing === 'left' && partName.startsWith('right-'))
-      if (partName.includes('arm') || partName.includes('hand') || partName === 'head' || partName === 'body') {
-        console.log(`  Z-Index: ${partName} = ${zIndex} (config ignored: ${configZIndex}, facing: ${this.defaultFacing}, isBack: ${isBackSide})`)
-      }
-      
+      // Z-Index
+      const zIndex = calculatePartZIndex(partName, this.defaultFacing)
       partContainer.zIndex = zIndex
       
-      // Store assembly data for later calculations
+      // Assembly Data
       if (frameData.assembly) {
         this.assemblyData.set(partName, {
           x: frameData.assembly.x,
@@ -516,32 +565,36 @@ export class CharacterRenderer {
       this.partContainers.set(partName, partContainer)
     }
 
-    // Step 2: Add all containers directly to main container (FLAT structure)
-    // We handle parent-child relationships in updatePose by calculating positions
-    console.log('Adding', tempSprites.size, 'containers to main container (flat)')
-    for (const [partName, { container }] of tempSprites) {
+    // Add to main container
+    for (const [_, { container }] of tempSprites) {
       this.container.addChild(container)
-      console.log('Added', partName, 'to root')
     }
-    console.log('Container children AFTER adding:', this.container.children.length)
     
-    // 手动触发 z-index 排序，确保层级正确
     this.container.sortChildren()
-    console.log('Container sortChildren() called')
-
-    // Position parts in default pose with hierarchy
     this.resetPose()
-    console.log('=== loadCharacter END ===')
-    
-    // Apply initial visibility based on showStaticPose setting
     this.container.visible = this.showStaticPose
-    console.log('Character loaded with hierarchy:', {
-      showStaticPose: this.showStaticPose,
-      partsCount: this.parts.size,
-      parts: Array.from(this.parts.keys()),
-      bindings: this.config.bindings,
-      hasBindings: Object.keys(this.config.bindings).length > 0,
-    })
+    
+    console.log('=== createParts END ===')
+  }
+
+  /**
+   * Load character from config URL
+   */
+  async loadCharacter(configUrl: string): Promise<void> {
+    if (!this.app || !this.container) {
+      throw new Error('Renderer not initialized')
+    }
+
+    const configResponse = await fetch(configUrl)
+    this.config = await configResponse.json()
+
+    if (!this.config) throw new Error('Failed to load config')
+    
+    const sheetResponse = await fetch(this.config!.spritesheet)
+    this.spritesheetData = await sheetResponse.json()
+
+    await this.loadBaseTexture()
+    this.createParts()
   }
 
 
@@ -578,9 +631,8 @@ export class CharacterRenderer {
     // Calculate scale to fit in canvas with padding
     const contentWidth = hasAssemblyData ? maxX - minX : 400
     const contentHeight = hasAssemblyData ? maxY - minY : 600
-    // Use logical dimensions for scale calculation
-    const canvasWidth = this.logicalWidth
-    const canvasHeight = this.logicalHeight
+    const canvasWidth = this.app.screen.width
+    const canvasHeight = this.app.screen.height
     const padding = 40
     
     const scaleX = (canvasWidth - padding * 2) / contentWidth
@@ -590,6 +642,15 @@ export class CharacterRenderer {
     // Calculate center offset
     const centerX = hasAssemblyData ? (minX + maxX) / 2 : 0
     const centerY = hasAssemblyData ? (minY + maxY) / 2 : 0
+
+    console.log('[resetPose] Layout:', {
+        hasAssemblyData,
+        bounds: { minX, minY, maxX, maxY },
+        content: { width: contentWidth, height: contentHeight },
+        canvas: { width: canvasWidth, height: canvasHeight },
+        scale: this.globalScale,
+        center: { centerX, centerY }
+    })
 
     // Fallback positions if no assembly data
     const fallbackPositions: Record<string, { x: number; y: number }> = {
@@ -704,9 +765,8 @@ export class CharacterRenderer {
   setPosition(x: number, y: number): void {
     if (!this.container || !this.app) return
     
-    // Use logical dimensions for positioning (single frame size)
-    const screenWidth = this.logicalWidth
-    const screenHeight = this.logicalHeight
+    const screenWidth = this.app.screen.width
+    const screenHeight = this.app.screen.height
     
     this.container.x = x * screenWidth
     this.container.y = y * screenHeight
@@ -729,8 +789,8 @@ export class CharacterRenderer {
     if (!this.container || !this.app) return { x: 0.5, y: 0.5 }
     
     return {
-      x: this.container.x / this.logicalWidth,
-      y: this.container.y / this.logicalHeight
+      x: this.container.x / this.app.screen.width,
+      y: this.container.y / this.app.screen.height
     }
   }
 
@@ -775,24 +835,26 @@ export class CharacterRenderer {
   }
 
   // Rotation limits for parts (in radians)
-  // Format: [minAngle, maxAngle] relative to default pose
+  // Format: [minAngle, maxAngle] relative to default pose (arm hanging down)
+  // 负值 = 向前/向上抬起
+  // 正值 = 向后
   private static readonly ROTATION_LIMITS: Record<string, [number, number] | null> = {
     'head': [-Math.PI / 4, Math.PI / 4],  // ±45 degrees
     'body': [-Math.PI / 6, Math.PI / 6],  // ±30 degrees
-    // Arms rotation limits (Relative to Rest Pose / Down):
-    // Removing strict limits to prevent "snapping" when crossing the discontinuity at ±180°
-    // The user's own arm physics will be the limit.
-    'left-arm': null,
-    'right-arm': null,
-    'left-hand': null,
-    'right-hand': null,
+    
+    // 手臂和手部：暂时移除限制以便调试
+    // 完全自由旋转 (-360° to +360°)
+    'left-arm': [-Math.PI * 2, Math.PI * 2],
+    'right-arm': [-Math.PI * 2, Math.PI * 2],
+    'left-hand': [-Math.PI * 2, Math.PI * 2],
+    'right-hand': [-Math.PI * 2, Math.PI * 2],
+    
     // 裙子不旋转
     'skirt': null,
-    // 左右大腿有旋转限制 (正值=向前/高抬腿，负值=向后/后踢)
-    // 限制向后翻转 (-0.3 rad ≈ -17度)
-    // 允许大幅度向前高抬腿 (2.5 rad ≈ 143度)
-    'left-thigh': [-0.3, 2.5],
-    'right-thigh': [-0.3, 2.5],
+    
+    // 左右大腿
+    'left-thigh': [-Math.PI, Math.PI],
+    'right-thigh': [-Math.PI, Math.PI],
     'left-foot': null,
     'right-foot': null,
   }
@@ -863,10 +925,10 @@ export class CharacterRenderer {
     // Don't move/scale based on body position - just rotate the parts
     // Only set position if not controlled externally (via setPosition)
     if (!this.useExternalPosition) {
-      const canvasWidth = this.logicalWidth
-      const canvasHeight = this.logicalHeight
-      this.container.x = canvasWidth / 2
-      this.container.y = canvasHeight / 2
+    const canvasWidth = this.app.screen.width
+    const canvasHeight = this.app.screen.height
+    this.container.x = canvasWidth / 2
+    this.container.y = canvasHeight / 2
     }
     // Use the global scale from resetPose, don't change it based on detection
     // this.container.scale is already set in resetPose()
@@ -1144,9 +1206,38 @@ export class CharacterRenderer {
 
   /**
    * Map a source part name (from PoseProcessor) to a target part name (on Character)
+   * 
+   * 关键逻辑：用户的"左手"应该总是控制画面中"外侧"的手
+   * 
+   * 1. 当角色面朝左时（无论是默认还是转身后）：
+   *    - 外侧是 left-arm，内侧是 right-arm
+   *    - 用户左手 → left-arm（外侧）
+   *    - 用户右手 → right-arm（内侧）
+   * 
+   * 2. 当角色面朝右时（无论是默认还是转身后）：
+   *    - 外侧是 right-arm，内侧是 left-arm
+   *    - 用户左手 → right-arm（外侧）
+   *    - 用户右手 → left-arm（内侧）
    */
   private mapPartName(sourceName: string): string {
-    return this.boneMap[sourceName] || sourceName
+    // 计算当前视觉朝向
+    const flipped = this.isFlipped()
+    const currentVisualFacing = flipped 
+      ? (this.defaultFacing === 'left' ? 'right' : 'left')
+      : this.defaultFacing
+    
+    // 如果当前视觉面朝右，需要交换左右绑定
+    const needsSwap = currentVisualFacing === 'right'
+    
+    if (needsSwap) {
+      if (sourceName.startsWith('left-')) {
+        return sourceName.replace('left-', 'right-')
+      } else if (sourceName.startsWith('right-')) {
+        return sourceName.replace('right-', 'left-')
+      }
+    }
+    
+    return sourceName
   }
 
   /**
@@ -1160,21 +1251,29 @@ export class CharacterRenderer {
    * @param shouldLog Whether to log debug info
    */
   applyPartAngles(angles: PartAngles, _isCalibrated: boolean = false, shouldLog: boolean = false): void {
-    // 每 60 帧记录一次详细日志
-    const logMapping = this.frameCount % 60 === 1
+    // 每 30 帧记录一次详细日志（更频繁以便调试）
+    const logMapping = this.frameCount % 30 === 1
+    
+    // 计算当前视觉朝向
+    const flipped = this.isFlipped()
+    const currentVisualFacing = flipped 
+      ? (this.defaultFacing === 'left' ? 'right' : 'left')
+      : this.defaultFacing
     
     if (logMapping) {
       console.log('=== applyPartAngles Debug ===')
-      console.log('defaultFacing:', this.defaultFacing)
+      console.log('defaultFacing:', this.defaultFacing, '| isFlipped:', flipped, '| currentVisualFacing:', currentVisualFacing)
+      console.log('Received angles:', JSON.stringify(angles, (_, v) => typeof v === 'number' ? (v * 180 / Math.PI).toFixed(1) + '°' : v))
+      console.log('Available parts:', Array.from(this.parts.keys()))
     }
     
     for (const [sourcePartName, angle] of Object.entries(angles)) {
       // 使用映射逻辑获取目标部件名
       const targetPartName = this.mapPartName(sourcePartName)
       
-      // 详细日志：每次映射
-      if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
-        console.log(`  MAP: "${sourcePartName}" -> "${targetPartName}"`)
+      // 详细日志：每次映射（所有部件）
+      if (logMapping) {
+        console.log(`  MAP: "${sourcePartName}" -> "${targetPartName}" (angle: ${(angle * 180 / Math.PI).toFixed(1)}°)`)
       }
 
       const sprite = this.parts.get(targetPartName)
@@ -1186,29 +1285,35 @@ export class CharacterRenderer {
       const restPoseOffset = this.getRestPoseOffset(targetPartName)
       const rotationOffset = this.getRotationOffset(targetPartName)
       
-      // 根据角色朝向决定是否取反角度
+      // 角度处理：
       // 
-      // 逻辑修正：
-      // 1. 面朝左（如嫦娥）：左手（外侧）不需要取反，右手（里侧）需要取反
-      // 2. 面朝右：右手（外侧）不需要取反，左手（里侧）需要取反
-      let needsInversion = false
-      if (this.defaultFacing === 'left') {
-        // 面朝左：里侧是右手/右臂
-        if (targetPartName.includes('right')) {
-          needsInversion = true
-        }
-      } else {
-        // 面朝右：里侧是左手/左臂
-        if (targetPartName.includes('left')) {
-          needsInversion = true
-        }
-      }
-
-      const adjustedAngle = needsInversion ? -angle : angle
+      // PoseProcessor 返回的角度反映了 atan2 的几何特性：
+      // - 当用户举起双手时，left-arm ≈ +110°，right-arm ≈ -110°
+      // - 符号相反是因为用户的左右手在屏幕的不同位置
+      // 
+      // 对于皮影戏角色（面朝左）：
+      // - 外侧手臂（left-arm）：使用 rest + angle
+      // - 内侧手臂（right-arm）：使用 rest - angle
+      // 
+      // 翻转后：
+      // - scale.x = -1 会镜像所有旋转方向
+      // - 所以需要交换公式
+      let useAddition = false
       
-      if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
-        console.log(`  APPLY: target="${targetPartName}" needsInversion=${needsInversion} angle=${(angle * 180 / Math.PI).toFixed(1)}° -> adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}°`)
+      if (targetPartName.includes('arm') || targetPartName.includes('hand')) {
+        // 视觉上的"内侧"部件（包括手臂和手）都需要用减法
+        // - 面朝左时 (!flipped)：right-arm, right-hand 是内侧
+        // - 面朝右时 (flipped)：left-arm, left-hand 是内侧
+        const isVisuallyInner = 
+          (!flipped && (targetPartName === 'right-arm' || targetPartName === 'right-hand')) || 
+          (flipped && (targetPartName === 'left-arm' || targetPartName === 'left-hand'))
+        
+        // 内侧用减法，外侧用加法
+        useAddition = !isVisuallyInner
       }
+      
+      // 不需要对角度本身做 inversion，而是改变公式
+      const adjustedAngle = angle
       
       // Apply rotation limits to the RELATIVE angle (movement), not the final absolute rotation
       // This ensures limits work consistently regardless of sprite drawing direction
@@ -1219,12 +1324,20 @@ export class CharacterRenderer {
         limitedAngle = Math.max(minAngle, Math.min(maxAngle, limitedAngle))
       }
 
-      const finalRotation = restPoseOffset + limitedAngle + rotationOffset
+      // 根据部件位置选择不同的公式
+      // - 外侧手臂：rest + angle
+      // - 内侧手臂：rest - angle
+      const finalRotation = useAddition 
+        ? (restPoseOffset + limitedAngle + rotationOffset)
+        : (restPoseOffset - limitedAngle + rotationOffset)
 
       sprite.rotation = finalRotation
 
-      if (shouldLog) {
-        console.log(`  ${targetPartName} (src:${sourcePartName}): angle=${(angle * 180 / Math.PI).toFixed(1)}° adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}° limited=${(limitedAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° offset=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(sprite.rotation * 180 / Math.PI).toFixed(1)}°`)
+      if (logMapping || shouldLog) {
+        const isBehind = targetPartName.includes('arm') || targetPartName.includes('hand') 
+          ? this.isPartBehindBody(targetPartName) : false
+        const formula = useAddition ? 'rest+angle' : 'rest-angle'
+        console.log(`  ${targetPartName}: angle=${(angle * 180 / Math.PI).toFixed(1)}° behind=${isBehind} flip=${flipped} formula=${formula} rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° FINAL=${(finalRotation * 180 / Math.PI).toFixed(1)}°`)
       }
     }
   }
@@ -1445,17 +1558,27 @@ export class CharacterRenderer {
    * 1. Find connected joints between parent and child from skeleton.bones
    * 2. When parent rotates, calculate where the parent's connection joint moves to
    * 3. Move the child so its connection joint aligns with parent's connection joint
+   * 
+   * If no skeleton data exists, uses DEFAULT_CONNECTION_POINTS as fallback
    */
+  // 调试计数器
+  private updateChildCallCount = 0
+  
   private updateChildPositions(shouldLog: boolean): void {
-    if (!this.config?.skeleton) {
-      if (shouldLog) console.log('No skeleton data, config:', this.config)
-      return
+    this.updateChildCallCount++
+    const hasSkeleton = this.config?.skeleton?.joints && this.config?.skeleton?.bones
+    
+    // 每100次调用输出一次调试信息
+    const debugHands = this.updateChildCallCount % 100 === 1
+    
+    if (debugHands) {
+      console.log(`[updateChildPositions] called #${this.updateChildCallCount}, hasSkeleton=${hasSkeleton}, parts:`, Array.from(this.parts.keys()))
     }
 
-    const joints = this.config.skeleton.joints
-    const bones = this.config.skeleton.bones
+    const joints = this.config?.skeleton?.joints || []
+    const bones = this.config?.skeleton?.bones || []
     
-    if (shouldLog) {
+    if (shouldLog && hasSkeleton) {
       console.log('updateChildPositions - skeleton data:', {
         jointsCount: joints?.length,
         bonesCount: bones?.length,
@@ -1483,53 +1606,21 @@ export class CharacterRenderer {
       const parentContainer = this.partContainers.get(parentName)
       const parentSprite = this.parts.get(parentName)
       
-      if (!childContainer || !parentContainer || !parentSprite) {
-        continue
-      }
-
-      // Find a bone that connects parent to child (in either direction)
-      // Bone format: { from: "partName:jointId", to: "partName:jointId" }
-      let parentJointId: string | null = null
-      let childJointId: string | null = null
-      
-      for (const bone of bones) {
-        const [fromPart, fromJoint] = bone.from.split(':')
-        const [toPart, toJoint] = bone.to.split(':')
-        
-        if (fromPart === parentName && toPart === childName) {
-          parentJointId = fromJoint
-          childJointId = toJoint
-          break
-        } else if (fromPart === childName && toPart === parentName) {
-          childJointId = fromJoint
-          parentJointId = toJoint
-          break
-        }
-      }
-
-      if (!parentJointId || !childJointId) {
-        if (shouldLog) {
-          console.log(`${childName}: no bone connection to ${parentName}`, {
-            bonesChecked: bones.map(b => `${b.from} -> ${b.to}`)
-          })
-        }
-        continue
-      }
-      
-      if (shouldLog) {
-        console.log(`${childName} -> ${parentName}: found bone connection`, {
-          parentJointId,
-          childJointId
+      // 对手部件进行详细调试
+      const isHandPart = childName.includes('hand')
+      if (isHandPart && debugHands) {
+        console.log(`[Hand Debug] ${childName}:`, {
+          hasChildContainer: !!childContainer,
+          hasParentContainer: !!parentContainer,
+          hasParentSprite: !!parentSprite,
+          allPartContainers: Array.from(this.partContainers.keys()),
+          allParts: Array.from(this.parts.keys())
         })
       }
-
-      // Find the actual joint objects
-      const parentJoint = joints.find(j => j.part === parentName && j.id === parentJointId)
-      const childJoint = joints.find(j => j.part === childName && j.id === childJointId)
-
-      if (!parentJoint || !childJoint) {
-        if (shouldLog) {
-          console.log(`${childName}: joints not found - parent:${parentJointId}, child:${childJointId}`)
+      
+      if (!childContainer || !parentContainer || !parentSprite) {
+        if (isHandPart && debugHands) {
+          console.log(`[Hand Debug] ${childName}: SKIPPED - missing container or sprite`)
         }
         continue
       }
@@ -1537,7 +1628,98 @@ export class CharacterRenderer {
       // Get assembly data
       const parentAssembly = this.assemblyData.get(parentName)
       const childAssembly = this.assemblyData.get(childName)
-      if (!parentAssembly || !childAssembly) continue
+      
+      if (isHandPart && debugHands) {
+        console.log(`[Hand Debug] ${childName}: assembly data:`, {
+          hasParentAssembly: !!parentAssembly,
+          hasChildAssembly: !!childAssembly
+        })
+      }
+      
+      if (!parentAssembly || !childAssembly) {
+        if (isHandPart && debugHands) {
+          console.log(`[Hand Debug] ${childName}: SKIPPED - missing assembly data`)
+        }
+        continue
+      }
+
+      // 尝试从骨骼数据获取连接点，否则使用默认值
+      let parentConnectionPoint: { x: number; y: number } | null = null
+      let childConnectionPoint: { x: number; y: number } | null = null
+
+      if (hasSkeleton && bones.length > 0) {
+        // Find a bone that connects parent to child (in either direction)
+        // Bone format: { from: "partName:jointId", to: "partName:jointId" }
+        let parentJointId: string | null = null
+        let childJointId: string | null = null
+        
+        for (const bone of bones) {
+          const [fromPart, fromJoint] = bone.from.split(':')
+          const [toPart, toJoint] = bone.to.split(':')
+          
+          if (fromPart === parentName && toPart === childName) {
+            parentJointId = fromJoint
+            childJointId = toJoint
+            break
+          } else if (fromPart === childName && toPart === parentName) {
+            childJointId = fromJoint
+            parentJointId = toJoint
+            break
+          }
+        }
+
+        if (parentJointId && childJointId) {
+          // Find the actual joint objects
+          const parentJoint = joints.find(j => j.part === parentName && j.id === parentJointId)
+          const childJoint = joints.find(j => j.part === childName && j.id === childJointId)
+
+          if (parentJoint && childJoint) {
+            parentConnectionPoint = parentJoint.position
+            childConnectionPoint = childJoint.position
+            
+            if (shouldLog) {
+              console.log(`${childName} -> ${parentName}: using skeleton bone connection`, {
+                parentJointId,
+                childJointId
+              })
+            }
+          }
+        }
+      }
+
+      // Fallback: 使用默认连接点
+      if (!parentConnectionPoint || !childConnectionPoint) {
+        // Use getPartPivot to handle defaults and facing
+        const childPivotForConn = this.getPartPivot(childName)
+        const parentPivotForConn = this.getPartPivot(parentName)
+        
+        // 子部件连接点 = 子部件的 jointPivot（旋转轴就是连接点，比如手的手腕位置）
+        childConnectionPoint = childPivotForConn
+        
+        // 父部件连接点：根据父部件的 pivot 计算对角位置
+        // 核心逻辑：子部件连接到父部件 pivot 的对角位置
+        // 例如：手臂 pivot 在肩膀（上方），则手腕在下方
+        if (parentName === 'body' && parentPivotForConn.x === 0.5 && parentPivotForConn.y === 0.5) {
+          // Special fallback for Body: connect at bottom center if no specific pivot
+          parentConnectionPoint = { x: 0.5, y: 0.9 }
+        } else {
+          // 计算 pivot 的对角位置作为连接点
+          parentConnectionPoint = {
+            x: 1 - parentPivotForConn.x,
+            y: 1 - parentPivotForConn.y
+          }
+        }
+        
+        // 调试输出
+        if (debugHands && (childName.includes('hand') || childName.includes('arm'))) {
+          console.log(`[Connection] ${childName} -> ${parentName}:`, {
+            parentPivot: parentPivotForConn,
+            parentConn: parentConnectionPoint,
+            childPivot: childPivotForConn,
+            childConn: childConnectionPoint
+          })
+        }
+      }
 
       // Use parent container's CURRENT position (not initial position)
       // This ensures child follows parent even when parent has moved
@@ -1548,46 +1730,46 @@ export class CharacterRenderer {
       const parentRotation = parentSprite.rotation
 
       // Get parent's pivot point (the anchor point for rotation)
-      const parentFrameData = this.spritesheetData?.frames[parentName] as FrameDataWithAssembly | undefined
-      const parentPivotX = parentFrameData?.jointPivot?.x ?? DEFAULT_JOINT_PIVOTS[parentName]?.x ?? 0.5
-      const parentPivotY = parentFrameData?.jointPivot?.y ?? DEFAULT_JOINT_PIVOTS[parentName]?.y ?? 0.5
+      const parentPivot = this.getPartPivot(parentName)
+      const parentPivotX = parentPivot.x
+      const parentPivotY = parentPivot.y
 
-      // Calculate parent joint position relative to parent's PIVOT (not center)
-      // Joint position is in 0-1 coordinates, pivot is also in 0-1 coordinates
-      const parentJointFromPivotX = (parentJoint.position.x - parentPivotX) * parentAssembly.width * this.globalScale
-      const parentJointFromPivotY = (parentJoint.position.y - parentPivotY) * parentAssembly.height * this.globalScale
+      // Calculate parent connection point position relative to parent's PIVOT (not center)
+      // Connection point position is in 0-1 coordinates, pivot is also in 0-1 coordinates
+      const parentJointFromPivotX = (parentConnectionPoint.x - parentPivotX) * parentAssembly.width * this.globalScale
+      const parentJointFromPivotY = (parentConnectionPoint.y - parentPivotY) * parentAssembly.height * this.globalScale
 
-      // Rotate the parent joint position by parent's rotation
+      // Rotate the parent connection point position by parent's rotation
       const cos = Math.cos(parentRotation)
       const sin = Math.sin(parentRotation)
       const rotatedParentJointX = parentJointFromPivotX * cos - parentJointFromPivotY * sin
       const rotatedParentJointY = parentJointFromPivotX * sin + parentJointFromPivotY * cos
 
-      // Parent joint's world position after rotation
+      // Parent connection point's world position after rotation
       // Use current container position instead of initial position
       const parentJointWorldX = parentCurrentX + rotatedParentJointX
       const parentJointWorldY = parentCurrentY + rotatedParentJointY
 
       // Get child's pivot point
-      const childFrameData = this.spritesheetData?.frames[childName] as FrameDataWithAssembly | undefined
-      const childPivotX = childFrameData?.jointPivot?.x ?? DEFAULT_JOINT_PIVOTS[childName]?.x ?? 0.5
-      const childPivotY = childFrameData?.jointPivot?.y ?? DEFAULT_JOINT_PIVOTS[childName]?.y ?? 0.5
+      const childPivot = this.getPartPivot(childName)
+      const childPivotX = childPivot.x
+      const childPivotY = childPivot.y
 
-      // Child joint position relative to child's PIVOT (before rotation)
-      const childJointFromPivotX = (childJoint.position.x - childPivotX) * childAssembly.width * this.globalScale
-      const childJointFromPivotY = (childJoint.position.y - childPivotY) * childAssembly.height * this.globalScale
+      // Child connection point position relative to child's PIVOT (before rotation)
+      const childJointFromPivotX = (childConnectionPoint.x - childPivotX) * childAssembly.width * this.globalScale
+      const childJointFromPivotY = (childConnectionPoint.y - childPivotY) * childAssembly.height * this.globalScale
 
       // Get child's current rotation to rotate the joint offset
       const childSprite = this.parts.get(childName)
       const childRotation = childSprite?.rotation ?? 0
       
-      // Rotate child joint offset by child's rotation
+      // Rotate child connection point offset by child's rotation
       const childCos = Math.cos(childRotation)
       const childSin = Math.sin(childRotation)
       const rotatedChildJointX = childJointFromPivotX * childCos - childJointFromPivotY * childSin
       const rotatedChildJointY = childJointFromPivotX * childSin + childJointFromPivotY * childCos
 
-      // Child's new pivot position: move child so its joint aligns with parent's joint
+      // Child's new pivot position: move child so its connection point aligns with parent's connection point
       // childNewPivot + rotatedChildJoint = parentJointWorld
       // childNewPivot = parentJointWorld - rotatedChildJoint
       const newChildX = parentJointWorldX - rotatedChildJointX
@@ -1595,9 +1777,34 @@ export class CharacterRenderer {
 
       childContainer.position.set(newChildX, newChildY)
 
-      if (shouldLog) {
-        console.log(`${childName}: parentJoint=${parentJoint.name}(${parentJoint.position.x.toFixed(2)},${parentJoint.position.y.toFixed(2)}), childJoint=${childJoint.name}, parentRot=${(parentRotation * 180 / Math.PI).toFixed(1)}°, newPos=(${newChildX.toFixed(1)}, ${newChildY.toFixed(1)})`)
+      // 调试：对于手部件，输出详细信息
+      if (shouldLog || (debugHands && isHandPart)) {
+        console.log(`${childName} position update:`, {
+          parentName,
+          parentPos: { x: parentCurrentX.toFixed(1), y: parentCurrentY.toFixed(1) },
+          parentRot: (parentRotation * 180 / Math.PI).toFixed(1) + '°',
+          parentConn: parentConnectionPoint,
+          childConn: childConnectionPoint,
+          newPos: { x: newChildX.toFixed(1), y: newChildY.toFixed(1) }
+        })
       }
+    }
+  }
+
+  /**
+   * Update Z-Index for all parts based on current facing
+   */
+  private updateZIndices(forceFlipped?: boolean): void {
+    const isFlipped = forceFlipped ?? (this.container?.scale.x ? this.container.scale.x < 0 : false)
+    
+    for (const [partName, container] of this.partContainers) {
+      const zIndex = calculatePartZIndex(partName, this.defaultFacing, isFlipped)
+      container.zIndex = zIndex
+    }
+    
+    // Trigger sort
+    if (this.container) {
+      this.container.sortChildren()
     }
   }
 
@@ -1707,31 +1914,11 @@ export class CharacterRenderer {
   resize(width: number, height: number): void {
     if (!this.app || !this.container) return
 
-    // Update logical dimensions
-    this.logicalWidth = width
-    this.logicalHeight = height
-
-    const canvasWidth = this.renderMode === 'side_by_side' ? width * 2 : width
-    this.app.renderer.resize(canvasWidth, height)
-
-    // Update Side-by-Side components if active
-    if (this.renderMode === 'side_by_side' && this.renderTexture) {
-      // Recreate texture with new size
-      // In PixiJS 8, we resize the source of the texture
-      const source = this.renderTexture.source;
-      if (source && 'resize' in source) {
-        (source as any).resize(width, height);
-      }
-      
-      if (this.maskSprite) {
-        this.maskSprite.x = width
-      }
-    }
-
+    this.app.renderer.resize(width, height)
     // Only reset position if not using external control
     if (!this.useExternalPosition) {
-      this.container.x = width / 2
-      this.container.y = height / 2
+    this.container.x = width / 2
+    this.container.y = height / 2
     }
   }
 
@@ -1829,11 +2016,70 @@ export class CharacterRenderer {
   }
 
   /**
+   * 将局部姿势转换为全局姿势（处理父子旋转继承）
+   * @param localPose 局部姿势数据
+   */
+  private computeGlobalPose(localPose: Record<string, number>): Record<string, number> {
+    const globalPose: Record<string, number> = {}
+    const parentMap = new Map<string, string>()
+    
+    // 构建父子关系映射
+    CharacterRenderer.CHILD_PARENT_PAIRS.forEach(([child, parent]) => {
+      parentMap.set(child, parent)
+    })
+    // 动态添加脚部的父级关系
+    const leftFootParent = this.getFootParent('left-foot')
+    if (leftFootParent) parentMap.set('left-foot', leftFootParent)
+    const rightFootParent = this.getFootParent('right-foot')
+    if (rightFootParent) parentMap.set('right-foot', rightFootParent)
+
+    // 递归计算全局旋转
+    const getPartGlobal = (part: string): number => {
+      // 如果已经计算过，直接返回
+      if (globalPose[part] !== undefined) return globalPose[part]
+      
+      let rot = 0
+      
+      // 1. 获取自身的局部旋转
+      if (localPose[part] !== undefined) {
+        rot = localPose[part]
+      } else {
+        // 如果不在 pose 中，获取当前的"局部"旋转？
+        // 实际上，如果父级也在 pose 中，我们希望未指定的子级保持当前的相对关系吗？
+        // 简化处理：如果不在 pose 中，我们使用当前的全局旋转减去父级的全局旋转
+        // 但这里我们只关心在 localPose 中存在的部件（以及它们的父级）
+        // 如果部件不在 localPose 中，但在递归链中被需要（作为父级），
+        // 我们直接使用它当前的全局旋转作为基准。
+        return this.getPartRotation(part)
+      }
+      
+      // 2. 获取父级的全局旋转并累加
+      const parent = parentMap.get(part)
+      if (parent) {
+        rot += getPartGlobal(parent)
+      }
+      
+      globalPose[part] = rot
+      return rot
+    }
+
+    // 只计算 localPose 中包含的部件
+    Object.keys(localPose).forEach(part => {
+      globalPose[part] = getPartGlobal(part)
+    })
+
+    return globalPose
+  }
+
+  /**
    * Apply a preset pose (set multiple part rotations at once)
    * @param pose Record of part name to rotation angle (in radians), relative to rest pose
    */
   applyPresetPose(pose: Record<string, number>): void {
-    for (const [partName, rotation] of Object.entries(pose)) {
+    const adjustedPose = this.adjustPoseForFacing(pose)
+    const globalPose = this.computeGlobalPose(adjustedPose)
+    
+    for (const [partName, rotation] of Object.entries(globalPose)) {
       const sprite = this.parts.get(partName)
       if (sprite) {
         const offset = this.getRestPoseOffset(partName)
@@ -1876,12 +2122,14 @@ export class CharacterRenderer {
     
     // 对于面向右的角色，需要调整姿势
     const adjustedPose = this.adjustPoseForFacing(pose)
+    // 将局部姿势转换为全局目标姿势（处理父子旋转继承）
+    const globalTargetPose = this.computeGlobalPose(adjustedPose)
     
-    for (const partName of Object.keys(adjustedPose)) {
+    for (const partName of Object.keys(globalTargetPose)) {
       // 当前的相对角度
       startPose[partName] = this.getPartRotation(partName)
-      // 目标的相对角度（已经根据朝向调整过）
-      targetPose[partName] = adjustedPose[partName]
+      // 目标的全局角度
+      targetPose[partName] = globalTargetPose[partName]
     }
 
     const startTime = Date.now()
@@ -1932,6 +2180,7 @@ export class CharacterRenderer {
   turnAround(): void {
     if (!this.container) return
     this.container.scale.x *= -1
+    this.updateZIndices()
   }
 
   /**
@@ -1947,12 +2196,19 @@ export class CharacterRenderer {
     const targetScaleX = this.container.scale.x > 0 ? -1 : 1
     const startScaleX = this.container.scale.x
     const startTime = Date.now()
+    let zIndexUpdated = false
 
     const animate = () => {
       if (!this.container) return
 
       const elapsed = Date.now() - startTime
       const progress = Math.min(elapsed / duration, 1)
+
+      // Update Z-Index when crossing the middle point (when character is "flat")
+      if (progress >= 0.5 && !zIndexUpdated) {
+        this.updateZIndices(targetScaleX < 0)
+        zIndexUpdated = true
+      }
 
       // 使用 ease-in-out 缓动，模拟皮影的物理特性
       // 先快速收缩到 0，再展开到目标值
@@ -1972,6 +2228,8 @@ export class CharacterRenderer {
         requestAnimationFrame(animate)
       } else {
         this.container.scale.x = targetScaleX
+        // Final ensure
+        if (!zIndexUpdated) this.updateZIndices()
         onComplete?.()
       }
     }
@@ -2212,26 +2470,42 @@ export class CharacterRenderer {
   }
 
   /**
+   * Update configuration and rebuild character
+   */
+  async updateConfig(config: CharacterConfig, spritesheetData: SpritesheetData): Promise<void> {
+    this.config = config
+    this.spritesheetData = spritesheetData
+    
+    // Clear existing parts
+    if (this.container) {
+      this.container.removeChildren()
+    }
+    this.parts.clear()
+    this.partContainers.clear()
+    this.assemblyData.clear()
+    
+    // Re-create parts with new config
+    this.createParts()
+    this.updateChildPositions(true)
+  }
+
+  /**
+   * Manual render trigger (mostly for initial setup)
+   * PixiJS handles the loop automatically, but we might want to force an update
+   */
+  render(): void {
+    this.updateChildPositions(true)
+    this.app?.render()
+  }
+
+  /**
    * Destroy the renderer
    */
   async destroy(): Promise<void> {
     // 先标记为未初始化，防止其他方法继续操作
     this.initialized = false
-    
-    if (this.app?.ticker) {
-      this.app.ticker.remove(this.renderToTexture, this)
-    }
 
     this.clearParts()
-    
-    // Cleanup Side-by-Side resources
-    if (this.renderTexture) {
-      this.renderTexture.destroy(true)
-      this.renderTexture = null
-    }
-    this.previewSprite = null
-    this.maskSprite = null
-    this.colorMatrix = null
 
     if (this.container) {
       try {

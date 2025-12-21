@@ -3,7 +3,7 @@
  * Shows the assembled character using PixiJS with interactive controls
  */
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { CharacterRenderer } from '../pixi/CharacterRenderer'
+import { CharacterRenderer } from '@renderer'
 import { adminApi } from '../services/api'
 import './CharacterPreview.css'
 

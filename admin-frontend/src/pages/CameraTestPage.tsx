@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { adminApi } from '../services/api'
-import { CharacterRenderer } from '../pixi/CharacterRenderer'
+import { CharacterRenderer, PoseLandmarks } from '@renderer'
 import { visionManager } from '../services/VisionManager'
 import { PoseProcessor } from '@pose/PoseProcessor'
 import type { ProcessorConfig, ProcessedPose } from '@pose/types'
 import { DEFAULT_CONFIG } from '@pose/types'
 import MotionCaptureDebugPanel from '../components/MotionCaptureDebugPanel'
-import type { PoseLandmarks } from '../pixi/types'
 import './CameraTestPage.css'
 
 interface CharacterListItem {

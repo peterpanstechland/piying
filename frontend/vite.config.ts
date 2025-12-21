@@ -8,7 +8,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@pose': path.resolve(__dirname, '../shared/pose'),
+      '@renderer': path.resolve(__dirname, '../shared/pixi'),
+      'pixi.js': path.resolve(__dirname, 'node_modules/pixi.js'),
     },
+  },
+  optimizeDeps: {
+    include: ['pixi.js'],
+    entries: [
+      './src/**/*.{ts,tsx}',
+      '../shared/**/*.ts',
+    ],
   },
   server: {
     port: 5173,

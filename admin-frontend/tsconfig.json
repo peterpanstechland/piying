@@ -17,8 +17,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
+      "pixi.js": ["./node_modules/pixi.js"],
       "@pose": ["../shared/pose/index.ts"],
-      "@pose/*": ["../shared/pose/*"]
+      "@pose/*": ["../shared/pose/*"],
+      "@renderer": ["../shared/pixi/index.ts"],
+      "@renderer/*": ["../shared/pixi/*"]
     }
   },
   "include": ["src", "../shared"],

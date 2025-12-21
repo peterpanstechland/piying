@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CharacterRenderer } from '../pixi/CharacterRenderer';
+import { CharacterRenderer } from '@renderer';
 import { apiClient } from '../services/api-client';
 import './SegmentReviewPage.css';
 

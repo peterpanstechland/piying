@@ -2,9 +2,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MotionCaptureRecorder } from '../services/motion-capture';
 import { CanvasRecorder } from '../services/canvas-recorder';
-import { CharacterRenderer } from '../pixi/CharacterRenderer';
+import { CharacterRenderer, PoseLandmarks } from '@renderer';
 import { PoseProcessor, DEFAULT_CONFIG, type ProcessedPose } from '@pose';
-import type { PoseLandmarks } from '../pixi/types';
 import { APP_CONFIG } from '../config/constants';
 import './RecordingPage.css';
 

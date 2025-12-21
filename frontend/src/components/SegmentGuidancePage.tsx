@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PoseLandmark } from '../services/camera-detection';
-import { CharacterRenderer } from '../pixi/CharacterRenderer';
+import { CharacterRenderer, PoseLandmarks } from '@renderer';
 import { PoseProcessor, DEFAULT_CONFIG } from '@pose';
-import type { PoseLandmarks } from '../pixi/types';
 import './SegmentGuidancePage.css';
 
 interface SegmentGuidancePageProps {
