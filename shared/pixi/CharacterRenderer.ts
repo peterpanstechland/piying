@@ -23,6 +23,8 @@ import {
   Graphics,
   Text,
   TextStyle,
+  RenderTexture,
+  ColorMatrixFilter,
 } from 'pixi.js'
 import type {
   CharacterConfig,
@@ -306,6 +308,13 @@ export class CharacterRenderer {
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
 
+  // Side-by-side Rendering Properties
+  private renderMode: 'chromakey' | 'side_by_side' = 'chromakey'
+  private renderTexture: RenderTexture | null = null
+  private previewSprite: Sprite | null = null
+  private maskSprite: Sprite | null = null
+  private colorMatrix: ColorMatrixFilter | null = null
+
   private canvas: HTMLCanvasElement | null = null
   private width: number = 800
   private height: number = 600
@@ -359,6 +368,8 @@ export class CharacterRenderer {
     } else if (arg1) {
       // New: init(options)
       options = { ...arg1, ...arg4 }
+      if (options.width) this.width = options.width
+      if (options.height) this.height = options.height
     }
 
     if (!this.canvas) throw new Error('Canvas not provided')
@@ -371,13 +382,38 @@ export class CharacterRenderer {
 
     const app = new Application()
     
+    // Determine Render Mode
+    const compositionMode = options.compositionMode || 'chromakey'
+    this.renderMode = compositionMode as 'chromakey' | 'side_by_side'
+    
+    // 绿幕设置
     const useGreenScreen = options.useGreenScreen === true
-    const bgColor = useGreenScreen ? 0x00ff00 : undefined
-    const bgAlpha = useGreenScreen ? 1 : 0
+    
+    let bgColor: number | string | undefined = undefined
+    let bgAlpha = 0
+    let canvasWidth = this.width // Use logical width as base
+    
+    if (this.renderMode === 'chromakey') {
+      if (useGreenScreen) {
+        bgColor = 0x00ff00
+        bgAlpha = 1
+      } else {
+        bgAlpha = 0
+      }
+    } else {
+      // side_by_side mode
+      // Double the width: Left = Color, Right = Mask
+      canvasWidth = this.width * 2
+      console.log(`[CharacterRenderer] Side-by-side mode enabled, canvas width: ${canvasWidth}, logical width: ${this.width}`)
+      
+      // Background must be pure black for the mask to work correctly
+      bgColor = 0x000000
+      bgAlpha = 1
+    }
     
     await app.init({
       canvas: this.canvas,
-      width: this.width,
+      width: canvasWidth,
       height: this.height,
       backgroundColor: bgColor,
       backgroundAlpha: bgAlpha,
@@ -394,10 +430,47 @@ export class CharacterRenderer {
 
     this.app = app
     this.container = new Container()
+    
+    // 默认居中于逻辑画面
     this.container.x = this.width / 2
     this.container.y = this.height / 2
     this.container.sortableChildren = true
-    this.app.stage.addChild(this.container)
+    
+    if (this.renderMode === 'chromakey') {
+      this.app.stage.addChild(this.container)
+    } else {
+      // Side-by-Side Setup
+      console.log('[CharacterRenderer] Setting up Side-by-Side rendering...')
+      
+      // 1. Create RenderTexture (single frame size - logical width)
+      this.renderTexture = RenderTexture.create({ width: this.width, height: this.height }) as RenderTexture
+      
+      // 2. Create Sprites
+      // Left: Color Preview
+      this.previewSprite = new Sprite(this.renderTexture)
+      this.app.stage.addChild(this.previewSprite)
+      
+      // Right: Alpha Mask
+      this.maskSprite = new Sprite(this.renderTexture)
+      this.maskSprite.x = this.width // Offset to right half
+      
+      // 3. Apply Filter for Mask
+      // Convert Alpha to Grayscale (R=A, G=A, B=A)
+      this.colorMatrix = new ColorMatrixFilter()
+      // Matrix to map Alpha to RGB:
+      // R = 0*R + 0*G + 0*B + 1*A + 0
+      this.colorMatrix.matrix = [
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0
+      ]
+      this.maskSprite.filters = [this.colorMatrix]
+      this.app.stage.addChild(this.maskSprite)
+      
+      // 4. Hook into Ticker to render container to texture
+      this.app.ticker.add(this.renderToTexture, this)
+    }
 
     this.initialized = true
     
@@ -414,6 +487,21 @@ export class CharacterRenderer {
     }
     
     console.log('CharacterRenderer.init completed successfully')
+  }
+
+  /**
+   * Render the character container to the render texture
+   * Used in side-by-side mode
+   */
+  private renderToTexture(): void {
+    if (!this.app || !this.container || !this.renderTexture) return
+    
+    // Manually render the container to the texture
+    this.app.renderer.render({
+      container: this.container,
+      target: this.renderTexture,
+      clear: true
+    })
   }
 
   private async loadBaseTexture(): Promise<void> {
@@ -765,11 +853,12 @@ export class CharacterRenderer {
   setPosition(x: number, y: number): void {
     if (!this.container || !this.app) return
     
-    const screenWidth = this.app.screen.width
-    const screenHeight = this.app.screen.height
-    
-    this.container.x = x * screenWidth
-    this.container.y = y * screenHeight
+    // 使用 logicalWidth 计算 X 坐标
+    // 在 side_by_side 模式下，container 是绘制在 renderTexture 上的
+    // renderTexture 的宽度是 logicalWidth
+    // 所以这里的 x 映射到 [0, logicalWidth]
+    this.container.x = x * this.width
+    this.container.y = y * this.height
     
     // Mark that we're using external position control
     this.useExternalPosition = true
@@ -1134,6 +1223,16 @@ export class CharacterRenderer {
     // Apply part angles from pipeline
     this.applyPartAngles(processedPose.partAngles, processedPose.isCalibrated, shouldLog)
 
+    // Apply root offset (Jumping/Squatting)
+    if (processedPose.rootOffset && this.container && !this.useExternalPosition) {
+      const baseY = this.height / 2
+      // rootOffset.y is normalized (0-1), convert to pixels
+      // Jump is negative Y in MediaPipe, so we add it to move up in Pixi
+      // Scaling factor 1.5 (reduced from 2.5) to make jump more natural
+      const jumpOffset = processedPose.rootOffset.y * this.height * 1.5
+      this.container.y = baseY + jumpOffset
+    }
+
     // Update facing direction based on pipeline turn state
     // Use animated turn if we are in a turning state
     if (processedPose.turnState) {
@@ -1313,7 +1412,13 @@ export class CharacterRenderer {
       }
       
       // 不需要对角度本身做 inversion，而是改变公式
-      const adjustedAngle = angle
+      // 
+      // 增强腿部动作幅度：
+      // 皮影戏的腿部通常需要更夸张的动作才能看清楚
+      let adjustedAngle = angle
+      if (targetPartName.includes('thigh') || targetPartName.includes('foot')) {
+        adjustedAngle = angle * 1.5 
+      }
       
       // Apply rotation limits to the RELATIVE angle (movement), not the final absolute rotation
       // This ensures limits work consistently regardless of sprite drawing direction
@@ -1914,11 +2019,27 @@ export class CharacterRenderer {
   resize(width: number, height: number): void {
     if (!this.app || !this.container) return
 
-    this.app.renderer.resize(width, height)
+    let canvasWidth = width
+    if (this.renderMode === 'side_by_side') {
+      canvasWidth = width * 2
+    }
+
+    this.app.renderer.resize(canvasWidth, height)
+    
+    // Update stored dimensions
+    this.width = width
+    this.height = height
+    
+    // Handle side-by-side resizing
+    if (this.renderMode === 'side_by_side' && this.renderTexture) {
+      this.renderTexture.resize(width, height)
+      if (this.maskSprite) this.maskSprite.x = width
+    }
+
     // Only reset position if not using external control
     if (!this.useExternalPosition) {
-    this.container.x = width / 2
-    this.container.y = height / 2
+      this.container.x = width / 2
+      this.container.y = height / 2
     }
   }
 
@@ -2504,8 +2625,24 @@ export class CharacterRenderer {
   async destroy(): Promise<void> {
     // 先标记为未初始化，防止其他方法继续操作
     this.initialized = false
+    
+    if (this.app?.ticker) {
+      // Check if renderToTexture exists before removing (it might be bound)
+      // Note: this.renderToTexture needs to be bound or use arrow function if passed directly
+      // In init: this.app.ticker.add(this.renderToTexture, this) handles binding context
+      this.app.ticker.remove(this.renderToTexture, this)
+    }
 
     this.clearParts()
+    
+    // Cleanup Side-by-Side resources
+    if (this.renderTexture) {
+      this.renderTexture.destroy(true)
+      this.renderTexture = null
+    }
+    this.previewSprite = null
+    this.maskSprite = null
+    this.colorMatrix = null
 
     if (this.container) {
       try {

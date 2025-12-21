@@ -13,7 +13,6 @@
  */
 
 import {
-  LegIntent,
   type ProcessorConfig,
   type ProcessedPose,
   type PartAngles,
@@ -220,6 +219,9 @@ export class PoseProcessor {
     // 8. 物理惯性
     partAngles = this.secondaryMotion.process(partAngles)
 
+    // 9. 计算根节点位移（跳跃）
+    const rootOffset = this.computeRootOffset(filteredLandmarks, calibrationData)
+
     const processingTime = performance.now() - startTime
     this.lastProcessTime = processingTime
 
@@ -235,7 +237,46 @@ export class PoseProcessor {
       isCalibrated: calibrationData !== null,
       frameCount: this.frameCount,
       processingTime,
+      rootOffset,
     }
+  }
+
+  /**
+   * 计算根节点（身体）的垂直位移（跳跃/蹲下）
+   */
+  private computeRootOffset(
+    landmarks: PoseLandmarks | null,
+    calibration: CalibrationData | null
+  ): { x: number, y: number } {
+    if (!landmarks || !calibration || !calibration.referencePose) {
+      return { x: 0, y: 0 }
+    }
+
+    const currentLeftHip = landmarks[LANDMARK_INDEX.LEFT_HIP]
+    const currentRightHip = landmarks[LANDMARK_INDEX.RIGHT_HIP]
+    
+    const refLeftHip = calibration.referencePose[LANDMARK_INDEX.LEFT_HIP]
+    const refRightHip = calibration.referencePose[LANDMARK_INDEX.RIGHT_HIP]
+
+    if (!currentLeftHip || !currentRightHip || !refLeftHip || !refRightHip) {
+      return { x: 0, y: 0 }
+    }
+
+    const currentHipY = (currentLeftHip.y + currentRightHip.y) / 2
+    const refHipY = (refLeftHip.y + refRightHip.y) / 2
+
+    // MediaPipe Y轴向下为正。Current < Ref 意味着跳起。
+    // 计算相对位移
+    let diffY = currentHipY - refHipY
+
+    // 阈值过滤，避免抖动
+    const JUMP_THRESHOLD = 0.02 // ~2% screen height
+    
+    if (Math.abs(diffY) < JUMP_THRESHOLD) {
+      diffY = 0
+    }
+
+    return { x: 0, y: diffY }
   }
 
   /**
@@ -248,7 +289,7 @@ export class PoseProcessor {
     landmarks: PoseLandmarks | null,
     calibration: CalibrationData | null,
     _facing: Facing,
-    legState: LegState,
+    _legState: LegState,
     _ikState: IKState
   ): PartAngles {
     const angles: PartAngles = {}
@@ -346,18 +387,10 @@ export class PoseProcessor {
 
     // --- 下身角度 ---
 
-    // 根据腿部状态选择 FK 或 IK 角度
-    if (this.legProcessor.shouldUseFK() && legState.overallIntent !== LegIntent.JUMPING) {
-      // 使用 FK（直接从关键点计算）
-      this.computeLegAnglesFK(landmarks, calibration, angles)
-    } else {
-      // 使用 IK 结果（IK 内部已经处理了朝向）
-      const ikAngles = this.ikSolver.toPartAngles(_facing)
-      angles['left-thigh'] = ikAngles.leftThigh
-      angles['left-foot'] = ikAngles.leftShin
-      angles['right-thigh'] = ikAngles.rightThigh
-      angles['right-foot'] = ikAngles.rightShin
-    }
+    // 强制使用 FK 计算腿部角度，以支持动捕
+    // 之前是：if (this.legProcessor.shouldUseFK() && legState.overallIntent !== LegIntent.JUMPING)
+    // 改为：始终计算，除非没有数据
+    this.computeLegAnglesFK(landmarks, calibration, angles)
 
     return angles
   }
