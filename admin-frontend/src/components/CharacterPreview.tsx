@@ -8,12 +8,12 @@ import { adminApi } from '../services/api'
 import './CharacterPreview.css'
 
 // 预设动作定义
-// 同时支持分体式下身(left-thigh/right-thigh)和一体式下身(skirt)的角色
-// 以及脚部(left-foot/right-foot)动画
 const PRESET_POSES: Record<string, { name: string; pose: Record<string, number> }> = {
   idle: {
     name: '站立',
     pose: {
+      'body': 0,
+      'head': 0,
       'left-arm': 0,
       'right-arm': 0,
       'left-hand': 0,
@@ -25,93 +25,143 @@ const PRESET_POSES: Record<string, { name: string; pose: Record<string, number> 
       'skirt': 0,
     }
   },
-  // 招手动画的两个关键帧
-  // 手臂举高并摇动，手自动跟随（不设置额外偏移）
+  // 招手动画 (FK系统：手自动跟随手臂)
   wave1: {
     name: '招手1',
     pose: {
-      'left-arm': 2.3,            // 手臂举高，向一侧
+      'left-arm': 2.5,
       'right-arm': 0,
-      'left-hand': 0,             // 手跟随手臂，不额外设置
+      'left-hand': 0.3,  // 手腕微调
       'right-hand': 0,
     }
   },
   wave2: {
     name: '招手2',
     pose: {
-      'left-arm': 2.7,            // 手臂举高，向另一侧
+      'left-arm': 2.0,
       'right-arm': 0,
-      'left-hand': 0,             // 手跟随手臂，不额外设置
+      'left-hand': -0.3, // 手腕摆动
       'right-hand': 0,
     }
   },
-  // 鞠躬动画的关键帧
-  // 角色面向左，身体前倾需要负值（逆时针）
+  // 鞠躬动画
   bow1: {
     name: '鞠躬1',
     pose: {
-      'body': -0.4,               // 身体前倾（负值=逆时针=向前弯）
-      'head': -0.3,               // 头跟随前倾
-      'left-arm': -0.3,           // 手臂向前下垂
-      'right-arm': -0.3,
-      'left-hand': 0,
-      'right-hand': 0,
+      'body': -0.5,      // 身体前倾
+      'head': -0.2,      // 头微低
+      'left-arm': -0.5,  // 手臂自然下垂
+      'right-arm': -0.5,
     }
   },
   bow2: {
     name: '鞠躬2',
     pose: {
-      'body': 0,                  // 身体直立
-      'head': 0,                  // 头直立
-      'left-arm': 0,              // 手臂自然
+      'body': 0,
+      'head': 0,
+      'left-arm': 0,
       'right-arm': 0,
-      'left-hand': 0,
-      'right-hand': 0,
     }
   },
+  // 走路动画
   walk1: {
     name: '走路1',
     pose: {
-      // 正常走路：手臂交错摆动
-      // 正值 = 向后摆（顺时针），负值 = 向前摆（逆时针）
-      'left-arm': 0.4,             // 左臂向后摆
-      'right-arm': -0.3,           // 右臂向前摆
-      // 手跟随手臂自然摆动（由 updateChildPositions 自动处理）
-      'left-hand': 0,
-      'right-hand': 0,
-      // 腿部：与手臂交叉（左臂后 = 右腿前）
-      'left-thigh': -Math.PI / 10, // 左腿向后
-      'right-thigh': Math.PI / 10, // 右腿向前
-      // 脚部跟随腿
-      'left-foot': -Math.PI / 8,
-      'right-foot': Math.PI / 8,
+      'left-arm': 0.5,
+      'right-arm': -0.5,
+      'left-thigh': -0.4,
+      'right-thigh': 0.4,
+      'left-foot': -0.2,
+      'right-foot': 0.2,
     }
   },
   walk2: {
     name: '走路2',
     pose: {
-      // 与 walk1 相反的姿势
-      'left-arm': -0.3,            // 左臂向前摆
-      'right-arm': 0.4,            // 右臂向后摆
-      // 手跟随手臂自然摆动（由 updateChildPositions 自动处理）
-      'left-hand': 0,
-      'right-hand': 0,
-      // 腿部：与手臂交叉
-      'left-thigh': Math.PI / 10,  // 左腿向前
-      'right-thigh': -Math.PI / 10,// 右腿向后
-      // 脚部跟随腿
-      'left-foot': Math.PI / 8,
-      'right-foot': -Math.PI / 8,
+      'left-arm': -0.5,
+      'right-arm': 0.5,
+      'left-thigh': 0.4,
+      'right-thigh': -0.4,
+      'left-foot': 0.2,
+      'right-foot': -0.2,
     }
   },
-  dance: {
-    name: '舞蹈',
+  // 舞蹈动作
+  dance1: {
+    name: '舞蹈1',
     pose: {
-      'left-arm': -Math.PI / 2,
-      'right-arm': -Math.PI / 3,
-      'left-hand': Math.PI / 4,
-      'right-hand': -Math.PI / 4,
+      'body': 0.1,
+      'head': -0.15,
+      'left-arm': 2.2,
+      'right-arm': 1.0,
+      'left-hand': 0.5,
+      'right-hand': -0.5,
+      'left-thigh': 0.2,
+      'right-thigh': -0.2,
+      'skirt': 0.1,
     }
+  },
+  dance2: {
+    name: '舞蹈2',
+    pose: {
+      'body': -0.1,
+      'head': 0.15,
+      'left-arm': 1.0,
+      'right-arm': 2.2,
+      'left-hand': -0.5,
+      'right-hand': 0.5,
+      'left-thigh': -0.2,
+      'right-thigh': 0.2,
+      'skirt': -0.1,
+    }
+  },
+  // 跳跃动作
+  jump_prep: {
+    name: '起跳准备',
+    pose: {
+      'body': 0.2,        // 身体微后仰
+      'left-thigh': -0.8, // 蹲下
+      'right-thigh': -0.8,
+      'left-foot': 0.8,
+      'right-foot': 0.8,
+      'left-arm': -0.5,   // 手臂向后甩蓄力
+      'right-arm': -0.5,
+    }
+  },
+  jump_air: {
+    name: '腾空',
+    pose: {
+      'body': -0.2,
+      'left-thigh': 0.4,  // 腿向后伸展
+      'right-thigh': 0.4,
+      'left-foot': 0.5,
+      'right-foot': 0.5,
+      'left-arm': 2.5,    // 手臂向上举
+      'right-arm': 2.5,
+      'head': -0.3,       // 抬头
+    }
+  },
+  // 踢腿
+  kick: {
+    name: '踢腿',
+    pose: {
+      'body': -0.2,
+      'left-thigh': -1.8, // 高踢腿
+      'left-foot': 0.2,
+      'right-thigh': 0.2, // 支撑腿微屈
+      'right-foot': 0,
+      'left-arm': -0.5,   // 保持平衡
+      'right-arm': 0.5,
+    }
+  },
+  // 点头
+  nod1: {
+    name: '点头1',
+    pose: { 'head': 0.2 }
+  },
+  nod2: {
+    name: '点头2',
+    pose: { 'head': -0.1 }
   },
 }
 
@@ -132,13 +182,11 @@ export default function CharacterPreview({
   const [error, setError] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<string | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
-  const [walkCycle, setWalkCycle] = useState(false)
-  const [waveCycle, setWaveCycle] = useState(false)
-  const [bowCycle, setBowCycle] = useState(false)
   const [isFlipped, setIsFlipped] = useState(false)
-  const walkIntervalRef = useRef<number | null>(null)
-  const waveIntervalRef = useRef<number | null>(null)
-  const bowIntervalRef = useRef<number | null>(null)
+
+  // 动画状态
+  const [activeCycle, setActiveCycle] = useState<string | null>(null)
+  const animationIntervalRef = useRef<number | null>(null)
 
   // Initialize renderer
   useEffect(() => {
@@ -163,34 +211,48 @@ export default function CharacterPreview({
         await new Promise(resolve => {
           initTimeout = window.setTimeout(resolve, 50)
         })
+
+        if (!isMounted) return
+
+        // Fetch configs
+        const [configRes, spritesheetRes] = await Promise.all([
+          adminApi.getCharacterConfig(characterId),
+          adminApi.getCharacterSpritesheet(characterId)
+        ])
+
+        console.log('[CharacterPreview] Data loaded:', {
+          config: configRes,
+          spritesheet: spritesheetRes
+        })
+
+        if (!isMounted) return
+
+        currentRenderer = new CharacterRenderer({
+          canvas: canvasRef.current,
+          width,
+          height,
+          config: configRes,
+          spritesheetData: spritesheetRes,
+          imageUrl: adminApi.getSpritesheetPngUrl(characterId),
+          onPartSelected: (partName) => {
+            if (isMounted) setSelectedPart(partName)
+          }
+        })
+
+        await currentRenderer.init()
         
-        if (!isMounted || !canvasRef.current) return
-
-        // Create new renderer instance
-        const renderer = new CharacterRenderer()
-        currentRenderer = renderer
-        rendererRef.current = renderer
-
-        await renderer.init(canvasRef.current, width, height)
-
-        // 检查组件是否已卸载
-        if (!isMounted) {
-          await renderer.destroy()
-          return
-        }
-
-        // Spritesheet is auto-generated when saving pivot config
-        // Just load the character directly
-        const configUrl = adminApi.getCharacterConfigUrl(characterId)
-        await renderer.loadCharacter(configUrl)
-
         if (isMounted) {
+          rendererRef.current = currentRenderer
           setLoading(false)
+          // Initial render
+          currentRenderer.render()
+        } else {
+          await currentRenderer.destroy()
         }
       } catch (err) {
-        console.error('Failed to initialize preview:', err)
+        console.error('Failed to init renderer:', err)
         if (isMounted) {
-          setError(err instanceof Error ? err.message : '加载预览失败')
+          setError(err instanceof Error ? err.message : '加载失败')
           setLoading(false)
         }
       }
@@ -200,215 +262,114 @@ export default function CharacterPreview({
 
     return () => {
       isMounted = false
-      if (initTimeout) {
-        clearTimeout(initTimeout)
+      if (initTimeout) window.clearTimeout(initTimeout)
+      if (animationIntervalRef.current) {
+        window.clearInterval(animationIntervalRef.current)
       }
-      if (walkIntervalRef.current) {
-        clearInterval(walkIntervalRef.current)
-        walkIntervalRef.current = null
-      }
-      if (waveIntervalRef.current) {
-        clearInterval(waveIntervalRef.current)
-        waveIntervalRef.current = null
-      }
-      if (bowIntervalRef.current) {
-        clearInterval(bowIntervalRef.current)
-        bowIntervalRef.current = null
-      }
-      // 同步标记销毁，异步执行
       if (currentRenderer) {
-        currentRenderer.destroy().catch(console.warn)
+        currentRenderer.destroy().catch(console.error)
       }
-      rendererRef.current = null
+      if (rendererRef.current) {
+        rendererRef.current.destroy().catch(console.error)
+        rendererRef.current = null
+      }
     }
   }, [characterId, width, height])
 
-  // 鼠标拖动控制
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!rendererRef.current || isAnimating) return
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    // 简单的部件选择逻辑（基于点击位置）
-    // 这里可以扩展为更精确的碰撞检测
-    const centerX = width / 2
-    const centerY = height / 2
-    
-    // 根据点击位置判断选中的部件
-    const dx = x - centerX
-    const dy = y - centerY
-    
-    if (dy < -100) {
-      setSelectedPart('head')
-    } else if (dx < -50 && dy < 50) {
-      setSelectedPart(dy < 0 ? 'left-arm' : 'left-hand')
-    } else if (dx > 50 && dy < 50) {
-      setSelectedPart(dy < 0 ? 'right-arm' : 'right-hand')
-    } else if (dy > 100) {
-      setSelectedPart(dx < 0 ? 'left-thigh' : 'right-thigh')
-    } else {
-      setSelectedPart(null)
-    }
-  }, [width, height, isAnimating])
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!selectedPart || !rendererRef.current || isAnimating) return
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    
-    const centerX = width / 2
-    const centerY = height / 2
-    
-    // 计算角度
-    const angle = Math.atan2(y - centerY, x - centerX)
-    
-    // 限制旋转范围
-    const limitedAngle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, angle))
-    
-    rendererRef.current.setPartRotation(selectedPart, limitedAngle)
-  }, [selectedPart, width, height, isAnimating])
-
-  const handleMouseUp = useCallback(() => {
-    setSelectedPart(null)
-  }, [])
-
-  // Refresh preview
-  const handleRefresh = useCallback(async () => {
-    if (!rendererRef.current) return
-    try {
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (rendererRef.current) {
       setLoading(true)
-      const configUrl = adminApi.getCharacterConfigUrl(characterId)
-      await rendererRef.current.loadCharacter(configUrl)
-      setLoading(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '刷新失败')
-      setLoading(false)
+      try {
+        // Stop animation
+        stopAnimation()
+        
+        // Reload configs
+        const [configRes, spritesheetRes] = await Promise.all([
+          adminApi.getCharacterConfig(characterId),
+          adminApi.getCharacterSpritesheet(characterId)
+        ])
+        
+        // Update renderer
+        await rendererRef.current.updateConfig(configRes, spritesheetRes)
+        setLoading(false)
+      } catch (err) {
+        console.error('Failed to refresh:', err)
+        setError('重新加载失败')
+        setLoading(false)
+      }
     }
-  }, [characterId])
+  }
 
-  // 应用预设动作
+  // Apply single preset
   const applyPreset = useCallback((presetKey: string) => {
-    if (!rendererRef.current || isAnimating) return
+    if (!rendererRef.current) return
     
+    // 如果正在循环动画，先停止
+    if (activeCycle) stopAnimation()
+
     const preset = PRESET_POSES[presetKey]
     if (!preset) return
-    
+
     setIsAnimating(true)
-    rendererRef.current.animateToPose(preset.pose, 300, () => {
+    rendererRef.current.animateToPose(preset.pose, 500, () => {
       setIsAnimating(false)
     })
-  }, [isAnimating])
+  }, [activeCycle])
 
   // 重置姿势
   const resetPose = useCallback(() => {
     if (!rendererRef.current || isAnimating) return
+    stopAnimation()
+    
     setIsAnimating(true)
     rendererRef.current.animateToPose(PRESET_POSES.idle.pose, 300, () => {
       setIsAnimating(false)
     })
   }, [isAnimating])
 
-  // 走路循环动画
-  const toggleWalkCycle = useCallback(() => {
-    if (!rendererRef.current) return
-    
-    if (walkCycle) {
-      // 停止走路
-      if (walkIntervalRef.current) {
-        clearInterval(walkIntervalRef.current)
-        walkIntervalRef.current = null
-      }
-      setWalkCycle(false)
-      resetPose()
-    } else {
-      // 开始走路循环
-      setWalkCycle(true)
-      let step = 0
-      
-      const animate = () => {
-        if (!rendererRef.current) return
-        const pose = step % 2 === 0 ? PRESET_POSES.walk1.pose : PRESET_POSES.walk2.pose
-        rendererRef.current.animateToPose(pose, 400)
-        step++
-      }
-      
-      animate()
-      walkIntervalRef.current = window.setInterval(animate, 500)
+  // 停止当前循环动画
+  const stopAnimation = useCallback(() => {
+    if (animationIntervalRef.current) {
+      window.clearInterval(animationIntervalRef.current)
+      animationIntervalRef.current = null
     }
-  }, [walkCycle, resetPose])
+    setActiveCycle(null)
+  }, [])
 
-  // 招手循环动画
-  const toggleWaveCycle = useCallback(() => {
+  // 通用循环动画处理器
+  const toggleAnimationCycle = useCallback((cycleName: string, frames: string[], interval: number, duration: number = 500) => {
     if (!rendererRef.current) return
-    
-    if (waveCycle) {
-      // 停止招手
-      if (waveIntervalRef.current) {
-        clearInterval(waveIntervalRef.current)
-        waveIntervalRef.current = null
-      }
-      setWaveCycle(false)
-      resetPose()
-    } else {
-      // 开始招手循环
-      setWaveCycle(true)
-      let step = 0
-      
-      const animate = () => {
-        if (!rendererRef.current) return
-        const pose = step % 2 === 0 ? PRESET_POSES.wave1.pose : PRESET_POSES.wave2.pose
-        rendererRef.current.animateToPose(pose, 600)  // 动画时长 600ms
-        step++
-      }
-      
-      animate()
-      waveIntervalRef.current = window.setInterval(animate, 700)  // 间隔 700ms
-    }
-  }, [waveCycle, resetPose])
 
-  // 鞠躬循环动画
-  const toggleBowCycle = useCallback(() => {
-    if (!rendererRef.current) return
-    
-    if (bowCycle) {
-      // 停止鞠躬
-      if (bowIntervalRef.current) {
-        clearInterval(bowIntervalRef.current)
-        bowIntervalRef.current = null
-      }
-      setBowCycle(false)
+    if (activeCycle === cycleName) {
+      // 停止当前动画
+      stopAnimation()
       resetPose()
     } else {
-      // 开始鞠躬循环
-      setBowCycle(true)
-      let step = 0
+      // 停止之前的动画
+      stopAnimation()
       
+      // 开始新动画
+      setActiveCycle(cycleName)
+      let step = 0
+
       const animate = () => {
         if (!rendererRef.current) return
-        const pose = step % 2 === 0 ? PRESET_POSES.bow1.pose : PRESET_POSES.bow2.pose
-        rendererRef.current.animateToPose(pose, 800)  // 动画时长 800ms
+        const poseKey = frames[step % frames.length]
+        const pose = PRESET_POSES[poseKey].pose
+        rendererRef.current.animateToPose(pose, duration)
         step++
       }
-      
+
       animate()
-      bowIntervalRef.current = window.setInterval(animate, 1000)  // 间隔 1000ms
+      animationIntervalRef.current = window.setInterval(animate, interval)
     }
-  }, [bowCycle, resetPose])
+  }, [activeCycle, stopAnimation, resetPose])
 
   // 转身动画
   const handleTurnAround = useCallback(() => {
     if (!rendererRef.current || isAnimating) return
-    
+
     setIsAnimating(true)
     rendererRef.current.turnAroundAnimated(300, () => {
       setIsAnimating(false)
@@ -433,111 +394,104 @@ export default function CharacterPreview({
 
   return (
     <div className="character-preview">
-      <div className="preview-main">
-        <div className="preview-canvas-container">
-          {loading && (
-            <div className="loading-overlay">
-              <div className="spinner"></div>
-              <p>加载预览...</p>
-            </div>
-          )}
-          <canvas 
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            style={{ cursor: selectedPart ? 'grabbing' : 'grab' }}
-          />
+      <div className="preview-container">
+        {loading && <div className="loading-overlay">加载中...</div>}
+        <canvas ref={canvasRef} />
+        <div className="controls-overlay">
           {selectedPart && (
-            <div className="selected-part-indicator">
-              拖动中: {selectedPart}
+            <div className="part-label">
+              选中部件: {selectedPart}
             </div>
           )}
-        </div>
-
-        <div className="preview-sidebar">
-          <div className="preset-section">
-            <h4>预设动作</h4>
-            <div className="preset-buttons">
-              {Object.entries(PRESET_POSES)
-                .filter(([key]) => !key.startsWith('wave') && !key.startsWith('walk') && !key.startsWith('bow'))
-                .map(([key, preset]) => (
-                <button
-                  key={key}
-                  className={`preset-btn ${key === 'idle' ? 'primary' : ''}`}
-                  onClick={() => applyPreset(key)}
-                  disabled={isAnimating || loading}
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="animation-section">
-            <h4>动画</h4>
-            <button
-              className={`animation-btn ${walkCycle ? 'active' : ''}`}
-              onClick={toggleWalkCycle}
-              disabled={loading || waveCycle}
-            >
-              {walkCycle ? '⏹ 停止走路' : '🚶 走路循环'}
-            </button>
-            <button
-              className={`animation-btn ${waveCycle ? 'active' : ''}`}
-              onClick={toggleWaveCycle}
-              disabled={loading || walkCycle || bowCycle}
-            >
-              {waveCycle ? '⏹ 停止招手' : '👋 招手循环'}
-            </button>
-            <button
-              className={`animation-btn ${bowCycle ? 'active' : ''}`}
-              onClick={toggleBowCycle}
-              disabled={loading || walkCycle || waveCycle}
-            >
-              {bowCycle ? '⏹ 停止鞠躬' : '🙇 鞠躬循环'}
-            </button>
-            <button
-              className={`animation-btn ${isFlipped ? 'active' : ''}`}
-              onClick={handleTurnAround}
-              disabled={isAnimating || loading}
-            >
-              🔄 转身
-            </button>
-          </div>
-
-          <div className="control-section">
-            <h4>控制</h4>
-            <button 
-              className="control-btn"
-              onClick={resetPose}
-              disabled={isAnimating || loading}
-            >
-              🔄 重置姿势
-            </button>
-            <button 
-              className="control-btn"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              ♻️ 重新加载
-            </button>
-          </div>
-
-          <div className="help-section">
-            <h4>操作说明</h4>
-            <ul>
-              <li>点击并拖动画布控制部件旋转</li>
-              <li>点击预设按钮播放动作</li>
-              <li>走路循环会自动播放</li>
-            </ul>
-          </div>
         </div>
       </div>
 
-      <div className="preview-footer">
-        <span className="hint">💡 提示：鼠标拖动可以手动调整部件角度</span>
+      <div className="preview-controls">
+        <div className="control-groups">
+          
+          {/* 基础控制 */}
+          <div className="control-group">
+            <h4>基础控制</h4>
+            <div className="btn-row">
+              <button className="control-btn" onClick={resetPose} disabled={isAnimating}>
+                🔄 复位
+              </button>
+              <button 
+                className={`control-btn ${isFlipped ? 'active' : ''}`}
+                onClick={handleTurnAround}
+                disabled={isAnimating}
+              >
+                ↔️ 转身
+              </button>
+              <button className="control-btn" onClick={handleRefresh}>
+                ♻️ 刷新
+              </button>
+            </div>
+          </div>
+
+          {/* 循环动画 */}
+          <div className="control-group">
+            <h4>循环动画</h4>
+            <div className="btn-grid">
+              <button
+                className={`animation-btn ${activeCycle === 'walk' ? 'active' : ''}`}
+                onClick={() => toggleAnimationCycle('walk', ['walk1', 'walk2'], 600, 500)}
+              >
+                🚶 走路
+              </button>
+              <button
+                className={`animation-btn ${activeCycle === 'wave' ? 'active' : ''}`}
+                onClick={() => toggleAnimationCycle('wave', ['wave1', 'wave2'], 800, 700)}
+              >
+                👋 招手
+              </button>
+              <button
+                className={`animation-btn ${activeCycle === 'dance' ? 'active' : ''}`}
+                onClick={() => toggleAnimationCycle('dance', ['dance1', 'dance2'], 700, 600)}
+              >
+                💃 舞蹈
+              </button>
+              <button
+                className={`animation-btn ${activeCycle === 'jump' ? 'active' : ''}`}
+                onClick={() => toggleAnimationCycle('jump', ['jump_prep', 'jump_air'], 1000, 400)}
+              >
+                🦘 跳跃
+              </button>
+              <button
+                className={`animation-btn ${activeCycle === 'nod' ? 'active' : ''}`}
+                onClick={() => toggleAnimationCycle('nod', ['nod1', 'nod2'], 600, 400)}
+              >
+                🙇 点头
+              </button>
+              <button
+                className={`animation-btn ${activeCycle === 'bow' ? 'active' : ''}`}
+                onClick={() => toggleAnimationCycle('bow', ['bow1', 'bow2'], 1500, 800)}
+              >
+                🙏 鞠躬
+              </button>
+            </div>
+          </div>
+
+          {/* 单次动作 */}
+          <div className="control-group">
+            <h4>单次动作</h4>
+            <div className="btn-grid">
+              <button className="preset-btn" onClick={() => applyPreset('kick')}>
+                🦵 踢腿
+              </button>
+              <button className="preset-btn" onClick={() => applyPreset('dance1')}>
+                💃 舞姿1
+              </button>
+              <button className="preset-btn" onClick={() => applyPreset('dance2')}>
+                🕺 舞姿2
+              </button>
+              <button className="preset-btn" onClick={() => applyPreset('jump_air')}>
+                ✈️ 腾空
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   )

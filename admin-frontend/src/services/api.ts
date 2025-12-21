@@ -306,6 +306,11 @@ class AdminApiClient {
     return `${API_BASE_URL}/characters/${characterId}/spritesheet.json`
   }
 
+  async getCharacterSpritesheet(characterId: string) {
+    const response = await this.client.get(`/characters/${characterId}/spritesheet.json`)
+    return response.data
+  }
+
   getCharacterConfigUrl(characterId: string): string {
     return `${API_BASE_URL}/characters/${characterId}/config.json`
   }
