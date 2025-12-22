@@ -785,3 +785,106 @@ ipcMain.handle('check-for-updates', async () => {
     throw new Error(error.message);
   }
 });
+
+// 获取网络状态
+ipcMain.handle('get-network-status', async () => {
+  try {
+    const https = require('https');
+    return new Promise((resolve) => {
+      const req = https.get('https://api.github.com', { timeout: 5000 }, (res) => {
+        resolve({ online: true, statusCode: res.statusCode });
+      });
+      req.on('error', () => {
+        resolve({ online: false, error: 'Network error' });
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({ online: false, error: 'Timeout' });
+      });
+    });
+  } catch (error) {
+    return { online: false, error: error.message };
+  }
+});
+
+// 获取更新状态
+let updateStatus = { status: 'idle', info: null };
+
+ipcMain.handle('get-update-status', async () => {
+  return updateStatus;
+});
+
+// 获取 OTA 设置
+ipcMain.handle('get-ota-settings', async () => {
+  return {
+    autoDownload: autoUpdater.autoDownload,
+    autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
+    allowPrerelease: autoUpdater.allowPrerelease,
+    currentVersion: app.getVersion()
+  };
+});
+
+// 刷新 OTA 设置
+ipcMain.handle('refresh-ota-settings', async () => {
+  return {
+    autoDownload: autoUpdater.autoDownload,
+    autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
+    allowPrerelease: autoUpdater.allowPrerelease,
+    currentVersion: app.getVersion()
+  };
+});
+
+// 获取 GitHub Release 信息
+ipcMain.handle('get-release-info', async () => {
+  try {
+    const https = require('https');
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: '/repos/peterpanstechland/piying/releases/latest',
+        headers: {
+          'User-Agent': 'Piying-Electron-App'
+        },
+        timeout: 10000
+      };
+      
+      const req = https.get(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            const release = JSON.parse(data);
+            resolve({
+              version: release.tag_name,
+              name: release.name,
+              body: release.body,
+              published_at: release.published_at,
+              html_url: release.html_url,
+              assets: release.assets ? release.assets.map(a => ({
+                name: a.name,
+                size: a.size,
+                download_url: a.browser_download_url
+              })) : []
+            });
+          } catch (e) {
+            reject(new Error('Failed to parse release info'));
+          }
+        });
+      });
+      
+      req.on('error', (e) => reject(e));
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request timeout'));
+      });
+    });
+  } catch (error) {
+    throw new Error(error.message);
+  }
+});
+
+// 安装已下载的更新
+ipcMain.handle('install-update', async () => {
+  log.info('Installing update...');
+  autoUpdater.quitAndInstall(false, true);
+});
