@@ -22,8 +22,55 @@ try {
     exit 1
 }
 
+# 步骤 0: 自动从 Git tag 获取版本号（与 GitHub Actions 保持一致）
+Write-Host "[0/7] 检测版本号..." -ForegroundColor Yellow
+try {
+    # 获取最新的 git tag
+    $latestTag = git describe --tags --abbrev=0 2>$null
+    if ($latestTag -and $latestTag -match '^v?(\d+\.\d+\.\d+)') {
+        $version = $matches[1]
+        Write-Host "      检测到 Git tag: $latestTag -> 版本: $version" -ForegroundColor Cyan
+        
+        # 更新 electron-app/package.json 的版本
+        Push-Location "$scriptPath\electron-app"
+        $currentVersion = (Get-Content package.json | ConvertFrom-Json).version
+        if ($currentVersion -ne $version) {
+            Write-Host "      更新 electron-app 版本: $currentVersion -> $version" -ForegroundColor Yellow
+            npm version $version --no-git-tag-version --allow-same-version 2>$null
+        } else {
+            Write-Host "      electron-app 版本已是最新: $version" -ForegroundColor Green
+        }
+        Pop-Location
+        
+        # 更新 frontend/package.json 的版本
+        Push-Location "$scriptPath\frontend"
+        $currentVersion = (Get-Content package.json | ConvertFrom-Json).version
+        if ($currentVersion -ne $version) {
+            Write-Host "      更新 frontend 版本: $currentVersion -> $version" -ForegroundColor Yellow
+            npm version $version --no-git-tag-version --allow-same-version 2>$null
+        }
+        Pop-Location
+        
+        # 更新 admin-frontend/package.json 的版本
+        Push-Location "$scriptPath\admin-frontend"
+        $currentVersion = (Get-Content package.json | ConvertFrom-Json).version
+        if ($currentVersion -ne $version) {
+            Write-Host "      更新 admin-frontend 版本: $currentVersion -> $version" -ForegroundColor Yellow
+            npm version $version --no-git-tag-version --allow-same-version 2>$null
+        }
+        Pop-Location
+        
+        Write-Host "      版本号已同步: v$version ✓" -ForegroundColor Green
+    } else {
+        Write-Host "      [警告] 未找到 Git tag，使用 package.json 中的版本" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "      [警告] 无法获取 Git tag: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+Write-Host ""
+
 # 步骤 1: 构建前端（始终重新构建以确保包含最新改动）
-Write-Host "[1/6] 构建用户前端..." -ForegroundColor Yellow
+Write-Host "[1/7] 构建用户前端..." -ForegroundColor Yellow
 Push-Location "$scriptPath\frontend"
 try {
     # 清理旧的构建
@@ -31,7 +78,7 @@ try {
         Write-Host "      清理旧的前端构建..." -ForegroundColor Gray
         Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    cmd /c "npm install"
+    cmd /c "npm ci"
     if ($LASTEXITCODE -ne 0) { throw "前端依赖安装失败" }
     cmd /c "npm run build"
     if ($LASTEXITCODE -ne 0) { throw "前端构建失败" }
@@ -52,7 +99,7 @@ Write-Host "      用户前端构建完成 ✓" -ForegroundColor Green
 Write-Host ""
 
 # 步骤 2: 构建管理后台前端（始终重新构建以确保包含最新改动）
-Write-Host "[2/6] 构建管理后台前端..." -ForegroundColor Yellow
+Write-Host "[2/7] 构建管理后台前端..." -ForegroundColor Yellow
 Push-Location "$scriptPath\admin-frontend"
 try {
     # 清理旧的构建
@@ -60,7 +107,7 @@ try {
         Write-Host "      清理旧的管理后台构建..." -ForegroundColor Gray
         Remove-Item -Path "dist" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    cmd /c "npm install"
+    cmd /c "npm ci"
     if ($LASTEXITCODE -ne 0) { throw "管理后台依赖安装失败" }
     cmd /c "npm run build"
     if ($LASTEXITCODE -ne 0) { throw "管理后台构建失败" }
@@ -81,7 +128,7 @@ Write-Host "      管理后台前端构建完成 ✓" -ForegroundColor Green
 Write-Host ""
 
 # 步骤 3: 构建后端
-Write-Host "[3/6] 构建 Python 后端..." -ForegroundColor Yellow
+Write-Host "[3/7] 构建 Python 后端..." -ForegroundColor Yellow
 try {
     # 调用后端构建脚本
     cmd /c "build-backend-exe.bat"
@@ -95,10 +142,10 @@ Write-Host "      Python 后端构建完成 ✓" -ForegroundColor Green
 Write-Host ""
 
 # 步骤 4: 安装 Electron 依赖
-Write-Host "[4/6] 安装 Electron 依赖..." -ForegroundColor Yellow
+Write-Host "[4/7] 安装 Electron 依赖..." -ForegroundColor Yellow
 Push-Location "$scriptPath\electron-app"
 try {
-    cmd /c "npm install"
+    cmd /c "npm ci"
     if ($LASTEXITCODE -ne 0) { throw "Electron 依赖安装失败" }
 } catch {
     Write-Host "[错误] $($_.Exception.Message)" -ForegroundColor Red

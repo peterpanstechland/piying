@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { CharacterRenderer } from '@renderer'
+import { CharacterRenderer } from '@shared/pixi'
 import { adminApi } from '../../services/api'
 import { TimelineSegment, ScaleConfig } from '../../contexts/TimelineEditorContext'
 import './CharacterOverlay.css'
@@ -27,12 +27,6 @@ export default function CharacterOverlay({
   const rendererRef = useRef<CharacterRenderer | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [bounds, setBounds] = useState<{ x: number, y: number, width: number, height: number } | null>(null)
-
-  // Keep refs for latest props to use in async init
-  const segmentRef = useRef(segment)
-  segmentRef.current = segment
-  const playheadRef = useRef(playhead)
-  playheadRef.current = playhead
 
   // Get current scale from config
   const getScale = useCallback(() => {
@@ -80,42 +74,10 @@ export default function CharacterOverlay({
         console.log('[CharacterOverlay] Reset to initial pose')
         
         // FIX: Apply initial scale immediately to avoid large character flash
-        const currentSegment = segmentRef.current
-        const currentPlayhead = playheadRef.current
-        
-        // Calculate initial scale using current props
-        let initialScale = 1.0
-        const scaleConfig = currentSegment.scale
-        if (scaleConfig) {
-          if (scaleConfig.mode === 'auto') {
-            initialScale = scaleConfig.start || 1.0
-          } else {
-            const progress = Math.max(0, Math.min(1, (currentPlayhead - currentSegment.startTime) / currentSegment.duration))
-            const start = scaleConfig.start || 1.0
-            const end = scaleConfig.end || 1.0
-            initialScale = start + (end - start) * progress
-          }
-        }
-
+        const initialScale = getScale()
         const container = renderer.getContainer()
         if (container) {
           container.scale.set(initialScale * (renderer.isFlipped() ? -1 : 1), initialScale)
-          
-          // FIX: Apply initial position immediately based on segment path
-          let x = containerWidth / 2
-          let y = containerHeight / 2
-
-          if (currentSegment.path) {
-            const { startPoint, endPoint } = currentSegment.path
-            // Calculate progress within segment
-            let progress = (currentPlayhead - currentSegment.startTime) / currentSegment.duration
-            progress = Math.max(0, Math.min(1, progress))
-
-            // Linear interpolation
-            x = (startPoint.x + (endPoint.x - startPoint.x) * progress) * containerWidth
-            y = (startPoint.y + (endPoint.y - startPoint.y) * progress) * containerHeight
-          }
-          container.position.set(x, y)
         }
         
         setIsLoaded(true)

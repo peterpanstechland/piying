@@ -1,9 +1,20 @@
 /**
- * Shared PixiJS Character Renderer
- * Used by both admin-frontend and frontend
+ * PixiJS Character Renderer Module
+ * Exports CharacterRenderer and related types
  */
 
 export { CharacterRenderer } from './CharacterRenderer'
-export type { CharacterFacing } from './CharacterRenderer'
-export * from './types'
+export type {
+  JointConfig,
+  BoneConfig,
+  SkeletonConfig,
+  BindingConfig,
+  CharacterConfig,
+  FrameData,
+  SpritesheetData,
+  PoseLandmark,
+  PoseLandmarks,
+} from './types'
+
+
 

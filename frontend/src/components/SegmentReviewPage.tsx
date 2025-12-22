@@ -1,25 +1,25 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CharacterRenderer } from '@renderer';
+import { CharacterRenderer } from '@shared/pixi';
 import { apiClient } from '../services/api-client';
 import './SegmentReviewPage.css';
 
-interface SegmentReviewPageProps {
+export interface SegmentReviewPageProps {
   segmentIndex: number;
   totalSegments: number;
   frameCount: number;
   videoElement?: HTMLVideoElement | null;
   onReRecord?: () => void;
   onContinue?: () => void;
-  onTimeout?: () => void; // 超时返回首页回调
+  onTimeout?: () => void;
   isUploading?: boolean;
   uploadProgress?: number;
   uploadError?: string | null;
   cursorPosition?: { x: number; y: number } | null;
   hoverDurationMs?: number;
   characterId?: string;
-  inactivityShowCountdownSeconds?: number; // 多少秒后显示倒计时（默认10秒）
-  inactivityAutoBackSeconds?: number; // 多少秒后自动返回（默认30秒）
+  inactivityShowCountdownSeconds?: number;
+  inactivityAutoBackSeconds?: number;
 }
 
 // Walk cycle poses (copied from CharacterPreview)
@@ -61,15 +61,12 @@ export const SegmentReviewPage = ({
   videoElement,
   onReRecord,
   onContinue,
-  onTimeout,
   isUploading = false,
   uploadProgress = 0,
   uploadError = null,
   cursorPosition,
   hoverDurationMs = 3000,
   characterId,
-  inactivityShowCountdownSeconds = 10,
-  inactivityAutoBackSeconds = 30,
 }: SegmentReviewPageProps) => {
   const { t } = useTranslation();
 
@@ -86,14 +83,6 @@ export const SegmentReviewPage = ({
   const continueHoverStartRef = useRef<number | null>(null);
   const hasTriggeredRef = useRef(false);
   const animationFrameRef = useRef<number | null>(null);
-
-  // 无操作自动返回状态
-  const [inactivitySeconds, setInactivitySeconds] = useState(0);
-  const [showCountdown, setShowCountdown] = useState(false);
-  const lastInteractionTimeRef = useRef<number>(Date.now());
-  const isReturningRef = useRef(false); // 防止重复调用
-  const onTimeoutRef = useRef(onTimeout);
-  onTimeoutRef.current = onTimeout;
 
   // Video ref to prevent repeated play() calls
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -120,44 +109,6 @@ export const SegmentReviewPage = ({
       cursorY <= rect.bottom
     );
   }, [cursorPosition]);
-
-  // 无操作计时器 - 页面级别的自动返回
-  useEffect(() => {
-    if (isUploading) return; // 上传中不计时
-    
-    const timer = setInterval(() => {
-      // 如果已经在返回中，停止计时
-      if (isReturningRef.current || hasTriggeredRef.current) return;
-      
-      const elapsed = Math.floor((Date.now() - lastInteractionTimeRef.current) / 1000);
-      setInactivitySeconds(elapsed);
-      
-      // 10秒后显示倒计时
-      if (elapsed >= inactivityShowCountdownSeconds && !showCountdown) {
-        setShowCountdown(true);
-        console.log('[SegmentReview] Showing countdown after', elapsed, 'seconds of inactivity');
-      }
-      
-      // 30秒后自动返回
-      if (elapsed >= inactivityAutoBackSeconds && onTimeoutRef.current && !isReturningRef.current) {
-        console.log('[SegmentReview] Auto-returning to IDLE after', elapsed, 'seconds of inactivity');
-        isReturningRef.current = true; // 标记正在返回，防止重复调用
-        onTimeoutRef.current();
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [inactivityShowCountdownSeconds, inactivityAutoBackSeconds, showCountdown, isUploading]);
-
-  // 当用户悬停在按钮上时重置无操作计时器
-  useEffect(() => {
-    if (rerecordProgress > 0 || continueProgress > 0) {
-      // 用户正在交互，重置计时器
-      lastInteractionTimeRef.current = Date.now();
-      setInactivitySeconds(0);
-      setShowCountdown(false);
-    }
-  }, [rerecordProgress, continueProgress]);
 
   // Handle hover progress for buttons
   useEffect(() => {
@@ -412,13 +363,6 @@ export const SegmentReviewPage = ({
                 />
               </div>
               <p className="progress-text">{t('review.uploading')} {uploadProgress}%</p>
-            </div>
-          )}
-
-          {/* 自动返回倒计时提示 - 10秒后显示 */}
-          {showCountdown && onTimeout && !isUploading && (
-            <div className="auto-return-countdown">
-              {inactivityAutoBackSeconds - inactivitySeconds}s 后自动返回首页
             </div>
           )}
         </div>

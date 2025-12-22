@@ -301,8 +301,6 @@ export interface ProcessedPose {
   frameCount: number
   /** 处理时间（毫秒） */
   processingTime: number
-  /** 根节点位移（相对于校准姿态） */
-  rootOffset?: { x: number, y: number }
 }
 
 /** 完整的处理器配置 */

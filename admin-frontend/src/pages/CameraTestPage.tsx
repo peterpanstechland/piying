@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { adminApi } from '../services/api'
-import { CharacterRenderer, PoseLandmarks } from '@renderer'
+import { CharacterRenderer, type PoseLandmarks } from '@shared/pixi'
 import { visionManager } from '../services/VisionManager'
-import { PoseProcessor } from '@pose/PoseProcessor'
-import type { ProcessorConfig, ProcessedPose } from '@pose/types'
-import { DEFAULT_CONFIG } from '@pose/types'
-import MotionCaptureDebugPanel from '../components/MotionCaptureDebugPanel'
 import './CameraTestPage.css'
 
 interface CharacterListItem {
@@ -71,13 +67,6 @@ export default function CameraTestPage() {
   const [autoCalibrated, setAutoCalibrated] = useState(false)
   const [calibrationProgress, setCalibrationProgress] = useState(0)
   const poseDetectionCountRef = useRef(0) // 连续检测到姿态的帧数
-  
-  // 动捕管线相关状态
-  const [usePipeline, setUsePipeline] = useState(true) // 是否使用新管线
-  const [pipelineConfig, setPipelineConfig] = useState<ProcessorConfig>(DEFAULT_CONFIG)
-  const [processedPose, setProcessedPose] = useState<ProcessedPose | null>(null)
-  const [showMotionDebugPanel, setShowMotionDebugPanel] = useState(false)
-  const poseProcessorRef = useRef<PoseProcessor | null>(null)
 
 
   // Load available cameras
@@ -263,64 +252,40 @@ export default function CameraTestPage() {
           const result = visionManager.detectPose(video)
           if (result && result.landmarks && result.landmarks.length > 0) {
             setPoseDetected(true)
-            
-            // 原始关键点（用于骨架绘制）
-            const rawLandmarks: PoseLandmarks = result.landmarks[0].map((lm) => ({
+            const landmarks: PoseLandmarks = result.landmarks[0].map((lm) => ({
               x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility
             }))
-            setCurrentPose(rawLandmarks)
-            currentPoseRef.current = rawLandmarks
+            setCurrentPose(landmarks)
+            currentPoseRef.current = landmarks
             
-            // 处理管线输入（根据镜像模式翻转 X 坐标）
-            const processLandmarks: PoseLandmarks = mirrorMode
-              ? rawLandmarks.map((lm) => ({ ...lm, x: 1 - lm.x }))
-              : rawLandmarks
-            
-            // 使用新管线处理
-            if (usePipeline && poseProcessorRef.current) {
-              const processed = poseProcessorRef.current.process(processLandmarks)
-              setProcessedPose(processed)
-              
-              // 使用处理后的数据更新角色
-              if (rendererRef.current) {
-                rendererRef.current.updatePoseFromProcessed(processed)
+            // 自动校准：连续检测到姿态30帧后自动校准（只执行一次）
+            if (!isCalibrated) {
+              poseDetectionCountRef.current++
+              // 每5帧更新一次进度显示，避免过于频繁的状态更新
+              if (poseDetectionCountRef.current % 5 === 0) {
+                setCalibrationProgress(poseDetectionCountRef.current)
               }
               
-              // 更新校准状态
-              if (poseProcessorRef.current.isCalibrated() && !isCalibrated) {
-                setIsCalibrated(true)
-                setAutoCalibrated(true)
+              if (poseDetectionCountRef.current === 30) {
+                if (rendererRef.current) {
+                  rendererRef.current.setReferencePose(landmarks)
+                  setAutoCalibrated(true)
+                  setIsCalibrated(true)
+                  setCalibrationProgress(30)
+                  console.log('✓ Auto-calibrated after 30 frames')
+                }
               }
+            }
+            
+            // Update character with pose
+            if (rendererRef.current) {
+              rendererRef.current.updatePose(landmarks)
             } else {
-              // 使用原有的直接更新方式
-              // 自动校准：连续检测到姿态30帧后自动校准（只执行一次）
-              if (!isCalibrated) {
-                poseDetectionCountRef.current++
-                // 每5帧更新一次进度显示，避免过于频繁的状态更新
-                if (poseDetectionCountRef.current % 5 === 0) {
-                  setCalibrationProgress(poseDetectionCountRef.current)
-                }
-                
-                if (poseDetectionCountRef.current === 30) {
-                  if (rendererRef.current) {
-                    rendererRef.current.setReferencePose(rawLandmarks)
-                    setAutoCalibrated(true)
-                    setIsCalibrated(true)
-                    setCalibrationProgress(30)
-                    console.log('✓ Auto-calibrated after 30 frames')
-                  }
-                }
-              }
-              
-              // Update character with pose
-              if (rendererRef.current) {
-                rendererRef.current.updatePose(rawLandmarks)
-              }
+              console.warn('[CameraTest] No renderer available for updatePose')
             }
           } else {
             setPoseDetected(false)
             setCurrentPose(null)
-            setProcessedPose(null)
             currentPoseRef.current = null
             poseDetectionCountRef.current = 0 // 重置计数
             if (calibrationProgress > 0) {
@@ -482,76 +447,11 @@ export default function CameraTestPage() {
   // Clear calibration
   const handleClearCalibration = () => {
     rendererRef.current?.clearReferencePose()
-    poseProcessorRef.current?.clearCalibration()
     setIsCalibrated(false)
     setAutoCalibrated(false)
     setCalibrationProgress(0)
     poseDetectionCountRef.current = 0
   }
-  
-  // 管线配置变更处理
-  const handlePipelineConfigChange = useCallback((newConfig: Partial<ProcessorConfig>) => {
-    setPipelineConfig(prev => {
-      // 深度合并配置
-      const updated: ProcessorConfig = {
-        filter: { ...prev.filter, ...newConfig.filter },
-        turn: { ...prev.turn, ...newConfig.turn },
-        scale: { ...prev.scale, ...newConfig.scale },
-        leg: { ...prev.leg, ...newConfig.leg },
-        ik: { ...prev.ik, ...newConfig.ik },
-        secondary: { ...prev.secondary, ...newConfig.secondary },
-        calibration: { ...prev.calibration, ...newConfig.calibration },
-      }
-      // 同步更新 PoseProcessor
-      poseProcessorRef.current?.updateConfig(updated)
-      return updated
-    })
-  }, [])
-  
-  // 管线校准
-  const handlePipelineCalibrate = useCallback(() => {
-    if (currentPoseRef.current && poseProcessorRef.current) {
-      poseProcessorRef.current.calibrate(currentPoseRef.current)
-      setIsCalibrated(true)
-    }
-  }, [])
-  
-  // 导出配置
-  const handleExportConfig = useCallback(() => {
-    const configJson = JSON.stringify(pipelineConfig, null, 2)
-    const blob = new Blob([configJson], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'motion-capture-config.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [pipelineConfig])
-  
-  // 导入配置
-  const handleImportConfig = useCallback(() => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          try {
-            const config = JSON.parse(event.target?.result as string)
-            setPipelineConfig(config)
-            poseProcessorRef.current?.updateConfig(config)
-          } catch (err) {
-            console.error('Failed to parse config:', err)
-            alert('配置文件格式错误')
-          }
-        }
-        reader.readAsText(file)
-      }
-    }
-    input.click()
-  }, [])
 
   // Initial load
   useEffect(() => {
@@ -559,11 +459,6 @@ export default function CameraTestPage() {
       setLoading(true)
       await Promise.all([loadCameras(), loadCharacters()])
       await initMediaPipe()
-      
-      // 初始化 PoseProcessor
-      poseProcessorRef.current = new PoseProcessor(pipelineConfig)
-      console.log('PoseProcessor initialized')
-      
       setLoading(false)
     }
     init()
@@ -774,22 +669,6 @@ export default function CameraTestPage() {
                 />
                 <span>静态姿势</span>
               </label>
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={usePipeline}
-                  onChange={(e) => setUsePipeline(e.target.checked)}
-                />
-                <span>使用处理管线</span>
-              </label>
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showMotionDebugPanel}
-                  onChange={(e) => setShowMotionDebugPanel(e.target.checked)}
-                />
-                <span>动捕调试面板</span>
-              </label>
             </div>
           </div>
 
@@ -913,67 +792,29 @@ export default function CameraTestPage() {
             </div>
           </div>
         )}
+      </div>
 
-        {/* 底部调试区域 1：姿态数据 (对应视频下方) */}
-        {(showDebugPanel || showMotionDebugPanel) && (
-          <div className="debug-cell-left">
-            {showDebugPanel ? (
-              currentPose ? (
-                <div className="debug-panel">
-                  <h3>姿态数据 (关键点)</h3>
-                  <div className="debug-grid">
-                    {Object.entries(LANDMARK_NAMES).map(([idx, name]) => {
-                      const lm = currentPose[parseInt(idx)]
-                      if (!lm) return null
-                      return (
-                        <div key={idx} className="debug-item">
-                          <span className="debug-label">{name} ({idx})</span>
-                          <span className="debug-value">
-                            x: {lm.x.toFixed(3)}, y: {lm.y.toFixed(3)}
-                            {lm.visibility !== undefined && ` (${(lm.visibility * 100).toFixed(0)}%)`}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="debug-placeholder">
-                  等待姿态识别...
+      {/* Debug Panel */}
+      {showDebugPanel && currentPose && (
+        <div className="debug-panel">
+          <h3>姿态数据 (关键点)</h3>
+          <div className="debug-grid">
+            {Object.entries(LANDMARK_NAMES).map(([idx, name]) => {
+              const lm = currentPose[parseInt(idx)]
+              if (!lm) return null
+              return (
+                <div key={idx} className="debug-item">
+                  <span className="debug-label">{name} ({idx})</span>
+                  <span className="debug-value">
+                    x: {lm.x.toFixed(3)}, y: {lm.y.toFixed(3)}
+                    {lm.visibility !== undefined && ` (${(lm.visibility * 100).toFixed(0)}%)`}
+                  </span>
                 </div>
               )
-            ) : (
-              <div className="debug-placeholder hint">
-                勾选"调试面板"查看数据
-              </div>
-            )}
+            })}
           </div>
-        )}
-
-        {/* 底部调试区域 2：动捕调试 (对应人物下方) */}
-        {(showDebugPanel || showMotionDebugPanel) && showCharacterPreview && (
-          <div className="debug-cell-right">
-            {showMotionDebugPanel ? (
-              <div className="mocap-debug-wrapper">
-                <MotionCaptureDebugPanel
-                  config={pipelineConfig}
-                  onConfigChange={handlePipelineConfigChange}
-                  processedPose={processedPose}
-                  onCalibrate={handlePipelineCalibrate}
-                  onClearCalibration={handleClearCalibration}
-                  onExportConfig={handleExportConfig}
-                  onImportConfig={handleImportConfig}
-                />
-              </div>
-            ) : (
-              <div className="debug-placeholder hint">
-                勾选"动捕调试面板"调整参数
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      {/* 原 debug-section 已移除 */}
+        </div>
+      )}
     </div>
   )
 }

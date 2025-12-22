@@ -13,37 +13,6 @@ interface ApiError {
   status?: number
 }
 
-// Export/Import types
-export interface ExportCharacterItem {
-  id: string
-  name: string
-  thumbnail_path: string | null
-}
-
-export interface ExportStorylineItem {
-  id: string
-  name: string
-  name_en: string
-  icon: string
-  required_character_ids: string[]
-}
-
-export interface ExportableContent {
-  characters: ExportCharacterItem[]
-  storylines: ExportStorylineItem[]
-  settings_available: boolean
-}
-
-export interface ExportOptions {
-  character_ids: string[]
-  storyline_ids: string[]
-  include_settings: boolean
-}
-
-export interface DependencyCalculation {
-  required_character_ids: string[]
-}
-
 class AdminApiClient {
   private client: AxiosInstance
 
@@ -306,11 +275,6 @@ class AdminApiClient {
     return `${API_BASE_URL}/characters/${characterId}/spritesheet.json`
   }
 
-  async getCharacterSpritesheet(characterId: string) {
-    const response = await this.client.get(`/characters/${characterId}/spritesheet.json`)
-    return response.data
-  }
-
   getCharacterConfigUrl(characterId: string): string {
     return `${API_BASE_URL}/characters/${characterId}/config.json`
   }
@@ -429,28 +393,10 @@ class AdminApiClient {
       large_path: string;
     };
   }> {
-    console.log('[API] captureCoverFromVideo request:', {
-      storylineId,
-      timestamp,
-      url: `/storylines/${storylineId}/cover/capture`
+    const response = await this.client.post(`/storylines/${storylineId}/cover/capture`, null, {
+      params: { timestamp }
     })
-    
-    try {
-      const response = await this.client.post(`/storylines/${storylineId}/cover/capture`, null, {
-        params: { timestamp }
-      })
-      
-      console.log('[API] captureCoverFromVideo success:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('[API] captureCoverFromVideo error:', {
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status,
-        config: error?.config
-      })
-      throw error
-    }
+    return response.data
   }
 
   async deleteCoverImage(storylineId: string): Promise<{ message: string }> {
@@ -690,30 +636,26 @@ class AdminApiClient {
   }
 
   // Export/Import
-  
-  async getExportableContent(): Promise<ExportableContent> {
+  async getExportableContent(): Promise<{
+    characters: Array<{ id: string; name: string; thumbnail_path: string | null }>
+    storylines: Array<{ id: string; name: string; name_en: string; icon: string; required_character_ids: string[] }>
+    settings_available: boolean
+  }> {
     const response = await this.client.get('/export/content')
     return response.data
   }
-  
-  async calculateExportDependencies(
-    selectedCharacterIds: string[],
-    selectedStorylineIds: string[]
-  ): Promise<DependencyCalculation> {
-    const response = await this.client.post('/export/dependencies', {
-      selected_character_ids: selectedCharacterIds,
-      selected_storyline_ids: selectedStorylineIds
-    })
-    return response.data
-  }
-  
-  async exportConfiguration(options?: ExportOptions): Promise<{
+
+  async exportConfiguration(options?: {
+    character_ids?: string[]
+    storyline_ids?: string[]
+    include_settings?: boolean
+  }): Promise<{
     success: boolean
     filename: string
     download_url: string
     message: string
   }> {
-    const response = await this.client.post('/export', options || null)
+    const response = await this.client.post('/export', options || {})
     return response.data
   }
 

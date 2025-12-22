@@ -24,11 +24,11 @@
     /* Testing */
     "types": ["jest", "@testing-library/jest-dom"],
     "paths": {
-      "pixi.js": ["./node_modules/pixi.js"],
       "@pose": ["../shared/pose/index.ts"],
       "@pose/*": ["../shared/pose/*"],
-      "@renderer": ["../shared/pixi/index.ts"],
-      "@renderer/*": ["../shared/pixi/*"]
+      "@shared/pixi": ["../shared/pixi/index.ts"],
+      "@shared/pixi/*": ["../shared/pixi/*"],
+      "pixi.js": ["node_modules/pixi.js"]
     }
   },
   "include": ["src", "../shared"],

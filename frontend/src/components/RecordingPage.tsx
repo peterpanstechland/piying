@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MotionCaptureRecorder } from '../services/motion-capture';
 import { CanvasRecorder } from '../services/canvas-recorder';
-import { CharacterRenderer, PoseLandmarks } from '@renderer';
+import { CharacterRenderer, type PoseLandmarks, type PoseLandmark } from '@shared/pixi';
 import { PoseProcessor, DEFAULT_CONFIG, type ProcessedPose } from '@pose';
 import { APP_CONFIG } from '../config/constants';
 import './RecordingPage.css';
@@ -215,17 +215,9 @@ export const RecordingPage = ({
         console.log('Renderers initialized: Display(Transparent), Recording(GreenScreen)');
         
         // 初始化 PoseProcessor
-        // 在录制页面禁用自动校准，防止用户表演过程中意外触发重置
-        const recordingConfig = {
-          ...DEFAULT_CONFIG,
-          calibration: {
-            ...DEFAULT_CONFIG.calibration,
-            autoCalibrationFrames: 999999, // 实际上禁用自动校准
-          }
-        };
-        const processor = new PoseProcessor(recordingConfig);
+        const processor = new PoseProcessor(DEFAULT_CONFIG);
         poseProcessorRef.current = processor;
-        console.log('PoseProcessor initialized (Auto-calibration disabled)');
+        console.log('PoseProcessor initialized');
 
         // Mark renderer as ready to trigger initial positioning
         setIsRendererReady(true);
@@ -430,7 +422,7 @@ export const RecordingPage = ({
     
     // 处理管线输入（根据镜像模式翻转 X 坐标）
     const processLandmarks: PoseLandmarks = mirrorMode
-      ? landmarks.map((lm) => ({ ...lm, x: 1 - lm.x }))
+      ? landmarks.map((lm: PoseLandmark) => ({ ...lm, x: 1 - lm.x }))
       : landmarks;
     
     // 使用 PoseProcessor 处理姿态数据
@@ -446,7 +438,7 @@ export const RecordingPage = ({
     // 录制姿态数据
     if (isRecording) {
       // 转换类型：确保 visibility 是必需的
-      const recordLandmarks = landmarks.map(lm => ({
+      const recordLandmarks = landmarks.map((lm: PoseLandmark) => ({
         x: lm.x,
         y: lm.y,
         z: lm.z,

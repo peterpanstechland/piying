@@ -13,6 +13,7 @@
  */
 
 import {
+  LegIntent,
   type ProcessorConfig,
   type ProcessedPose,
   type PartAngles,
@@ -219,9 +220,6 @@ export class PoseProcessor {
     // 8. 物理惯性
     partAngles = this.secondaryMotion.process(partAngles)
 
-    // 9. 计算根节点位移（跳跃）
-    const rootOffset = this.computeRootOffset(filteredLandmarks, calibrationData)
-
     const processingTime = performance.now() - startTime
     this.lastProcessTime = processingTime
 
@@ -237,46 +235,7 @@ export class PoseProcessor {
       isCalibrated: calibrationData !== null,
       frameCount: this.frameCount,
       processingTime,
-      rootOffset,
     }
-  }
-
-  /**
-   * 计算根节点（身体）的垂直位移（跳跃/蹲下）
-   */
-  private computeRootOffset(
-    landmarks: PoseLandmarks | null,
-    calibration: CalibrationData | null
-  ): { x: number, y: number } {
-    if (!landmarks || !calibration || !calibration.referencePose) {
-      return { x: 0, y: 0 }
-    }
-
-    const currentLeftHip = landmarks[LANDMARK_INDEX.LEFT_HIP]
-    const currentRightHip = landmarks[LANDMARK_INDEX.RIGHT_HIP]
-    
-    const refLeftHip = calibration.referencePose[LANDMARK_INDEX.LEFT_HIP]
-    const refRightHip = calibration.referencePose[LANDMARK_INDEX.RIGHT_HIP]
-
-    if (!currentLeftHip || !currentRightHip || !refLeftHip || !refRightHip) {
-      return { x: 0, y: 0 }
-    }
-
-    const currentHipY = (currentLeftHip.y + currentRightHip.y) / 2
-    const refHipY = (refLeftHip.y + refRightHip.y) / 2
-
-    // MediaPipe Y轴向下为正。Current < Ref 意味着跳起。
-    // 计算相对位移
-    let diffY = currentHipY - refHipY
-
-    // 阈值过滤，避免抖动
-    const JUMP_THRESHOLD = 0.02 // ~2% screen height
-    
-    if (Math.abs(diffY) < JUMP_THRESHOLD) {
-      diffY = 0
-    }
-
-    return { x: 0, y: diffY }
   }
 
   /**
@@ -289,7 +248,7 @@ export class PoseProcessor {
     landmarks: PoseLandmarks | null,
     calibration: CalibrationData | null,
     _facing: Facing,
-    _legState: LegState,
+    legState: LegState,
     _ikState: IKState
   ): PartAngles {
     const angles: PartAngles = {}
@@ -300,17 +259,11 @@ export class PoseProcessor {
 
     // --- 上身角度 ---
 
-    // 头部角度
-    const headAngle = this.computeHeadAngle(landmarks, calibration)
-    if (headAngle !== null) {
-      angles['head'] = headAngle
-    }
+    // 头部角度（暂不处理，头部通常不旋转）
+    // const headAngle = this.computeAngle(...)
 
-    // 身体角度（躯干倾斜）
-    const bodyAngle = this.computeBodyAngle(landmarks, calibration)
-    if (bodyAngle !== null) {
-      angles['body'] = bodyAngle
-    }
+    // 身体角度（躯干倾斜）- 暂不处理，皮影的身体通常不旋转
+    // const bodyAngle = this.computeBodyAngle(landmarks)
 
     // 左臂（保持原值，抬手为负）
     // 物理含义：从垂直向下（90度）逆时针旋转到向前/上
@@ -346,8 +299,9 @@ export class PoseProcessor {
     }
 
     // 右臂（标准化处理）
-    // 移除之前的负号，保持与左臂一致的计算逻辑
-    // CharacterRenderer 会根据 facing 自动处理镜像
+    // 原始计算中，右臂抬起是顺时针旋转（正值）。
+    // 为了简化后续处理（如 SecondaryMotion），我们将所有肢体的“向前/向上”运动统一为负值（逆时针）。
+    // CharacterRenderer 会根据角色朝向自动处理这种标准化带来的符号差异。
     const rightArmAngle = this.computeJointAngle(
       landmarks,
       LANDMARK_INDEX.RIGHT_SHOULDER,
@@ -355,7 +309,7 @@ export class PoseProcessor {
       calibration?.referencePose
     )
     if (rightArmAngle !== null) {
-      angles['right-arm'] = rightArmAngle
+      angles['right-arm'] = -rightArmAngle
     }
 
     // 右手（标准化处理）
@@ -366,17 +320,15 @@ export class PoseProcessor {
       calibration?.referencePose
     )
     if (rightHandAngle !== null) {
-      // 同样移除负号
-      const normalizedRightHand = rightHandAngle
+      // 同样统一为负值（抬手）
+      const normalizedRightHand = -rightHandAngle
       
       // 应用约束
       if (angles['right-arm'] !== undefined) {
-        // 放宽右手限制，允许反向弯曲（负值差异）
-        // 因为右手的几何计算会导致在某些动作下出现负向的角度差
         const constrained = this.constrainJointAngle(
           angles['right-arm'],
           normalizedRightHand,
-          -2.8, // 允许反向弯曲
+          -0.2,
           2.8
         )
         angles['right-hand'] = constrained
@@ -387,73 +339,20 @@ export class PoseProcessor {
 
     // --- 下身角度 ---
 
-    // 强制使用 FK 计算腿部角度，以支持动捕
-    // 之前是：if (this.legProcessor.shouldUseFK() && legState.overallIntent !== LegIntent.JUMPING)
-    // 改为：始终计算，除非没有数据
-    this.computeLegAnglesFK(landmarks, calibration, angles)
+    // 根据腿部状态选择 FK 或 IK 角度
+    if (this.legProcessor.shouldUseFK() && legState.overallIntent !== LegIntent.JUMPING) {
+      // 使用 FK（直接从关键点计算）
+      this.computeLegAnglesFK(landmarks, calibration, angles)
+    } else {
+      // 使用 IK 结果（IK 内部已经处理了朝向）
+      const ikAngles = this.ikSolver.toPartAngles(_facing)
+      angles['left-thigh'] = ikAngles.leftThigh
+      angles['left-foot'] = ikAngles.leftShin
+      angles['right-thigh'] = ikAngles.rightThigh
+      angles['right-foot'] = ikAngles.rightShin
+    }
 
     return angles
-  }
-
-  /**
-   * 计算头部角度
-   * 基于鼻子相对于肩膀中点的偏转
-   */
-  private computeHeadAngle(
-    landmarks: PoseLandmarks,
-    _calibration: CalibrationData | null
-  ): number | null {
-    const nose = landmarks[LANDMARK_INDEX.NOSE]
-    const leftShoulder = landmarks[LANDMARK_INDEX.LEFT_SHOULDER]
-    const rightShoulder = landmarks[LANDMARK_INDEX.RIGHT_SHOULDER]
-
-    if (!nose || !leftShoulder || !rightShoulder) return null
-    if ((nose.visibility ?? 0) < 0.5) return null
-
-    // 计算脖子位置（肩膀中点）
-    const neckX = (leftShoulder.x + rightShoulder.x) / 2
-    const neckY = (leftShoulder.y + rightShoulder.y) / 2
-
-    // 计算从脖子到鼻子的向量角度
-    const dx = nose.x - neckX
-    const dy = nose.y - neckY
-    const currentAngle = Math.atan2(dy, dx)
-
-    // 垂直向上是 -PI/2
-    // 计算相对于垂直向上的偏移
-    // 向右倾斜（顺时针）为正
-    return currentAngle + Math.PI / 2
-  }
-
-  /**
-   * 计算身体角度
-   * 基于肩膀中点相对于髋部中点的偏转
-   */
-  private computeBodyAngle(
-    landmarks: PoseLandmarks,
-    _calibration: CalibrationData | null
-  ): number | null {
-    const leftShoulder = landmarks[LANDMARK_INDEX.LEFT_SHOULDER]
-    const rightShoulder = landmarks[LANDMARK_INDEX.RIGHT_SHOULDER]
-    const leftHip = landmarks[LANDMARK_INDEX.LEFT_HIP]
-    const rightHip = landmarks[LANDMARK_INDEX.RIGHT_HIP]
-
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return null
-
-    // 计算中点
-    const shoulderX = (leftShoulder.x + rightShoulder.x) / 2
-    const shoulderY = (leftShoulder.y + rightShoulder.y) / 2
-    const hipX = (leftHip.x + rightHip.x) / 2
-    const hipY = (leftHip.y + rightHip.y) / 2
-
-    // 计算从髋部到肩膀的向量角度（身体中轴线）
-    const dx = shoulderX - hipX
-    const dy = shoulderY - hipY
-    const currentAngle = Math.atan2(dy, dx)
-
-    // 垂直向上是 -PI/2
-    // 计算相对于垂直向上的偏移
-    return currentAngle + Math.PI / 2
   }
 
   /**
@@ -484,7 +383,6 @@ export class PoseProcessor {
     const dy = end.y - start.y
     const currentAngle = Math.atan2(dy, dx)
 
-    // 直接返回相对角度，由 CharacterRenderer 根据角色朝向处理
     let relativeAngle: number
 
     // 如果有参考姿态（校准后），计算相对角度
@@ -504,10 +402,7 @@ export class PoseProcessor {
       relativeAngle = currentAngle - Math.PI / 2
     }
 
-    // Normalize to [-PI, PI]
-    while (relativeAngle <= -Math.PI) relativeAngle += 2 * Math.PI
-    while (relativeAngle > Math.PI) relativeAngle -= 2 * Math.PI
-
+    // 直接返回相对角度，由 CharacterRenderer 根据角色朝向处理
     return relativeAngle
   }
 

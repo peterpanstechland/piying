@@ -9,7 +9,7 @@
  * 4. 保存配置到后端
  */
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { CharacterRenderer } from '@renderer'
+import { CharacterRenderer } from '@shared/pixi'
 import { adminApi } from '../services/api'
 import './RestPoseEditor.css'
 
@@ -347,14 +347,14 @@ export default function RestPoseEditor({ characterId, onSave, onCancel }: Props)
               onClick={() => {
                 const renderer = rendererRef.current
                 if (renderer) {
-                  // @ts-expect-error - accessing private property for debugging
+                  // @ts-ignore - accessing private property for debugging
                   const config = renderer.config
                   console.log('=== DEBUG: Character Config ===')
                   console.log('Skeleton:', config?.skeleton)
                   console.log('Joints:', config?.skeleton?.joints)
                   console.log('Bones:', config?.skeleton?.bones)
                   // 手动触发一次带日志的 updateChildPositions
-                  // @ts-expect-error - accessing private method for debugging
+                  // @ts-ignore - accessing private method for debugging
                   renderer.updateChildPositions(true)
                 }
               }}
