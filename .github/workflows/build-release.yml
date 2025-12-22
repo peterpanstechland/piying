@@ -74,6 +74,14 @@ jobs:
             --hidden-import=uvicorn.protocols.websockets.auto \
             --hidden-import=uvicorn.lifespan \
             --hidden-import=uvicorn.lifespan.on \
+            --hidden-import=sqlalchemy.ext.asyncio \
+            --hidden-import=sqlalchemy.dialects.sqlite \
+            --hidden-import=aiosqlite \
+            --hidden-import=passlib.handlers.bcrypt \
+            --hidden-import=multipart \
+            --hidden-import=boto3 \
+            --hidden-import=botocore \
+            --collect-all jaraco \
             --collect-all mediapipe \
             run.py
 
