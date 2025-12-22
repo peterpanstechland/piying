@@ -94,6 +94,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Update package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Updating version to $VERSION"
+          cd frontend
+          npm version $VERSION --no-git-tag-version
+          cd ../admin-frontend
+          npm version $VERSION --no-git-tag-version
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -134,6 +144,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Update package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Updating version to $VERSION"
+          cd electron-app
+          npm version $VERSION --no-git-tag-version
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -205,6 +224,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Update package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Updating version to $VERSION"
+          cd electron-app
+          npm version $VERSION --no-git-tag-version
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -302,6 +329,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Update package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Updating version to $VERSION"
+          cd electron-app
+          npm version $VERSION --no-git-tag-version
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -397,6 +432,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Update package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Updating version to $VERSION"
+          cd electron-app
+          npm version $VERSION --no-git-tag-version
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
