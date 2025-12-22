@@ -767,3 +767,21 @@ ipcMain.handle('open-logs-folder', async () => {
 ipcMain.handle('get-app-version', async () => {
   return app.getVersion();
 });
+
+ipcMain.handle('check-for-updates', async () => {
+  log.info('Manual update check triggered from UI');
+  if (isDev) {
+    return { status: 'dev', message: 'Development mode' };
+  }
+  
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return {
+      status: 'checked',
+      updateInfo: result ? result.updateInfo : null
+    };
+  } catch (error) {
+    log.error('Manual update check failed: ' + error);
+    throw new Error(error.message);
+  }
+});
