@@ -7,6 +7,15 @@
 
 ---
 
+## [1.2.7] - 2025-12-23
+
+### 修复
+- 跳过 macOS DMG 构建，只生成 ZIP 文件
+- 解决 GitHub Actions macOS runner 上 `hdiutil resize` 失败的问题
+- 这是 electron-builder 在 GitHub Actions 环境下的已知问题
+
+---
+
 ## [1.2.6] - 2025-12-23
 
 ### 修复
