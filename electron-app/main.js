@@ -786,24 +786,68 @@ ipcMain.handle('check-for-updates', async () => {
   }
 });
 
-// 获取网络状态
+// 获取网络状态（包含 OTA 设置）
 ipcMain.handle('get-network-status', async () => {
+  // 先从后端获取 OTA 设置
+  let otaEnabled = true;
+  let sourceType = 'github';
+  
+  try {
+    const http = require('http');
+    const otaSettings = await new Promise((resolve) => {
+      const req = http.get('http://localhost:8000/api/settings/ota', { timeout: 3000 }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
+    });
+    
+    if (otaSettings) {
+      otaEnabled = otaSettings.enabled !== false;
+      sourceType = otaSettings.source_type || 'github';
+    }
+  } catch (e) {
+    log.warn('Failed to get OTA settings for network status:', e.message);
+  }
+  
+  // 如果 OTA 禁用，直接返回
+  if (!otaEnabled) {
+    return { available: false, otaEnabled: false, sourceType };
+  }
+  
+  // 检查网络连接
   try {
     const https = require('https');
     return new Promise((resolve) => {
       const req = https.get('https://api.github.com', { timeout: 5000 }, (res) => {
-        resolve({ online: true, statusCode: res.statusCode });
+        resolve({ 
+          available: res.statusCode === 200, 
+          otaEnabled: true, 
+          sourceType,
+          statusCode: res.statusCode 
+        });
       });
       req.on('error', () => {
-        resolve({ online: false, error: 'Network error' });
+        resolve({ available: false, otaEnabled: true, sourceType, error: 'Network error' });
       });
       req.on('timeout', () => {
         req.destroy();
-        resolve({ online: false, error: 'Timeout' });
+        resolve({ available: false, otaEnabled: true, sourceType, error: 'Timeout' });
       });
     });
   } catch (error) {
-    return { online: false, error: error.message };
+    return { available: false, otaEnabled: true, sourceType, error: error.message };
   }
 });
 
