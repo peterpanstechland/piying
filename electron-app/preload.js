@@ -52,6 +52,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 刷新 OTA 设置
   refreshOTASettings: () => ipcRenderer.invoke('refresh-ota-settings'),
   
+  // 手动触发备份（用于测试）
+  manualBackup: () => ipcRenderer.invoke('manual-backup'),
+  
   // ============== 监听事件 ==============
   
   // 基础事件
