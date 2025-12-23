@@ -62,8 +62,8 @@ jobs:
           cd backend
           pyinstaller --clean --noconfirm \
             --name backend \
-            --onefile \
-            --add-data "app:app" \
+            --onedir \
+            --noconsole \
             --hidden-import=uvicorn.logging \
             --hidden-import=uvicorn.loops \
             --hidden-import=uvicorn.loops.auto \
@@ -81,6 +81,12 @@ jobs:
             --hidden-import=multipart \
             --hidden-import=boto3 \
             --hidden-import=botocore \
+            --hidden-import=jaraco \
+            --hidden-import=jaraco.text \
+            --hidden-import=jaraco.functools \
+            --hidden-import=jaraco.classes \
+            --hidden-import=jaraco.collections \
+            --hidden-import=jaraco.context \
             --collect-all jaraco \
             --collect-all mediapipe \
             run.py
