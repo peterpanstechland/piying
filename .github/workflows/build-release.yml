@@ -55,6 +55,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install pyinstaller
+          pip install jaraco.text jaraco.functools jaraco.context
 
       - name: Build backend executable
         shell: bash
@@ -85,19 +86,14 @@ jobs:
             --hidden-import=jaraco \
             --hidden-import=jaraco.text \
             --hidden-import=jaraco.functools \
-            --hidden-import=jaraco.classes \
-            --hidden-import=jaraco.collections \
             --hidden-import=jaraco.context \
+            --hidden-import=pkg_resources.py2_warn \
+            --hidden-import=pkg_resources.markers \
             --collect-submodules jaraco \
-            --collect-data jaraco \
-            --copy-metadata jaraco.text \
-            --copy-metadata jaraco.functools \
-            --copy-metadata jaraco.classes \
-            --copy-metadata jaraco.collections \
-            --copy-metadata jaraco.context \
-            --collect-all jaraco \
+            --collect-all jaraco.text \
+            --collect-all jaraco.functools \
+            --collect-all jaraco.context \
             --collect-all mediapipe \
-            --collect-all pkg_resources \
             run.py
 
       - name: Upload backend artifact
