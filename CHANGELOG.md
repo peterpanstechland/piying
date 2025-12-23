@@ -7,6 +7,14 @@
 
 ---
 
+## [1.2.3] - 2025-12-23
+
+### 修复
+- **重要**: 添加 `--add-data "app:app"` 到 PyInstaller 命令，修复后端启动时 `ModuleNotFoundError: No module named 'backend'` 错误
+- 确保 Python 后端的 `app` 模块被正确打包
+
+---
+
 ## [1.2.2] - 2025-12-23
 
 ### 修复
