@@ -64,6 +64,7 @@ jobs:
             --name backend \
             --onedir \
             --noconsole \
+            --add-data "app:app" \
             --hidden-import=uvicorn.logging \
             --hidden-import=uvicorn.loops \
             --hidden-import=uvicorn.loops.auto \
