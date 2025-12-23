@@ -23,6 +23,8 @@ import {
   Graphics,
   Text,
   TextStyle,
+  RenderTexture,
+  ColorMatrixFilter,
 } from 'pixi.js'
 import type {
   CharacterConfig,
@@ -140,59 +142,58 @@ const DEFAULT_REST_POSE_OFFSETS: Record<string, number> = {
 // 
 // 重要：childConnection 应该与该部件的旋转轴点（pivot）一致
 // 这样旋转时连接点才能保持正确位置
-// @ts-ignore: Kept as reference documentation for connection points
-const _DEFAULT_CONNECTION_POINTS: Record<string, {
-  parentConnection: { x: number; y: number };
-  childConnection: { x: number; y: number };
-}> = {
-  // 手连接到手臂末端
-  // 注意：手的连接点需要与 DEFAULT_JOINT_PIVOTS 中的 pivot 一致
-  'left-hand': {
-    parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
-    childConnection: { x: 0.9, y: 0.5 },    // 左手的 pivot 在右侧（手腕位置）
-  },
-  'right-hand': {
-    parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
-    childConnection: { x: 0.9, y: 0.5 },    // 右手的 pivot 在右侧
-  },
-  // 头连接到身体顶部
-  'head': {
-    parentConnection: { x: 0.5, y: 0.1 },   // 身体顶部（脖子位置）
-    childConnection: { x: 0.5, y: 0.9 },    // 头底部（脖子位置）- 与 pivot 一致
-  },
-  // 手臂连接到身体肩部
-  'left-arm': {
-    parentConnection: { x: 0.3, y: 0.15 },  // 身体左肩位置
-    childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）- 与 pivot 一致
-  },
-  'right-arm': {
-    parentConnection: { x: 0.7, y: 0.15 },  // 身体右肩位置
-    childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）- 与 pivot 一致
-  },
-  // 裙子/下身连接到身体底部
-  'skirt': {
-    parentConnection: { x: 0.5, y: 0.9 },   // 身体底部（腰部）
-    childConnection: { x: 0.5, y: 0.1 },    // 裙子顶部 - 与 pivot 一致
-  },
-  // 大腿连接到身体/裙子底部
-  'left-thigh': {
-    parentConnection: { x: 0.4, y: 0.9 },   // 身体左髋位置
-    childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部 - 与 pivot 一致
-  },
-  'right-thigh': {
-    parentConnection: { x: 0.6, y: 0.9 },   // 身体右髋位置
-    childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部 - 与 pivot 一致
-  },
-  // 脚连接到大腿/裙子底部
-  'left-foot': {
-    parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
-    childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）- 与 pivot 一致
-  },
-  'right-foot': {
-    parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
-    childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）- 与 pivot 一致
-  },
-}
+// const DEFAULT_CONNECTION_POINTS: Record<string, {
+//   parentConnection: { x: number; y: number };
+//   childConnection: { x: number; y: number };
+// }> = {
+//   // 手连接到手臂末端
+//   // 注意：手的连接点需要与 DEFAULT_JOINT_PIVOTS 中的 pivot 一致
+//   'left-hand': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
+//     childConnection: { x: 0.9, y: 0.5 },    // 左手的 pivot 在右侧（手腕位置）
+//   },
+//   'right-hand': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 手臂底部（手腕位置）
+//     childConnection: { x: 0.9, y: 0.5 },    // 右手的 pivot 在右侧
+//   },
+//   // 头连接到身体顶部
+//   'head': {
+//     parentConnection: { x: 0.5, y: 0.1 },   // 身体顶部（脖子位置）
+//     childConnection: { x: 0.5, y: 0.9 },    // 头底部（脖子位置）- 与 pivot 一致
+//   },
+//   // 手臂连接到身体肩部
+//   'left-arm': {
+//     parentConnection: { x: 0.3, y: 0.15 },  // 身体左肩位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）- 与 pivot 一致
+//   },
+//   'right-arm': {
+//     parentConnection: { x: 0.7, y: 0.15 },  // 身体右肩位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 手臂顶部（肩膀位置）- 与 pivot 一致
+//   },
+//   // 裙子/下身连接到身体底部
+//   'skirt': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 身体底部（腰部）
+//     childConnection: { x: 0.5, y: 0.1 },    // 裙子顶部 - 与 pivot 一致
+//   },
+//   // 大腿连接到身体/裙子底部
+//   'left-thigh': {
+//     parentConnection: { x: 0.4, y: 0.9 },   // 身体左髋位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部 - 与 pivot 一致
+//   },
+//   'right-thigh': {
+//     parentConnection: { x: 0.6, y: 0.9 },   // 身体右髋位置
+//     childConnection: { x: 0.5, y: 0.1 },    // 大腿顶部 - 与 pivot 一致
+//   },
+//   // 脚连接到大腿/裙子底部
+//   'left-foot': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
+//     childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）- 与 pivot 一致
+//   },
+//   'right-foot': {
+//     parentConnection: { x: 0.5, y: 0.9 },   // 大腿底部（膝盖位置）
+//     childConnection: { x: 0.5, y: 0.1 },    // 脚顶部（脚踝位置）- 与 pivot 一致
+//   },
+// }
 
 /**
  * 皮影部件默认 Z-Index 层级系统
@@ -237,14 +238,15 @@ const Z_INDEX_LAYERS = {
  * - 背后的手臂/手在头部后面（z-index < HEAD）
  * - 腿/脚在身体后面
  */
-function calculatePartZIndex(partName: string, defaultFacing: CharacterFacing, isFlipped: boolean = false): number {
-  // Determine actual facing direction
-  const facingRight = (defaultFacing === 'right' && !isFlipped) || (defaultFacing === 'left' && isFlipped)
-
-  // 判断是否为"背后"部件
+function calculatePartZIndex(partName: string, defaultFacing: CharacterFacing, _isFlipped: boolean = false): number {
+  // 重要：Z-index 只基于默认朝向，不因转身而改变！
+  // 原因：转身是通过 scale.x = -1 实现的，所有精灵一起翻转
+  // 所以视觉上的前后关系已经自动正确了，不需要调整 z-index
+  
+  // 判断是否为"背后"部件（基于默认朝向）
   // 面朝右：左侧是背后；面朝左：右侧是背后
-  const isBackSide = (facingRight && partName.startsWith('left-')) ||
-                     (!facingRight && partName.startsWith('right-'))
+  const isBackSide = (defaultFacing === 'right' && partName.startsWith('left-')) ||
+                     (defaultFacing === 'left' && partName.startsWith('right-'))
   
   // 根据部件类型和前后位置返回 z-index
   if (partName === 'head') {
@@ -306,6 +308,13 @@ export class CharacterRenderer {
   // Maps PoseProcessor part names (user perspective) to Character part names
   private boneMap: Record<string, string> = {}
 
+  // Side-by-side Rendering Properties
+  private renderMode: 'chromakey' | 'side_by_side' = 'chromakey'
+  private renderTexture: RenderTexture | null = null
+  private previewSprite: Sprite | null = null
+  private maskSprite: Sprite | null = null
+  private colorMatrix: ColorMatrixFilter | null = null
+
   private canvas: HTMLCanvasElement | null = null
   private width: number = 800
   private height: number = 600
@@ -359,6 +368,8 @@ export class CharacterRenderer {
     } else if (arg1) {
       // New: init(options)
       options = { ...arg1, ...arg4 }
+      if (options.width) this.width = options.width
+      if (options.height) this.height = options.height
     }
 
     if (!this.canvas) throw new Error('Canvas not provided')
@@ -371,13 +382,38 @@ export class CharacterRenderer {
 
     const app = new Application()
     
+    // Determine Render Mode
+    const compositionMode = options.compositionMode || 'chromakey'
+    this.renderMode = compositionMode as 'chromakey' | 'side_by_side'
+    
+    // 绿幕设置
     const useGreenScreen = options.useGreenScreen === true
-    const bgColor = useGreenScreen ? 0x00ff00 : undefined
-    const bgAlpha = useGreenScreen ? 1 : 0
+    
+    let bgColor: number | string | undefined = undefined
+    let bgAlpha = 0
+    let canvasWidth = this.width // Use logical width as base
+    
+    if (this.renderMode === 'chromakey') {
+      if (useGreenScreen) {
+        bgColor = 0x00ff00
+        bgAlpha = 1
+      } else {
+        bgAlpha = 0
+      }
+    } else {
+      // side_by_side mode
+      // Double the width: Left = Color, Right = Mask
+      canvasWidth = this.width * 2
+      console.log(`[CharacterRenderer] Side-by-side mode enabled, canvas width: ${canvasWidth}, logical width: ${this.width}`)
+      
+      // Background must be pure black for the mask to work correctly
+      bgColor = 0x000000
+      bgAlpha = 1
+    }
     
     await app.init({
       canvas: this.canvas,
-      width: this.width,
+      width: canvasWidth,
       height: this.height,
       backgroundColor: bgColor,
       backgroundAlpha: bgAlpha,
@@ -394,10 +430,47 @@ export class CharacterRenderer {
 
     this.app = app
     this.container = new Container()
+    
+    // 默认居中于逻辑画面
     this.container.x = this.width / 2
     this.container.y = this.height / 2
     this.container.sortableChildren = true
-    this.app.stage.addChild(this.container)
+    
+    if (this.renderMode === 'chromakey') {
+      this.app.stage.addChild(this.container)
+    } else {
+      // Side-by-Side Setup
+      console.log('[CharacterRenderer] Setting up Side-by-Side rendering...')
+      
+      // 1. Create RenderTexture (single frame size - logical width)
+      this.renderTexture = RenderTexture.create({ width: this.width, height: this.height }) as RenderTexture
+      
+      // 2. Create Sprites
+      // Left: Color Preview
+      this.previewSprite = new Sprite(this.renderTexture)
+      this.app.stage.addChild(this.previewSprite)
+      
+      // Right: Alpha Mask
+      this.maskSprite = new Sprite(this.renderTexture)
+      this.maskSprite.x = this.width // Offset to right half
+      
+      // 3. Apply Filter for Mask
+      // Convert Alpha to Grayscale (R=A, G=A, B=A)
+      this.colorMatrix = new ColorMatrixFilter()
+      // Matrix to map Alpha to RGB:
+      // R = 0*R + 0*G + 0*B + 1*A + 0
+      this.colorMatrix.matrix = [
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 1, 0
+      ]
+      this.maskSprite.filters = [this.colorMatrix]
+      this.app.stage.addChild(this.maskSprite)
+      
+      // 4. Hook into Ticker to render container to texture
+      this.app.ticker.add(this.renderToTexture, this)
+    }
 
     this.initialized = true
     
@@ -414,6 +487,21 @@ export class CharacterRenderer {
     }
     
     console.log('CharacterRenderer.init completed successfully')
+  }
+
+  /**
+   * Render the character container to the render texture
+   * Used in side-by-side mode
+   */
+  private renderToTexture(): void {
+    if (!this.app || !this.container || !this.renderTexture) return
+    
+    // Manually render the container to the texture
+    this.app.renderer.render({
+      container: this.container,
+      target: this.renderTexture,
+      clear: true
+    })
   }
 
   private async loadBaseTexture(): Promise<void> {
@@ -566,7 +654,7 @@ export class CharacterRenderer {
     }
 
     // Add to main container
-    for (const [, { container }] of tempSprites) {
+    for (const [_, { container }] of tempSprites) {
       this.container.addChild(container)
     }
     
@@ -765,11 +853,12 @@ export class CharacterRenderer {
   setPosition(x: number, y: number): void {
     if (!this.container || !this.app) return
     
-    const screenWidth = this.app.screen.width
-    const screenHeight = this.app.screen.height
-    
-    this.container.x = x * screenWidth
-    this.container.y = y * screenHeight
+    // 使用 logicalWidth 计算 X 坐标
+    // 在 side_by_side 模式下，container 是绘制在 renderTexture 上的
+    // renderTexture 的宽度是 logicalWidth
+    // 所以这里的 x 映射到 [0, logicalWidth]
+    this.container.x = x * this.width
+    this.container.y = y * this.height
     
     // Mark that we're using external position control
     this.useExternalPosition = true
@@ -842,26 +931,19 @@ export class CharacterRenderer {
     'head': [-Math.PI / 4, Math.PI / 4],  // ±45 degrees
     'body': [-Math.PI / 6, Math.PI / 6],  // ±30 degrees
     
-    // 手臂旋转限制（相对于自然垂下的休息姿势）：
-    // 向前/向上：允许大幅度抬起，最多 -150° (约 -2.6 弧度)
-    // 向后：限制在 35° 以内，防止不自然的后翻 (约 0.6 弧度)
-    'left-arm': [-2.6, 0.6],   // -150° to +35°
-    'right-arm': [-2.6, 0.6],  // 两只手臂使用相同限制
-    
-    // 手部旋转限制（相对于手臂，即手腕弯曲程度）：
-    // 向前弯曲（手心朝小臂）：允许 45° (约 0.79 弧度)
-    // 向后弯曲（手背朝小臂）：限制在 30°，防止"骨折式"弯曲 (约 0.52 弧度)
-    'left-hand': [-0.79, 0.52],   // -45° to +30°
-    'right-hand': [-0.79, 0.52],  // 两只手使用相同限制
+    // 手臂和手部：暂时移除限制以便调试
+    // 完全自由旋转 (-360° to +360°)
+    'left-arm': [-Math.PI * 2, Math.PI * 2],
+    'right-arm': [-Math.PI * 2, Math.PI * 2],
+    'left-hand': [-Math.PI * 2, Math.PI * 2],
+    'right-hand': [-Math.PI * 2, Math.PI * 2],
     
     // 裙子不旋转
     'skirt': null,
     
-    // 左右大腿有旋转限制 (正值=向前/高抬腿，负值=向后/后踢)
-    // 限制向后翻转 (-0.3 rad ≈ -17度)
-    // 允许大幅度向前高抬腿 (2.5 rad ≈ 143度)
-    'left-thigh': [-0.3, 2.5],
-    'right-thigh': [-0.3, 2.5],
+    // 左右大腿
+    'left-thigh': [-Math.PI, Math.PI],
+    'right-thigh': [-Math.PI, Math.PI],
     'left-foot': null,
     'right-foot': null,
   }
@@ -1141,6 +1223,16 @@ export class CharacterRenderer {
     // Apply part angles from pipeline
     this.applyPartAngles(processedPose.partAngles, processedPose.isCalibrated, shouldLog)
 
+    // Apply root offset (Jumping/Squatting)
+    if (processedPose.rootOffset && this.container && !this.useExternalPosition) {
+      const baseY = this.height / 2
+      // rootOffset.y is normalized (0-1), convert to pixels
+      // Jump is negative Y in MediaPipe, so we add it to move up in Pixi
+      // Scaling factor 1.5 (reduced from 2.5) to make jump more natural
+      const jumpOffset = processedPose.rootOffset.y * this.height * 1.5
+      this.container.y = baseY + jumpOffset
+    }
+
     // Update facing direction based on pipeline turn state
     // Use animated turn if we are in a turning state
     if (processedPose.turnState) {
@@ -1213,9 +1305,38 @@ export class CharacterRenderer {
 
   /**
    * Map a source part name (from PoseProcessor) to a target part name (on Character)
+   * 
+   * 关键逻辑：用户的"左手"应该总是控制画面中"外侧"的手
+   * 
+   * 1. 当角色面朝左时（无论是默认还是转身后）：
+   *    - 外侧是 left-arm，内侧是 right-arm
+   *    - 用户左手 → left-arm（外侧）
+   *    - 用户右手 → right-arm（内侧）
+   * 
+   * 2. 当角色面朝右时（无论是默认还是转身后）：
+   *    - 外侧是 right-arm，内侧是 left-arm
+   *    - 用户左手 → right-arm（外侧）
+   *    - 用户右手 → left-arm（内侧）
    */
   private mapPartName(sourceName: string): string {
-    return this.boneMap[sourceName] || sourceName
+    // 计算当前视觉朝向
+    const flipped = this.isFlipped()
+    const currentVisualFacing = flipped 
+      ? (this.defaultFacing === 'left' ? 'right' : 'left')
+      : this.defaultFacing
+    
+    // 如果当前视觉面朝右，需要交换左右绑定
+    const needsSwap = currentVisualFacing === 'right'
+    
+    if (needsSwap) {
+      if (sourceName.startsWith('left-')) {
+        return sourceName.replace('left-', 'right-')
+      } else if (sourceName.startsWith('right-')) {
+        return sourceName.replace('right-', 'left-')
+      }
+    }
+    
+    return sourceName
   }
 
   /**
@@ -1229,21 +1350,29 @@ export class CharacterRenderer {
    * @param shouldLog Whether to log debug info
    */
   applyPartAngles(angles: PartAngles, _isCalibrated: boolean = false, shouldLog: boolean = false): void {
-    // 每 60 帧记录一次详细日志
-    const logMapping = this.frameCount % 60 === 1
+    // 每 30 帧记录一次详细日志（更频繁以便调试）
+    const logMapping = this.frameCount % 30 === 1
+    
+    // 计算当前视觉朝向
+    const flipped = this.isFlipped()
+    const currentVisualFacing = flipped 
+      ? (this.defaultFacing === 'left' ? 'right' : 'left')
+      : this.defaultFacing
     
     if (logMapping) {
       console.log('=== applyPartAngles Debug ===')
-      console.log('defaultFacing:', this.defaultFacing)
+      console.log('defaultFacing:', this.defaultFacing, '| isFlipped:', flipped, '| currentVisualFacing:', currentVisualFacing)
+      console.log('Received angles:', JSON.stringify(angles, (_, v) => typeof v === 'number' ? (v * 180 / Math.PI).toFixed(1) + '°' : v))
+      console.log('Available parts:', Array.from(this.parts.keys()))
     }
     
     for (const [sourcePartName, angle] of Object.entries(angles)) {
       // 使用映射逻辑获取目标部件名
       const targetPartName = this.mapPartName(sourcePartName)
       
-      // 详细日志：每次映射
-      if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
-        console.log(`  MAP: "${sourcePartName}" -> "${targetPartName}"`)
+      // 详细日志：每次映射（所有部件）
+      if (logMapping) {
+        console.log(`  MAP: "${sourcePartName}" -> "${targetPartName}" (angle: ${(angle * 180 / Math.PI).toFixed(1)}°)`)
       }
 
       const sprite = this.parts.get(targetPartName)
@@ -1255,25 +1384,40 @@ export class CharacterRenderer {
       const restPoseOffset = this.getRestPoseOffset(targetPartName)
       const rotationOffset = this.getRotationOffset(targetPartName)
       
-      // 根据角色朝向和图层深度决定是否取反角度
+      // 角度处理：
       // 
-      // 动态逻辑修正：
-      // 不再依赖写死的左右判断，而是检测部件是否在 Body 图层下方（背后）。
-      // 任何在 Body 后面的手臂/手部件（内侧），通常对应 MediaPipe 中相反的一侧数据，
-      // 因此需要对旋转角度取反，以保证动作方向与外侧一致（都向前抬起）。
-      let needsInversion = false
+      // PoseProcessor 返回的角度反映了 atan2 的几何特性：
+      // - 当用户举起双手时，left-arm ≈ +110°，right-arm ≈ -110°
+      // - 符号相反是因为用户的左右手在屏幕的不同位置
+      // 
+      // 对于皮影戏角色（面朝左）：
+      // - 外侧手臂（left-arm）：使用 rest + angle
+      // - 内侧手臂（right-arm）：使用 rest - angle
+      // 
+      // 翻转后：
+      // - scale.x = -1 会镜像所有旋转方向
+      // - 所以需要交换公式
+      let useAddition = false
       
-      // 只对手臂和手部应用此逻辑
       if (targetPartName.includes('arm') || targetPartName.includes('hand')) {
-        if (this.isPartBehindBody(targetPartName)) {
-          needsInversion = true
-        }
+        // 视觉上的"内侧"部件（包括手臂和手）都需要用减法
+        // - 面朝左时 (!flipped)：right-arm, right-hand 是内侧
+        // - 面朝右时 (flipped)：left-arm, left-hand 是内侧
+        const isVisuallyInner = 
+          (!flipped && (targetPartName === 'right-arm' || targetPartName === 'right-hand')) || 
+          (flipped && (targetPartName === 'left-arm' || targetPartName === 'left-hand'))
+        
+        // 内侧用减法，外侧用加法
+        useAddition = !isVisuallyInner
       }
-
-      const adjustedAngle = needsInversion ? -angle : angle
       
-      if (logMapping && (sourcePartName.includes('arm') || sourcePartName.includes('hand'))) {
-        console.log(`  APPLY: target="${targetPartName}" needsInversion=${needsInversion} angle=${(angle * 180 / Math.PI).toFixed(1)}° -> adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}°`)
+      // 不需要对角度本身做 inversion，而是改变公式
+      // 
+      // 增强腿部动作幅度：
+      // 皮影戏的腿部通常需要更夸张的动作才能看清楚
+      let adjustedAngle = angle
+      if (targetPartName.includes('thigh') || targetPartName.includes('foot')) {
+        adjustedAngle = angle * 1.5 
       }
       
       // Apply rotation limits to the RELATIVE angle (movement), not the final absolute rotation
@@ -1285,12 +1429,20 @@ export class CharacterRenderer {
         limitedAngle = Math.max(minAngle, Math.min(maxAngle, limitedAngle))
       }
 
-      const finalRotation = restPoseOffset + limitedAngle + rotationOffset
+      // 根据部件位置选择不同的公式
+      // - 外侧手臂：rest + angle
+      // - 内侧手臂：rest - angle
+      const finalRotation = useAddition 
+        ? (restPoseOffset + limitedAngle + rotationOffset)
+        : (restPoseOffset - limitedAngle + rotationOffset)
 
       sprite.rotation = finalRotation
 
-      if (shouldLog) {
-        console.log(`  ${targetPartName} (src:${sourcePartName}): angle=${(angle * 180 / Math.PI).toFixed(1)}° adjusted=${(adjustedAngle * 180 / Math.PI).toFixed(1)}° limited=${(limitedAngle * 180 / Math.PI).toFixed(1)}° rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° offset=${(rotationOffset * 180 / Math.PI).toFixed(1)}° final=${(sprite.rotation * 180 / Math.PI).toFixed(1)}°`)
+      if (logMapping || shouldLog) {
+        const isBehind = targetPartName.includes('arm') || targetPartName.includes('hand') 
+          ? this.isPartBehindBody(targetPartName) : false
+        const formula = useAddition ? 'rest+angle' : 'rest-angle'
+        console.log(`  ${targetPartName}: angle=${(angle * 180 / Math.PI).toFixed(1)}° behind=${isBehind} flip=${flipped} formula=${formula} rest=${(restPoseOffset * 180 / Math.PI).toFixed(1)}° FINAL=${(finalRotation * 180 / Math.PI).toFixed(1)}°`)
       }
     }
   }
@@ -1867,11 +2019,27 @@ export class CharacterRenderer {
   resize(width: number, height: number): void {
     if (!this.app || !this.container) return
 
-    this.app.renderer.resize(width, height)
+    let canvasWidth = width
+    if (this.renderMode === 'side_by_side') {
+      canvasWidth = width * 2
+    }
+
+    this.app.renderer.resize(canvasWidth, height)
+    
+    // Update stored dimensions
+    this.width = width
+    this.height = height
+    
+    // Handle side-by-side resizing
+    if (this.renderMode === 'side_by_side' && this.renderTexture) {
+      this.renderTexture.resize(width, height)
+      if (this.maskSprite) this.maskSprite.x = width
+    }
+
     // Only reset position if not using external control
     if (!this.useExternalPosition) {
-    this.container.x = width / 2
-    this.container.y = height / 2
+      this.container.x = width / 2
+      this.container.y = height / 2
     }
   }
 
@@ -2457,8 +2625,24 @@ export class CharacterRenderer {
   async destroy(): Promise<void> {
     // 先标记为未初始化，防止其他方法继续操作
     this.initialized = false
+    
+    if (this.app?.ticker) {
+      // Check if renderToTexture exists before removing (it might be bound)
+      // Note: this.renderToTexture needs to be bound or use arrow function if passed directly
+      // In init: this.app.ticker.add(this.renderToTexture, this) handles binding context
+      this.app.ticker.remove(this.renderToTexture, this)
+    }
 
     this.clearParts()
+    
+    // Cleanup Side-by-Side resources
+    if (this.renderTexture) {
+      this.renderTexture.destroy(true)
+      this.renderTexture = null
+    }
+    this.previewSprite = null
+    this.maskSprite = null
+    this.colorMatrix = null
 
     if (this.container) {
       try {
