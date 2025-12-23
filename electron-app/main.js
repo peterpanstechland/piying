@@ -953,19 +953,31 @@ ipcMain.handle('get-network-status', async () => {
     return { available: false, otaEnabled: false, sourceType };
   }
   
-  // 检查网络连接
+  // 检查网络连接（使用 GitHub API）
   try {
     const https = require('https');
     return new Promise((resolve) => {
-      const req = https.get('https://api.github.com', { timeout: 5000 }, (res) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: '/repos/peterpanstechland/piying/releases/latest',
+        headers: {
+          'User-Agent': 'Piying-Electron-App'
+        },
+        timeout: 5000
+      };
+      
+      const req = https.get(options, (res) => {
+        // 200-299 都算成功，403 是 rate limited 但网络是通的
+        const isAvailable = res.statusCode >= 200 && res.statusCode < 400;
         resolve({ 
-          available: res.statusCode === 200, 
+          available: isAvailable, 
           otaEnabled: true, 
           sourceType,
           statusCode: res.statusCode 
         });
       });
-      req.on('error', () => {
+      req.on('error', (err) => {
+        log.warn('Network check error:', err.message);
         resolve({ available: false, otaEnabled: true, sourceType, error: 'Network error' });
       });
       req.on('timeout', () => {
@@ -1100,36 +1112,81 @@ ipcMain.handle('get-release-info', async () => {
         let data = '';
         res.on('data', chunk => data += chunk);
         res.on('end', () => {
+          // 检查 HTTP 状态码
+          if (res.statusCode === 403) {
+            log.warn('GitHub API rate limited');
+            resolve({ error: 'rate_limited', message: 'GitHub API 请求过于频繁，请稍后再试' });
+            return;
+          }
+          if (res.statusCode === 404) {
+            log.warn('No releases found');
+            resolve({ error: 'no_releases', message: '暂无发布版本' });
+            return;
+          }
+          if (res.statusCode !== 200) {
+            log.warn('GitHub API error:', res.statusCode);
+            resolve({ error: 'api_error', message: `GitHub API 错误 (${res.statusCode})` });
+            return;
+          }
+          
           try {
             const release = JSON.parse(data);
+            // 获取当前版本进行比较
+            const currentVersion = app.getVersion();
+            const latestVersion = release.tag_name ? release.tag_name.replace(/^v/, '') : '0.0.0';
+            const hasUpdate = compareVersions(latestVersion, currentVersion) > 0;
+            
             resolve({
+              success: true,
               version: release.tag_name,
+              latestVersion: latestVersion,
+              currentVersion: currentVersion,
+              hasUpdate: hasUpdate,
               name: release.name,
               body: release.body,
-              published_at: release.published_at,
-              html_url: release.html_url,
+              publishedAt: release.published_at,
+              htmlUrl: release.html_url,
               assets: release.assets ? release.assets.map(a => ({
                 name: a.name,
                 size: a.size,
-                download_url: a.browser_download_url
+                downloadUrl: a.browser_download_url
               })) : []
             });
           } catch (e) {
-            reject(new Error('Failed to parse release info'));
+            log.error('Failed to parse release info:', e);
+            resolve({ error: 'parse_error', message: '解析版本信息失败' });
           }
         });
       });
       
-      req.on('error', (e) => reject(e));
+      req.on('error', (e) => {
+        log.error('GitHub API request error:', e);
+        resolve({ error: 'network_error', message: '网络错误: ' + e.message });
+      });
       req.on('timeout', () => {
         req.destroy();
-        reject(new Error('Request timeout'));
+        resolve({ error: 'timeout', message: '请求超时' });
       });
     });
   } catch (error) {
-    throw new Error(error.message);
+    log.error('get-release-info error:', error);
+    return { error: 'unknown', message: error.message };
   }
 });
+
+// 版本号比较函数
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+  return 0;
+}
 
 // 安装已下载的更新
 ipcMain.handle('install-update', async () => {
