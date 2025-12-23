@@ -96,7 +96,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-${{ matrix.platform }}-${{ matrix.arch }}
-          path: backend/dist/
+          path: backend/dist/backend/
           retention-days: 1
 
   # ============================================
