@@ -7,6 +7,15 @@
 
 ---
 
+## [1.2.6] - 2025-12-23
+
+### 修复
+- **重要**: 在 CI 中显式安装 `jaraco.text`, `jaraco.functools`, `jaraco.context` 包
+- 之前的构建失败是因为这些包没有在 CI 环境中安装，导致 PyInstaller 无法收集它们
+- 优化 PyInstaller 收集选项，使用 `--collect-all` 替代 `--copy-metadata`
+
+---
+
 ## [1.2.5] - 2025-12-23
 
 ### 修复
