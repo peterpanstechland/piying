@@ -7,6 +7,16 @@
 
 ---
 
+## [1.2.8] - 2025-12-23
+
+### 修复
+- **关键修复**: 修正后端 artifact 上传路径
+- PyInstaller `--onedir` 创建 `backend/dist/backend/` 结构
+- 之前上传 `backend/dist/` 导致下载后路径变成 `resources/backend/backend/backend.exe`（多了一层）
+- 现在上传 `backend/dist/backend/`，确保结构为 `resources/backend/backend.exe`
+
+---
+
 ## [1.2.7] - 2025-12-23
 
 ### 修复
