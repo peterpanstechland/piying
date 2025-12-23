@@ -816,7 +816,42 @@ ipcMain.handle('get-update-status', async () => {
 
 // 获取 OTA 设置
 ipcMain.handle('get-ota-settings', async () => {
+  // 尝试从后端 API 获取 OTA 设置
+  let otaEnabled = true; // 默认启用
+  let checkOnStartup = true;
+  
+  try {
+    const http = require('http');
+    const settings = await new Promise((resolve, reject) => {
+      const req = http.get('http://localhost:8000/api/system/settings', { timeout: 3000 }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
+    });
+    
+    if (settings && settings.ota) {
+      otaEnabled = settings.ota.enabled !== false;
+      checkOnStartup = settings.ota.check_on_startup !== false;
+    }
+  } catch (e) {
+    log.warn('Failed to get OTA settings from backend:', e.message);
+  }
+  
   return {
+    enabled: otaEnabled,
+    checkOnStartup: checkOnStartup,
     autoDownload: autoUpdater.autoDownload,
     autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
     allowPrerelease: autoUpdater.allowPrerelease,
@@ -826,7 +861,42 @@ ipcMain.handle('get-ota-settings', async () => {
 
 // 刷新 OTA 设置
 ipcMain.handle('refresh-ota-settings', async () => {
+  // 尝试从后端 API 获取 OTA 设置
+  let otaEnabled = true;
+  let checkOnStartup = true;
+  
+  try {
+    const http = require('http');
+    const settings = await new Promise((resolve, reject) => {
+      const req = http.get('http://localhost:8000/api/system/settings', { timeout: 3000 }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
+    });
+    
+    if (settings && settings.ota) {
+      otaEnabled = settings.ota.enabled !== false;
+      checkOnStartup = settings.ota.check_on_startup !== false;
+    }
+  } catch (e) {
+    log.warn('Failed to refresh OTA settings from backend:', e.message);
+  }
+  
   return {
+    enabled: otaEnabled,
+    checkOnStartup: checkOnStartup,
     autoDownload: autoUpdater.autoDownload,
     autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
     allowPrerelease: autoUpdater.allowPrerelease,
