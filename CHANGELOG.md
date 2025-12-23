@@ -7,6 +7,15 @@
 
 ---
 
+## [1.2.4] - 2025-12-23
+
+### 修复
+- **重要**: 修正 GitHub Actions 后端 artifact 上传路径
+- PyInstaller `--onedir` 模式生成 `backend/dist/backend/`，之前错误上传了 `backend/dist/` 导致路径多了一层
+- 现在正确上传 `backend/dist/backend/`，确保 `backend.exe` 能被 Electron 正确找到
+
+---
+
 ## [1.2.3] - 2025-12-23
 
 ### 修复
