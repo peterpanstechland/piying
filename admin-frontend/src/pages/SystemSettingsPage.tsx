@@ -6,6 +6,19 @@ import { useTranslation } from 'react-i18next'
 import { adminApi } from '../services/api'
 import './SystemSettingsPage.css'
 
+// Electron API 类型声明
+interface ElectronAPI {
+  getAutoLaunchStatus: () => Promise<{ success: boolean; openAtLogin: boolean; error?: string }>;
+  setAutoLaunch: (enabled: boolean) => Promise<{ success: boolean; openAtLogin: boolean; error?: string }>;
+  // 其他 API...
+}
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI;
+  }
+}
+
 interface TimeoutSettings {
   idle_to_scene_select_seconds: number
   scene_select_inactivity_seconds: number
@@ -97,10 +110,17 @@ export default function SystemSettingsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  
+  // 开机自启动相关状态
+  const [isElectron, setIsElectron] = useState(false)
+  const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(false)
+  const [autoLaunchLoading, setAutoLaunchLoading] = useState(false)
 
 
   useEffect(() => {
     loadSettings()
+    // 检测 Electron 环境并加载开机自启动状态
+    checkElectronAndLoadAutoLaunch()
   }, [])
 
   const loadSettings = async () => {
@@ -131,6 +151,42 @@ export default function SystemSettingsPage() {
       setError(err.message || t('settings.system.loadError'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 检测 Electron 环境并加载开机自启动状态
+  const checkElectronAndLoadAutoLaunch = async () => {
+    // 检测是否在 Electron 环境中
+    if (window.electronAPI && typeof window.electronAPI.getAutoLaunchStatus === 'function') {
+      setIsElectron(true)
+      try {
+        const result = await window.electronAPI.getAutoLaunchStatus()
+        if (result.success) {
+          setAutoLaunchEnabled(result.openAtLogin)
+        }
+      } catch (err) {
+        console.error('Failed to get auto-launch status:', err)
+      }
+    }
+  }
+
+  // 切换开机自启动
+  const handleAutoLaunchChange = async (enabled: boolean) => {
+    if (!window.electronAPI) return
+    
+    setAutoLaunchLoading(true)
+    try {
+      const result = await window.electronAPI.setAutoLaunch(enabled)
+      if (result.success) {
+        setAutoLaunchEnabled(result.openAtLogin)
+        setSuccess(enabled ? t('settings.system.autoLaunchEnabled') : t('settings.system.autoLaunchDisabled'))
+      } else {
+        setError(result.error || t('settings.system.autoLaunchError'))
+      }
+    } catch (err: any) {
+      setError(err.message || t('settings.system.autoLaunchError'))
+    } finally {
+      setAutoLaunchLoading(false)
     }
   }
 
@@ -235,6 +291,27 @@ export default function SystemSettingsPage() {
       <main className="page-content">
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
+
+        {/* 开机自启动设置 - 仅在 Electron 环境中显示 */}
+        {isElectron && (
+          <div className="settings-card">
+            <h2>{t('settings.system.autoLaunchTitle')}</h2>
+            <p className="card-description">{t('settings.system.autoLaunchDescription')}</p>
+            
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={autoLaunchEnabled}
+                  onChange={(e) => handleAutoLaunchChange(e.target.checked)}
+                  disabled={autoLaunchLoading}
+                />
+                <span>{t('settings.system.autoLaunch')}</span>
+              </label>
+              <span className="field-hint">{t('settings.system.autoLaunchHint')}</span>
+            </div>
+          </div>
+        )}
 
         {/* Interface Settings */}
         <div className="settings-card">

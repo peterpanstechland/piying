@@ -1207,3 +1207,47 @@ ipcMain.handle('manual-backup', async () => {
     return { success: false, error: error.message };
   }
 });
+
+// ============== 开机自启动 API ==============
+
+// 获取开机自启动状态
+ipcMain.handle('get-auto-launch-status', async () => {
+  try {
+    const settings = app.getLoginItemSettings();
+    log.info(`Auto-launch status: openAtLogin=${settings.openAtLogin}`);
+    return { 
+      success: true, 
+      openAtLogin: settings.openAtLogin,
+      // macOS 特有属性
+      openAsHidden: settings.openAsHidden || false,
+      wasOpenedAtLogin: settings.wasOpenedAtLogin || false
+    };
+  } catch (error) {
+    log.error('Failed to get auto-launch status: ' + error.message);
+    return { success: false, error: error.message, openAtLogin: false };
+  }
+});
+
+// 设置开机自启动
+ipcMain.handle('set-auto-launch', async (event, enabled) => {
+  try {
+    log.info(`Setting auto-launch to: ${enabled}`);
+    app.setLoginItemSettings({ 
+      openAtLogin: enabled,
+      // macOS: 是否在登录时隐藏窗口启动
+      openAsHidden: false
+    });
+    
+    // 验证设置是否成功
+    const settings = app.getLoginItemSettings();
+    log.info(`Auto-launch set result: openAtLogin=${settings.openAtLogin}`);
+    
+    return { 
+      success: true, 
+      openAtLogin: settings.openAtLogin 
+    };
+  } catch (error) {
+    log.error('Failed to set auto-launch: ' + error.message);
+    return { success: false, error: error.message };
+  }
+});

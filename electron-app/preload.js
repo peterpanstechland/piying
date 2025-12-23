@@ -55,6 +55,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 手动触发备份（用于测试）
   manualBackup: () => ipcRenderer.invoke('manual-backup'),
   
+  // ============== 开机自启动 API ==============
+  
+  // 获取开机自启动状态
+  getAutoLaunchStatus: () => ipcRenderer.invoke('get-auto-launch-status'),
+  
+  // 设置开机自启动
+  setAutoLaunch: (enabled) => ipcRenderer.invoke('set-auto-launch', enabled),
+  
   // ============== 监听事件 ==============
   
   // 基础事件
