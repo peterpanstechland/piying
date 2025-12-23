@@ -55,7 +55,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install pyinstaller
-          pip install jaraco.text jaraco.functools jaraco.context
+          pip install jaraco.text jaraco.functools jaraco.context platformdirs
 
       - name: Build backend executable
         shell: bash
@@ -89,6 +89,7 @@ jobs:
             --hidden-import=jaraco.context \
             --hidden-import=pkg_resources.py2_warn \
             --hidden-import=pkg_resources.markers \
+            --hidden-import=platformdirs \
             --collect-submodules jaraco \
             --collect-all jaraco.text \
             --collect-all jaraco.functools \
