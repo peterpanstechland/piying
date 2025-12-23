@@ -88,15 +88,23 @@ jobs:
             --hidden-import=jaraco.classes \
             --hidden-import=jaraco.collections \
             --hidden-import=jaraco.context \
+            --collect-submodules jaraco \
+            --collect-data jaraco \
+            --copy-metadata jaraco.text \
+            --copy-metadata jaraco.functools \
+            --copy-metadata jaraco.classes \
+            --copy-metadata jaraco.collections \
+            --copy-metadata jaraco.context \
             --collect-all jaraco \
             --collect-all mediapipe \
+            --collect-all pkg_resources \
             run.py
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
           name: backend-${{ matrix.platform }}-${{ matrix.arch }}
-          path: backend/dist/backend/
+          path: backend/dist/
           retention-days: 1
 
   # ============================================
