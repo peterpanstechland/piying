@@ -62,26 +62,134 @@ function checkForUpdates() {
   autoUpdater.checkForUpdatesAndNotify();
 }
 
+// 备份用户数据（更新前自动调用）
+async function backupUserData() {
+  const appDataPath = app.getPath('appData');
+  const dataPath = path.join(appDataPath, 'RobomonPiying');
+  const backupBasePath = path.join(appDataPath, 'RobomonPiying_Backups');
+  
+  // 检查数据目录是否存在
+  if (!fs.existsSync(dataPath)) {
+    log.info('No user data directory found, skipping backup');
+    return;
+  }
+  
+  // 创建带时间戳的备份目录名
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').split('Z')[0];
+  const backupPath = path.join(backupBasePath, `backup_${timestamp}`);
+  
+  log.info(`Backing up user data from ${dataPath} to ${backupPath}`);
+  
+  // 确保备份基础目录存在
+  if (!fs.existsSync(backupBasePath)) {
+    fs.mkdirSync(backupBasePath, { recursive: true });
+  }
+  
+  // 递归复制目录
+  await copyDirectoryRecursive(dataPath, backupPath);
+  
+  // 清理旧备份，只保留最近5个
+  await cleanupOldBackups(backupBasePath, 5);
+  
+  log.info(`User data backed up successfully to ${backupPath}`);
+}
+
+// 递归复制目录
+async function copyDirectoryRecursive(src, dest) {
+  // 创建目标目录
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+  
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      // 递归复制子目录
+      await copyDirectoryRecursive(srcPath, destPath);
+    } else {
+      // 复制文件
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+// 清理旧备份，只保留最近的 N 个
+async function cleanupOldBackups(backupBasePath, keepCount) {
+  try {
+    if (!fs.existsSync(backupBasePath)) {
+      return;
+    }
+    
+    const entries = fs.readdirSync(backupBasePath, { withFileTypes: true });
+    const backupDirs = entries
+      .filter(entry => entry.isDirectory() && entry.name.startsWith('backup_'))
+      .map(entry => ({
+        name: entry.name,
+        path: path.join(backupBasePath, entry.name),
+        // 从目录名解析时间戳进行排序
+        timestamp: entry.name.replace('backup_', '')
+      }))
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp)); // 按时间戳降序排列
+    
+    // 删除超出保留数量的旧备份
+    if (backupDirs.length > keepCount) {
+      const toDelete = backupDirs.slice(keepCount);
+      for (const dir of toDelete) {
+        log.info(`Removing old backup: ${dir.name}`);
+        fs.rmSync(dir.path, { recursive: true, force: true });
+      }
+      log.info(`Cleaned up ${toDelete.length} old backup(s)`);
+    }
+  } catch (error) {
+    log.warn(`Failed to cleanup old backups: ${error.message}`);
+    // 清理失败不影响主流程
+  }
+}
+
 autoUpdater.on('checking-for-update', () => {
   log.info('Checking for update...');
 });
 
+// 广播更新事件到所有活跃窗口
+function broadcastUpdateEvent(channel, data) {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send(channel, data);
+  }
+  if (launcherWindow && !launcherWindow.isDestroyed()) {
+    launcherWindow.webContents.send(channel, data);
+  }
+}
+
 autoUpdater.on('update-available', (info) => {
   log.info('Update available: ' + info.version);
+  updateStatus.updateAvailable = true;
+  updateStatus.latestUpdateInfo = info;
   if (splashWindow) {
     splashWindow.webContents.send('update-message', '发现新版本，正在下载...');
   }
+  // 广播到 launcher
+  broadcastUpdateEvent('update-available', { version: info.version, info });
 });
 
 autoUpdater.on('update-not-available', (info) => {
   log.info('Update not available.');
+  updateStatus.updateAvailable = false;
+  // 广播到 launcher
+  broadcastUpdateEvent('update-not-available', { info });
 });
 
 autoUpdater.on('error', (err) => {
   log.error('Error in auto-updater: ' + err);
+  updateStatus.error = err.message;
   if (splashWindow) {
     splashWindow.webContents.send('update-message', '更新检查失败，继续启动...');
   }
+  // 广播到 launcher
+  broadcastUpdateEvent('update-error', { error: err.message });
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
@@ -92,15 +200,34 @@ autoUpdater.on('download-progress', (progressObj) => {
   if (splashWindow) {
     splashWindow.webContents.send('update-message', `正在下载更新... ${Math.round(progressObj.percent)}%`);
   }
+  // 广播到 launcher
+  broadcastUpdateEvent('update-download-progress', { 
+    percent: progressObj.percent,
+    bytesPerSecond: progressObj.bytesPerSecond,
+    transferred: progressObj.transferred,
+    total: progressObj.total
+  });
 });
 
-autoUpdater.on('update-downloaded', (info) => {
-  log.info('Update downloaded');
-  if (splashWindow) {
-    splashWindow.webContents.send('update-message', '更新下载完成，下次启动时安装');
+autoUpdater.on('update-downloaded', async (info) => {
+  log.info('Update downloaded, backing up user data before update...');
+  updateStatus.updateDownloaded = true;
+  updateStatus.latestUpdateInfo = info;
+  
+  // 在安装更新前备份用户数据
+  try {
+    await backupUserData();
+    log.info('User data backup completed before update');
+  } catch (backupError) {
+    log.error('Failed to backup user data before update: ' + backupError.message);
+    // 备份失败不阻止更新，但记录错误
   }
-  // 这里可以选择立即安装并重启，或者下次启动时安装
-  // autoUpdater.quitAndInstall(); 
+  
+  if (splashWindow) {
+    splashWindow.webContents.send('update-message', '更新下载完成，点击安装按钮开始安装');
+  }
+  // 广播到 launcher
+  broadcastUpdateEvent('update-downloaded', { version: info.version, info });
 });
 
 // 检查端口是否被占用
@@ -852,7 +979,14 @@ ipcMain.handle('get-network-status', async () => {
 });
 
 // 获取更新状态
-let updateStatus = { status: 'idle', info: null };
+let updateStatus = { 
+  status: 'idle', 
+  info: null,
+  updateAvailable: false,
+  updateDownloaded: false,
+  latestUpdateInfo: null,
+  error: null
+};
 
 ipcMain.handle('get-update-status', async () => {
   return updateStatus;
@@ -1001,4 +1135,18 @@ ipcMain.handle('get-release-info', async () => {
 ipcMain.handle('install-update', async () => {
   log.info('Installing update...');
   autoUpdater.quitAndInstall(false, true);
+});
+
+// 手动触发备份（用于测试）
+ipcMain.handle('manual-backup', async () => {
+  log.info('Manual backup triggered...');
+  try {
+    await backupUserData();
+    const appDataPath = app.getPath('appData');
+    const backupBasePath = path.join(appDataPath, 'RobomonPiying_Backups');
+    return { success: true, path: backupBasePath };
+  } catch (error) {
+    log.error('Manual backup failed: ' + error.message);
+    return { success: false, error: error.message };
+  }
 });
