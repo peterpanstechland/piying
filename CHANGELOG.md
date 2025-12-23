@@ -7,6 +7,37 @@
 
 ---
 
+## [1.2.12] - 2025-12-23
+
+### 新增
+- **OTA 自动更新功能**: 启用 `--publish always`，自动上传 `latest.yml` 到 GitHub Release
+- 所有平台（Windows、macOS、Linux）的构建现在都会发布更新元数据
+- 配置 `GH_TOKEN` 环境变量用于发布
+
+---
+
+## [1.2.11] - 2025-12-23
+
+### 修复
+- 将 `boto3` 和 `botocore` 添加到 `requirements.txt`（之前完全缺失）
+- 在 CI 中显式安装 boto3 和 botocore
+
+---
+
+## [1.2.10] - 2025-12-23
+
+### 修复
+- 添加 `--collect-all boto3` 和 `--collect-all botocore` 到 PyInstaller
+
+---
+
+## [1.2.9] - 2025-12-23
+
+### 修复
+- 添加 `platformdirs` 依赖和 hidden import
+
+---
+
 ## [1.2.8] - 2025-12-23
 
 ### 修复
