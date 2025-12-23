@@ -7,6 +7,17 @@
 
 ---
 
+## [1.2.5] - 2025-12-23
+
+### 修复
+- **重要**: 解决 `jaraco` 命名空间包 (namespace package) 的 PyInstaller 打包问题
+- 添加 `--collect-submodules jaraco` 收集所有子模块
+- 添加 `--collect-data jaraco` 收集数据文件
+- 添加 `--copy-metadata` 复制 jaraco 各子包的元数据
+- 添加 `--collect-all pkg_resources` 确保资源加载器正常工作
+
+---
+
 ## [1.2.4] - 2025-12-23
 
 ### 修复
