@@ -95,6 +95,8 @@ jobs:
             --collect-all jaraco.functools \
             --collect-all jaraco.context \
             --collect-all mediapipe \
+            --collect-all boto3 \
+            --collect-all botocore \
             run.py
 
       - name: Upload backend artifact
