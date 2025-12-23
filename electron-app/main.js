@@ -816,14 +816,14 @@ ipcMain.handle('get-update-status', async () => {
 
 // 获取 OTA 设置
 ipcMain.handle('get-ota-settings', async () => {
-  // 尝试从后端 API 获取 OTA 设置
+  // 尝试从后端 API 获取 OTA 设置 (公开端点，不需要认证)
   let otaEnabled = true; // 默认启用
   let checkOnStartup = true;
   
   try {
     const http = require('http');
-    const settings = await new Promise((resolve, reject) => {
-      const req = http.get('http://localhost:8000/api/system/settings', { timeout: 3000 }, (res) => {
+    const otaSettings = await new Promise((resolve, reject) => {
+      const req = http.get('http://localhost:8000/api/settings/ota', { timeout: 3000 }, (res) => {
         let data = '';
         res.on('data', chunk => data += chunk);
         res.on('end', () => {
@@ -841,9 +841,9 @@ ipcMain.handle('get-ota-settings', async () => {
       });
     });
     
-    if (settings && settings.ota) {
-      otaEnabled = settings.ota.enabled !== false;
-      checkOnStartup = settings.ota.check_on_startup !== false;
+    if (otaSettings) {
+      otaEnabled = otaSettings.enabled !== false;
+      checkOnStartup = otaSettings.check_on_startup !== false;
     }
   } catch (e) {
     log.warn('Failed to get OTA settings from backend:', e.message);
@@ -861,14 +861,14 @@ ipcMain.handle('get-ota-settings', async () => {
 
 // 刷新 OTA 设置
 ipcMain.handle('refresh-ota-settings', async () => {
-  // 尝试从后端 API 获取 OTA 设置
+  // 尝试从后端 API 获取 OTA 设置 (公开端点，不需要认证)
   let otaEnabled = true;
   let checkOnStartup = true;
   
   try {
     const http = require('http');
-    const settings = await new Promise((resolve, reject) => {
-      const req = http.get('http://localhost:8000/api/system/settings', { timeout: 3000 }, (res) => {
+    const otaSettings = await new Promise((resolve, reject) => {
+      const req = http.get('http://localhost:8000/api/settings/ota', { timeout: 3000 }, (res) => {
         let data = '';
         res.on('data', chunk => data += chunk);
         res.on('end', () => {
@@ -886,9 +886,9 @@ ipcMain.handle('refresh-ota-settings', async () => {
       });
     });
     
-    if (settings && settings.ota) {
-      otaEnabled = settings.ota.enabled !== false;
-      checkOnStartup = settings.ota.check_on_startup !== false;
+    if (otaSettings) {
+      otaEnabled = otaSettings.enabled !== false;
+      checkOnStartup = otaSettings.check_on_startup !== false;
     }
   } catch (e) {
     log.warn('Failed to refresh OTA settings from backend:', e.message);
