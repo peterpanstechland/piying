@@ -600,3 +600,83 @@
 [data-theme='light'] .auto-return-hint {
   color: rgba(139, 69, 19, 0.8);
 }
+
+/* ========================================
+   无操作倒计时样式
+======================================== */
+.inactivity-countdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.inactivity-countdown-box {
+  background: linear-gradient(145deg, #2a1f3d 0%, #1a1428 100%);
+  border: 2px solid #d4af37;
+  border-radius: 20px;
+  padding: 40px 60px;
+  text-align: center;
+  box-shadow: 
+    0 0 40px rgba(212, 175, 55, 0.3),
+    inset 0 0 20px rgba(212, 175, 55, 0.1);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 40px rgba(212, 175, 55, 0.3), inset 0 0 20px rgba(212, 175, 55, 0.1); }
+  50% { box-shadow: 0 0 60px rgba(212, 175, 55, 0.5), inset 0 0 30px rgba(212, 175, 55, 0.2); }
+}
+
+.inactivity-countdown-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.inactivity-countdown-text {
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.inactivity-countdown-timer {
+  font-size: 32px;
+  color: #d4af37;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* 浅色主题 */
+[data-theme='light'] .inactivity-countdown-overlay {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme='light'] .inactivity-countdown-box {
+  background: linear-gradient(145deg, #fff8e7 0%, #f5e6d3 100%);
+  border-color: #8b4513;
+  box-shadow: 
+    0 0 40px rgba(139, 69, 19, 0.3),
+    inset 0 0 20px rgba(139, 69, 19, 0.1);
+}
+
+[data-theme='light'] .inactivity-countdown-text {
+  color: #3d2418;
+}
+
+[data-theme='light'] .inactivity-countdown-timer {
+  color: #8b4513;
+  text-shadow: 0 0 10px rgba(139, 69, 19, 0.3);
+}

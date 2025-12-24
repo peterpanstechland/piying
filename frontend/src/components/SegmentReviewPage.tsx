@@ -61,12 +61,15 @@ export const SegmentReviewPage = ({
   videoElement,
   onReRecord,
   onContinue,
+  onTimeout,
   isUploading = false,
   uploadProgress = 0,
   uploadError = null,
   cursorPosition,
   hoverDurationMs = 3000,
   characterId,
+  inactivityShowCountdownSeconds = 20,
+  inactivityAutoBackSeconds = 30,
 }: SegmentReviewPageProps) => {
   const { t } = useTranslation();
 
@@ -83,6 +86,14 @@ export const SegmentReviewPage = ({
   const continueHoverStartRef = useRef<number | null>(null);
   const hasTriggeredRef = useRef(false);
   const animationFrameRef = useRef<number | null>(null);
+  
+  // 无操作自动返回状态
+  const [inactivitySeconds, setInactivitySeconds] = useState(0);
+  const [showInactivityCountdown, setShowInactivityCountdown] = useState(false);
+  const lastInteractionTimeRef = useRef<number>(Date.now());
+  const isReturningRef = useRef(false);
+  const onTimeoutRef = useRef(onTimeout);
+  onTimeoutRef.current = onTimeout;
 
   // Video ref to prevent repeated play() calls
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -173,6 +184,41 @@ export const SegmentReviewPage = ({
       }
     };
   }, [isCursorOverElement, hoverDurationMs, onReRecord, onContinue, isUploading]);
+
+  // 无操作计时器 - 自动返回首页
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 如果已经在返回中，停止计时
+      if (isReturningRef.current) return;
+      
+      const elapsed = Math.floor((Date.now() - lastInteractionTimeRef.current) / 1000);
+      setInactivitySeconds(elapsed);
+      
+      // 超过显示倒计时时间后显示倒计时
+      if (elapsed >= inactivityShowCountdownSeconds && !showInactivityCountdown) {
+        setShowInactivityCountdown(true);
+        console.log('[SegmentReview] Showing inactivity countdown after', elapsed, 'seconds');
+      }
+      
+      // 超过自动返回时间后自动返回
+      if (elapsed >= inactivityAutoBackSeconds && onTimeoutRef.current && !isReturningRef.current) {
+        console.log('[SegmentReview] Auto-returning after', elapsed, 'seconds of inactivity');
+        isReturningRef.current = true;
+        onTimeoutRef.current();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [inactivityShowCountdownSeconds, inactivityAutoBackSeconds, showInactivityCountdown]);
+
+  // 当有光标移动或按钮悬停时重置无操作计时器
+  useEffect(() => {
+    if (cursorPosition || rerecordProgress > 0 || continueProgress > 0) {
+      lastInteractionTimeRef.current = Date.now();
+      setInactivitySeconds(0);
+      setShowInactivityCountdown(false);
+    }
+  }, [cursorPosition, rerecordProgress, continueProgress]);
 
   // Setup video only once
   useEffect(() => {
@@ -377,6 +423,16 @@ export const SegmentReviewPage = ({
             <p className="review-hint">{t('review.allComplete')}</p>
           )}
         </div>
+        
+        {/* 无操作倒计时提示 */}
+        {showInactivityCountdown && (
+          <div className="inactivity-countdown-banner">
+            <span className="inactivity-icon">⏱️</span>
+            <span className="inactivity-text">
+              {inactivityAutoBackSeconds - inactivitySeconds}s 后自动返回首页
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

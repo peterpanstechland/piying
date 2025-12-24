@@ -43,11 +43,22 @@ export const SegmentGuidancePage = ({
   currentPose,
   characterId,
   onGuidanceComplete,
+  onBack,
+  inactivityShowBackSeconds = 15,
+  inactivityAutoBackSeconds = 30,
 }: SegmentGuidancePageProps) => {
   const { t } = useTranslation();
   const [isInBox, setIsInBox] = useState(false);
   const [isStableInBox, setIsStableInBox] = useState(false); // Debounced state
   const [countdown, setCountdown] = useState<number | null>(null);
+  
+  // 无操作自动返回状态
+  const [inactivitySeconds, setInactivitySeconds] = useState(0);
+  const [showInactivityCountdown, setShowInactivityCountdown] = useState(false);
+  const lastPoseDetectedTimeRef = useRef<number>(Date.now());
+  const isReturningRef = useRef(false);
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
   
   // 4个动作校准相关状态
   const [currentActionIndex, setCurrentActionIndex] = useState(0);
@@ -203,6 +214,40 @@ export const SegmentGuidancePage = ({
     }
     return () => clearTimeout(timeout);
   }, [isInBox]);
+
+  // 无操作计时器 - 当没有检测到用户时自动返回首页
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 如果已经在返回中，停止计时
+      if (isReturningRef.current) return;
+      
+      // 如果用户在检测框内，重置计时器
+      if (isStableInBox) {
+        lastPoseDetectedTimeRef.current = Date.now();
+        setInactivitySeconds(0);
+        setShowInactivityCountdown(false);
+        return;
+      }
+      
+      const elapsed = Math.floor((Date.now() - lastPoseDetectedTimeRef.current) / 1000);
+      setInactivitySeconds(elapsed);
+      
+      // 超过显示倒计时时间后显示倒计时
+      if (elapsed >= inactivityShowBackSeconds && !showInactivityCountdown) {
+        setShowInactivityCountdown(true);
+        console.log('[SegmentGuidance] Showing inactivity countdown after', elapsed, 'seconds');
+      }
+      
+      // 超过自动返回时间后自动返回
+      if (elapsed >= inactivityAutoBackSeconds && onBackRef.current && !isReturningRef.current) {
+        console.log('[SegmentGuidance] Auto-returning after', elapsed, 'seconds of inactivity');
+        isReturningRef.current = true;
+        onBackRef.current();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isStableInBox, inactivityShowBackSeconds, inactivityAutoBackSeconds, showInactivityCountdown]);
 
   // 初始化皮影人物渲染器和姿态处理器
   useEffect(() => {
@@ -475,6 +520,21 @@ export const SegmentGuidancePage = ({
             <p className="guidance-description">
               {t(`guidance.segment${segmentIndex + 1}.description`)}
             </p>
+          </div>
+        )}
+        
+        {/* 无操作倒计时提示 */}
+        {showInactivityCountdown && !isStableInBox && (
+          <div className="inactivity-countdown-overlay">
+            <div className="inactivity-countdown-box">
+              <div className="inactivity-countdown-icon">⏱️</div>
+              <div className="inactivity-countdown-text">
+                {t('guidance.inactivityWarning', { defaultValue: '检测不到用户' })}
+              </div>
+              <div className="inactivity-countdown-timer">
+                {inactivityAutoBackSeconds - inactivitySeconds}s 后自动返回首页
+              </div>
+            </div>
           </div>
         )}
       </div>
