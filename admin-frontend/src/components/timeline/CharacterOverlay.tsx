@@ -4,6 +4,10 @@ import { adminApi } from '../../services/api'
 import { TimelineSegment, ScaleConfig } from '../../contexts/TimelineEditorContext'
 import './CharacterOverlay.css'
 
+// 参考分辨率 - 与录制端保持一致，确保 scale 和位置精确匹配
+const REFERENCE_WIDTH = 1920
+const REFERENCE_HEIGHT = 1080
+
 interface CharacterOverlayProps {
   characterId: string
   segment: TimelineSegment
@@ -43,7 +47,13 @@ export default function CharacterOverlay({
     }
   }, [segment.scale, playhead, segment.startTime, segment.duration])
 
-  // Initialize Renderer
+  // 计算显示缩放比例 (预览窗口 / 参考分辨率)
+  const displayScale = Math.min(
+    containerWidth / REFERENCE_WIDTH,
+    containerHeight / REFERENCE_HEIGHT
+  )
+
+  // Initialize Renderer - 使用固定参考分辨率
   useEffect(() => {
     if (!canvasRef.current || !characterId) return
     // Don't init if dimensions are invalid
@@ -53,14 +63,21 @@ export default function CharacterOverlay({
     rendererRef.current = renderer
 
     const initRenderer = async () => {
-      console.log('[CharacterOverlay] Initializing renderer', { characterId, containerWidth, containerHeight })
+      console.log('[CharacterOverlay] Initializing renderer with REFERENCE resolution', { 
+        characterId, 
+        referenceWidth: REFERENCE_WIDTH, 
+        referenceHeight: REFERENCE_HEIGHT,
+        containerWidth,
+        containerHeight,
+        displayScale
+      })
       try {
-        // Use transparent background for PixiJS 8
-        await renderer.init(canvasRef.current!, containerWidth, containerHeight, {
+        // 使用固定参考分辨率初始化，确保与录制端一致
+        await renderer.init(canvasRef.current!, REFERENCE_WIDTH, REFERENCE_HEIGHT, {
           backgroundAlpha: 0,
           backgroundColor: 'transparent',
         })
-        console.log('[CharacterOverlay] Renderer initialized successfully')
+        console.log('[CharacterOverlay] Renderer initialized with reference resolution')
         
         // Use getCharacterConfigUrl to get the config URL for the character
         const configUrl = adminApi.getCharacterConfigUrl(characterId)
@@ -92,18 +109,9 @@ export default function CharacterOverlay({
       renderer.destroy()
       rendererRef.current = null
     }
-  }, [characterId, containerWidth, containerHeight]) // Add dimensions to dependency to re-init if they were 0 initially
+  }, [characterId]) // 只在 characterId 变化时重新初始化
 
-  // Handle Resize without re-init
-  useEffect(() => {
-    // Only resize if we already have a valid renderer instance
-    if (rendererRef.current && isLoaded && containerWidth > 0 && containerHeight > 0) {
-      rendererRef.current.resize(containerWidth, containerHeight)
-      // Render update handled by loop
-    }
-  }, [containerWidth, containerHeight, isLoaded])
-
-  // Update Render (Position & Scale)
+  // Update Render (Position & Scale) - 使用参考分辨率计算
   const updateRender = useCallback(() => {
     const renderer = rendererRef.current
     if (!renderer || !isLoaded) {
@@ -113,9 +121,9 @@ export default function CharacterOverlay({
     const container = renderer.getContainer()
     if (!container) return
 
-    // 1. Position based on Path
-    let x = containerWidth / 2
-    let y = containerHeight / 2
+    // 1. Position based on Path - 使用参考分辨率计算
+    let x = REFERENCE_WIDTH / 2
+    let y = REFERENCE_HEIGHT / 2
 
     if (segment.path) {
       const { startPoint, endPoint } = segment.path
@@ -124,50 +132,50 @@ export default function CharacterOverlay({
       progress = Math.max(0, Math.min(1, progress))
 
       // Linear interpolation between start and end points
-      // Path coordinates are normalized (0-1), multiply by container size
-      x = (startPoint.x + (endPoint.x - startPoint.x) * progress) * containerWidth
-      y = (startPoint.y + (endPoint.y - startPoint.y) * progress) * containerHeight
+      // Path coordinates are normalized (0-1), multiply by REFERENCE size
+      x = (startPoint.x + (endPoint.x - startPoint.x) * progress) * REFERENCE_WIDTH
+      y = (startPoint.y + (endPoint.y - startPoint.y) * progress) * REFERENCE_HEIGHT
     }
 
-    // 2. Scale
+    // 2. Scale - 直接使用配置的 scale，与录制端完全一致
     const currentScale = getScale()
     
     // Apply transform
     container.position.set(x, y)
     container.scale.set(currentScale * (renderer.isFlipped() ? -1 : 1), currentScale)
 
-    // Update bounds - calculate based on character position and size
-    // The container.position is the CENTER of the character
-    // We need to get the actual rendered size from the container's local bounds
+    // Update bounds - 需要考虑显示缩放比例
     const localBounds = container.getLocalBounds()
     
-    // Calculate the actual width/height considering scale
-    const actualWidth = localBounds.width * Math.abs(currentScale)
-    const actualHeight = localBounds.height * Math.abs(currentScale)
+    // Calculate the actual width/height considering scale AND display scale
+    const actualWidth = localBounds.width * Math.abs(currentScale) * displayScale
+    const actualHeight = localBounds.height * Math.abs(currentScale) * displayScale
+    
+    // Convert position to display coordinates
+    const displayX = x * displayScale
+    const displayY = y * displayScale
     
     // If bounds are empty or invalid, use a fallback size
     if (actualWidth === 0 || actualHeight === 0 || !isFinite(actualWidth) || !isFinite(actualHeight)) {
         // Fallback: assume a standard size (e.g. 200x400) scaled
-        const fallbackW = 200 * currentScale
-        const fallbackH = 400 * currentScale
+        const fallbackW = 200 * currentScale * displayScale
+        const fallbackH = 400 * currentScale * displayScale
         setBounds({
-            x: x - fallbackW / 2,
-            y: y - fallbackH / 2,
+            x: displayX - fallbackW / 2,
+            y: displayY - fallbackH / 2,
             width: fallbackW,
             height: fallbackH
         })
     } else {
         // Calculate the top-left corner based on center position
-        // The local bounds give us the offset from the container's origin
-        // Since pivot is usually at center (0,0 in local space maps to container.position in world space)
         setBounds({
-            x: x + localBounds.x * currentScale,
-            y: y + localBounds.y * currentScale,
+            x: displayX + localBounds.x * currentScale * displayScale,
+            y: displayY + localBounds.y * currentScale * displayScale,
             width: actualWidth,
             height: actualHeight
         })
     }
-  }, [isLoaded, playhead, segment, containerWidth, containerHeight, getScale])
+  }, [isLoaded, playhead, segment, displayScale, getScale])
 
   // Animation Loop
   useEffect(() => {
@@ -198,7 +206,7 @@ export default function CharacterOverlay({
       if (type === 'drag') {
         // Future: Implement Drag to move path
       } else {
-        // Resize
+        // Resize - 在显示坐标系中计算
         // Calculate center in screen coordinates
         const centerX = canvasRect.left + initialBounds.x + initialBounds.width / 2
         const centerY = canvasRect.top + initialBounds.y + initialBounds.height / 2
@@ -210,7 +218,7 @@ export default function CharacterOverlay({
         if (startDist < 1) return // Avoid division by zero
 
         const scaleFactor = currentDist / startDist
-        const newScale = Math.max(0.1, initialScale * scaleFactor)
+        const newScale = Math.max(0.1, Math.min(3.0, initialScale * scaleFactor)) // 限制在 0.1 - 3.0
         
         // Update config
         const currentConfig = segment.scale || { mode: 'auto', start: 1.0, end: 1.0 }
@@ -236,7 +244,16 @@ export default function CharacterOverlay({
 
   return (
     <div className="character-overlay">
-      <canvas ref={canvasRef} className="character-overlay__canvas" />
+      <canvas 
+        ref={canvasRef} 
+        className="character-overlay__canvas" 
+        style={{
+          width: REFERENCE_WIDTH,
+          height: REFERENCE_HEIGHT,
+          transform: `scale(${displayScale})`,
+          transformOrigin: 'top left',
+        }}
+      />
       
       {bounds && (
         <div 

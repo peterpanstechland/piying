@@ -10,9 +10,12 @@
 }
 
 .character-overlay__canvas {
-  width: 100%;
-  height: 100%;
+  /* 尺寸和缩放由内联样式控制，使用固定参考分辨率 */
   display: block;
+  /* 防止 canvas 影响布局 */
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .character-overlay__transformer {
