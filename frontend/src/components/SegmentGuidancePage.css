@@ -257,13 +257,20 @@
   }
 }
 
-/* 倒计时显示 - 独立位置，不覆盖皮影 */
+/* 倒计时显示 - 画面正中间 */
 .countdown-display {
   position: absolute;
-  bottom: 200px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 70%);
+  border-radius: 50%;
 }
 
 @keyframes pulse {
@@ -392,19 +399,20 @@
 /* 倒计时数字 - 高对比度 */
 .countdown-number {
   font-family: 'Noto Serif SC', serif;
-  font-size: 140px;
-  font-weight: 700;
-  color: #fff;
+  font-size: 220px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ff3333;
   text-shadow: 
-    0 0 40px rgba(255, 215, 0, 1),
-    0 0 80px rgba(255, 215, 0, 0.6),
-    0 4px 8px rgba(0, 0, 0, 0.5);
+    0 0 60px rgba(255, 50, 50, 1),
+    0 0 120px rgba(255, 50, 50, 0.8),
+    0 6px 20px rgba(0, 0, 0, 0.8);
   animation: countdownPop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%);
+  background: linear-gradient(180deg, #ff4444 0%, #cc0000 50%, #990000 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 40px rgba(255, 50, 50, 0.6));
 }
 
 @keyframes countdownPop {
