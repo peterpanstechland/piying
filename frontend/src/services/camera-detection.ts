@@ -1,5 +1,6 @@
 import { VisionManager } from './VisionManager';
 import type { PoseLandmarkerResult, HandLandmarkerResult, NormalizedLandmark } from '@mediapipe/tasks-vision';
+import { apiClient } from './api-client';
 
 export interface PoseLandmark {
   x: number;
@@ -55,6 +56,7 @@ export class CameraDetectionService {
 
   /**
    * Initialize camera and MediaPipe models
+   * Will attempt to use the default camera configured in admin panel
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -73,14 +75,53 @@ export class CameraDetectionService {
       this.visionManager = VisionManager.getInstance();
       await this.visionManager.initialize();
 
+      // Try to get default camera from admin settings
+      let defaultCameraId: string | null = null;
+      try {
+        const cameraSettings = await apiClient.getCameraSettings();
+        defaultCameraId = cameraSettings.default_camera_id;
+        if (defaultCameraId) {
+          console.log(`[CameraDetection] Using configured default camera: ${defaultCameraId}`);
+        }
+      } catch (settingsError) {
+        console.warn('[CameraDetection] Could not fetch camera settings, using system default:', settingsError);
+      }
+
+      // Build video constraints
+      const videoConstraints: MediaTrackConstraints = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      };
+
+      // If we have a default camera ID, try to use it
+      if (defaultCameraId) {
+        videoConstraints.deviceId = { exact: defaultCameraId };
+      } else {
+        videoConstraints.facingMode = 'user';
+      }
+
       // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+        });
+        console.log(`[CameraDetection] Camera stream acquired with deviceId: ${defaultCameraId || 'system default'}`);
+      } catch (cameraError) {
+        // If the specified camera failed, fall back to any available camera
+        if (defaultCameraId) {
+          console.warn(`[CameraDetection] Failed to use configured camera ${defaultCameraId}, falling back to system default`);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user',
+            },
+          });
+        } else {
+          throw cameraError;
+        }
+      }
 
       this.videoElement.srcObject = stream;
       

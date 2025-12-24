@@ -162,8 +162,12 @@ export const RecordingPage = ({
         const recordingRenderer = new CharacterRenderer();
         if (recordingCanvasRef.current) {
           // 使用后端设置的渲染模式
+          // 重要：resolution 必须为 1，否则在高 DPI 显示器上录制分辨率会翻倍
+          // 导致 FFmpeg side_by_side 裁剪时出错
           await recordingRenderer.init(recordingCanvasRef.current, APP_CONFIG.RECORDING.WIDTH, APP_CONFIG.RECORDING.HEIGHT, {
             compositionMode: 'side_by_side', // 使用 Side-by-Side 模式
+            resolution: 1, // 固定分辨率为 1，确保输出尺寸正确
+            autoDensity: false, // 禁用自动密度调整
           });
         }
         

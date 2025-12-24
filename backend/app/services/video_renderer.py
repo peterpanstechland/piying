@@ -882,13 +882,14 @@ class VideoRenderer:
                 # 1:v is the side-by-side video (Left=Color, Right=Mask)
                 # Crop Left -> fg_rgb (use trunc for integer width)
                 # Crop Right -> fg_alpha (convert to grayscale)
-                # Alphamerge -> fg_trans
+                # Alphamerge -> fg_trans (with alpha channel)
                 # fps filter: 强制overlay视频使用固定帧率，防止帧时间戳不连续导致卡顿
                 # Scale -> Overlay
+                # 注意：format=rgba 确保 alphamerge 输入格式兼容，format=yuva420p 确保输出支持 alpha
                 filter_complex = (
-                    f"[1:v]fps={target_fps},crop=trunc(iw/2):ih:0:0[fg_rgb];"
+                    f"[1:v]fps={target_fps},crop=trunc(iw/2):ih:0:0,format=rgba[fg_rgb];"
                     f"[1:v]fps={target_fps},crop=trunc(iw/2):ih:trunc(iw/2):0,format=gray[fg_alpha];"
-                    f"[fg_rgb][fg_alpha]alphamerge,setpts=PTS+{seg_start_time}/TB[fg_trans];"
+                    f"[fg_rgb][fg_alpha]alphamerge,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_trans];"
                     f"[fg_trans][0:v]scale2ref[fg][bg];"
                     f"[bg][fg]overlay=0:0:format=auto:eof_action=pass:enable='between(t,{seg_start_time},{seg_start_time}+{segment.duration})'[out]"
                 )
@@ -1027,9 +1028,10 @@ class VideoRenderer:
                 if composition_mode == 'side_by_side':
                     # Side-by-Side logic for segment
                     # fps filter: 强制overlay视频使用固定帧率，防止帧时间戳不连续导致卡顿
-                    filter_parts.append(f"[{input_idx}:v]fps={target_fps},crop=trunc(iw/2):ih:0:0[fg_rgb_{i}]")
+                    # format=rgba 确保 alphamerge 输入格式兼容，format=yuva420p 确保输出支持 alpha
+                    filter_parts.append(f"[{input_idx}:v]fps={target_fps},crop=trunc(iw/2):ih:0:0,format=rgba[fg_rgb_{i}]")
                     filter_parts.append(f"[{input_idx}:v]fps={target_fps},crop=trunc(iw/2):ih:trunc(iw/2):0,format=gray[fg_alpha_{i}]")
-                    filter_parts.append(f"[fg_rgb_{i}][fg_alpha_{i}]alphamerge,setpts=PTS+{seg_start_time}/TB[fg_{i}]")
+                    filter_parts.append(f"[fg_rgb_{i}][fg_alpha_{i}]alphamerge,format=yuva420p,setpts=PTS+{seg_start_time}/TB[fg_{i}]")
                     overlay_source = f"[fg_{i}]"
                 else:
                     # Chromakey logic for segment

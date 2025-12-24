@@ -375,3 +375,22 @@ async def get_ota_settings_public() -> OTASettings:
     """
     settings = settings_service.get_settings()
     return settings.ota
+
+
+class PublicCameraSettingsResponse(BaseModel):
+    """Response model for public camera settings endpoint."""
+    default_camera_id: Optional[str] = Field(default=None, description="Default camera device ID")
+
+
+@public_router.get("/camera", response_model=PublicCameraSettingsResponse)
+async def get_camera_settings_public() -> PublicCameraSettingsResponse:
+    """
+    Get camera settings (public endpoint for frontend).
+    
+    This endpoint does not require authentication and is used by
+    the frontend to get the default camera device configured in admin panel.
+    """
+    settings = settings_service.get_settings()
+    return PublicCameraSettingsResponse(
+        default_camera_id=settings.camera.default_camera_id
+    )

@@ -413,14 +413,29 @@ export class APIClient {
     });
   }
 
-  /**
-   * Get character config URL for frontend rendering
-   * @param characterId - Character identifier
-   * @returns Full URL to character config JSON
-   */
-  getCharacterConfigUrl(characterId: string): string {
-    return `${this.client.defaults.baseURL}/api/characters/${characterId}/config.json`;
-  }
+/**
+ * Get character config URL for frontend rendering
+ * @param characterId - Character identifier
+ * @returns Full URL to character config JSON
+ */
+getCharacterConfigUrl(characterId: string): string {
+  return `${this.client.defaults.baseURL}/api/characters/${characterId}/config.json`;
+}
+
+/**
+ * Get camera settings including default camera ID
+ * This allows frontend to use the camera configured in admin panel
+ * Uses public endpoint (no auth required)
+ * @returns Camera settings with default_camera_id
+ */
+async getCameraSettings(): Promise<{ default_camera_id: string | null }> {
+  return this.retryRequest(async () => {
+    const response = await this.client.get<{ default_camera_id: string | null }>(
+      '/api/settings/camera'
+    );
+    return { default_camera_id: response.data.default_camera_id };
+  });
+}
 
   /**
    * Process cached uploads (retry failed uploads)

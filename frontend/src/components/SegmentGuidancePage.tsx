@@ -17,10 +17,24 @@ export interface SegmentGuidancePageProps {
   inactivityAutoBackSeconds?: number;
 }
 
+// 4个校准动作定义
+type CalibrationAction = 'raiseLeftHand' | 'raiseRightHand' | 'liftLeftFoot' | 'liftRightFoot';
+
+const CALIBRATION_ACTIONS: CalibrationAction[] = [
+  'raiseLeftHand',
+  'raiseRightHand', 
+  'liftLeftFoot',
+  'liftRightFoot'
+];
+
+// 每个动作需要保持的帧数
+const HOLD_FRAMES_REQUIRED = 15;
+
 /**
  * SegmentGuidancePage - Displays guidance for the current motion capture segment
  * Shows action description and example poses before recording begins
  * NOW: Includes a detection box that users must step into to start
+ * UPDATED: Uses 4-action calibration flow
  */
 export const SegmentGuidancePage = ({
   segmentIndex,
@@ -35,15 +49,69 @@ export const SegmentGuidancePage = ({
   const [isStableInBox, setIsStableInBox] = useState(false); // Debounced state
   const [countdown, setCountdown] = useState<number | null>(null);
   
-  // 校准相关状态
+  // 4个动作校准相关状态
+  const [currentActionIndex, setCurrentActionIndex] = useState(0);
+  const [actionHoldProgress, setActionHoldProgress] = useState(0);
   const [isCalibrated, setIsCalibrated] = useState(false);
-  const [calibrationProgress, setCalibrationProgress] = useState(0);
+  const actionHoldCountRef = useRef(0);
   
   // 皮影人物渲染相关
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CharacterRenderer | null>(null);
   const poseProcessorRef = useRef<PoseProcessor | null>(null);
-  const poseDetectionCountRef = useRef(0);
+  
+  // 检测动作是否完成的函数
+  const checkActionComplete = useCallback((action: CalibrationAction, pose: PoseLandmark[]): boolean => {
+    // MediaPipe 关键点索引
+    // 11: 左肩, 12: 右肩, 13: 左肘, 14: 右肘, 15: 左腕, 16: 右腕
+    // 23: 左髋, 24: 右髋, 25: 左膝, 26: 右膝, 27: 左踝, 28: 右踝
+    
+    const leftShoulder = pose[11];
+    const rightShoulder = pose[12];
+    const leftWrist = pose[15];
+    const rightWrist = pose[16];
+    const leftKnee = pose[25];
+    const rightKnee = pose[26];
+    const leftAnkle = pose[27];
+    const rightAnkle = pose[28];
+    
+    const isVisible = (p: PoseLandmark) => p && p.visibility > 0.5;
+    
+    switch (action) {
+      case 'raiseLeftHand':
+        // 左手腕高于左肩
+        if (isVisible(leftWrist) && isVisible(leftShoulder)) {
+          return leftWrist.y < leftShoulder.y - 0.1;
+        }
+        return false;
+        
+      case 'raiseRightHand':
+        // 右手腕高于右肩
+        if (isVisible(rightWrist) && isVisible(rightShoulder)) {
+          return rightWrist.y < rightShoulder.y - 0.1;
+        }
+        return false;
+        
+      case 'liftLeftFoot':
+        // 左踝高于正常站立位置（左膝和右踝之间的差异）
+        if (isVisible(leftAnkle) && isVisible(rightAnkle) && isVisible(leftKnee)) {
+          // 左踝明显高于右踝，且左膝弯曲
+          return leftAnkle.y < rightAnkle.y - 0.08;
+        }
+        return false;
+        
+      case 'liftRightFoot':
+        // 右踝高于正常站立位置
+        if (isVisible(rightAnkle) && isVisible(leftAnkle) && isVisible(rightKnee)) {
+          // 右踝明显高于左踝
+          return rightAnkle.y < leftAnkle.y - 0.08;
+        }
+        return false;
+        
+      default:
+        return false;
+    }
+  }, []);
   
   // Config: Detection Box Area (Normalized 0-1)
   const BOX_CONFIG = {
@@ -179,7 +247,7 @@ export const SegmentGuidancePage = ({
     };
   }, [characterId]);
 
-  // 处理姿态检测 - 更新皮影人物和校准
+  // 处理姿态检测 - 更新皮影人物和4动作校准
   const handlePoseUpdate = useCallback((pose: PoseLandmark[]) => {
     const renderer = rendererRef.current;
     const processor = poseProcessorRef.current;
@@ -200,21 +268,43 @@ export const SegmentGuidancePage = ({
     // 更新皮影人物
     renderer.updatePoseFromProcessed(processed);
     
-    // 更新校准状态
-    if (processor.isCalibrated() && !isCalibrated) {
-      setIsCalibrated(true);
-      setCalibrationProgress(30);
-      console.log('[SegmentGuidance] ✓ Auto-calibrated via PoseProcessor');
-    }
-    
-    // 更新校准进度
-    if (!processor.isCalibrated()) {
-      poseDetectionCountRef.current++;
-      if (poseDetectionCountRef.current % 5 === 0) {
-        setCalibrationProgress(Math.min(poseDetectionCountRef.current, 29));
+    // 4动作校准逻辑 - 只在用户站在框内时进行
+    if (!isCalibrated && isStableInBox && currentActionIndex < CALIBRATION_ACTIONS.length) {
+      const currentAction = CALIBRATION_ACTIONS[currentActionIndex];
+      const actionComplete = checkActionComplete(currentAction, pose);
+      
+      if (actionComplete) {
+        // 动作正确，增加保持计数
+        actionHoldCountRef.current++;
+        setActionHoldProgress(Math.min(actionHoldCountRef.current, HOLD_FRAMES_REQUIRED));
+        
+        console.log(`[SegmentGuidance] Action ${currentAction}: ${actionHoldCountRef.current}/${HOLD_FRAMES_REQUIRED}`);
+        
+        if (actionHoldCountRef.current >= HOLD_FRAMES_REQUIRED) {
+          // 当前动作完成，进入下一个
+          const nextIndex = currentActionIndex + 1;
+          
+          if (nextIndex >= CALIBRATION_ACTIONS.length) {
+            // 所有动作完成！
+            setIsCalibrated(true);
+            console.log('[SegmentGuidance] ✓ All 4 calibration actions completed!');
+          } else {
+            // 进入下一个动作
+            setCurrentActionIndex(nextIndex);
+            actionHoldCountRef.current = 0;
+            setActionHoldProgress(0);
+            console.log(`[SegmentGuidance] Moving to action ${nextIndex + 1}: ${CALIBRATION_ACTIONS[nextIndex]}`);
+          }
+        }
+      } else {
+        // 动作不正确，重置保持计数
+        if (actionHoldCountRef.current > 0) {
+          actionHoldCountRef.current = 0;
+          setActionHoldProgress(0);
+        }
       }
     }
-  }, [isCalibrated]);
+  }, [isCalibrated, isStableInBox, currentActionIndex, checkActionComplete]);
 
   // 当有姿态数据时，更新皮影人物（始终处理，与 CameraTestPage 保持一致）
   useEffect(() => {
@@ -294,28 +384,65 @@ export const SegmentGuidancePage = ({
       )}
 
       <div className="guidance-overlay">
-        {/* 标题 - 显示校准状态或标题 */}
+        {/* 标题 - 显示4动作校准状态或标题 */}
         <div className="guidance-header">
           {!isCalibrated ? (
-              <div className="calibration-status">
-                <div className="calibration-text">
-                正在校准姿态... ({calibrationProgress}/30)
+            <div className="calibration-status">
+              {/* 状态提示 */}
+              {!isStableInBox ? (
+                <div className="calibration-enter-hint">
+                  <span className="enter-icon">👤</span>
+                  <span className="enter-text">请走进画面中央的检测区域</span>
                 </div>
-              <div className="calibration-hint">
-                请站在摄像头前保持静止
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="calibration-step">
+                    {t('guidance.calibration.step', { current: currentActionIndex + 1, total: CALIBRATION_ACTIONS.length })}
+                  </div>
+                  <div className="calibration-action-text">
+                    {t(`guidance.calibration.${CALIBRATION_ACTIONS[currentActionIndex]}`)}
+                  </div>
+                  <div className="calibration-progress-bar">
+                    <div 
+                      className="calibration-progress-fill" 
+                      style={{ width: `${(actionHoldProgress / HOLD_FRAMES_REQUIRED) * 100}%` }}
+                    />
+                  </div>
+                  <div className="calibration-hint">
+                    {actionHoldProgress > 0 
+                      ? t('guidance.calibration.holdStill')
+                      : '请保持动作直到进度条填满'
+                    }
+                  </div>
+                  {/* 4个动作的进度指示器 */}
+                  <div className="calibration-dots">
+                    {CALIBRATION_ACTIONS.map((_, index) => (
+                      <div 
+                        key={index}
+                        className={`calibration-dot ${
+                          index < currentActionIndex ? 'completed' : 
+                          index === currentActionIndex ? 'active' : 'pending'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
-            <>
+            <div className="calibration-complete-status">
+              <div className="calibration-complete-badge">
+                {t('guidance.calibration.complete')}
+              </div>
               <h1>{t('guidance.title')}</h1>
               <p className="segment-counter">
                 {t('guidance.segment', { current: segmentIndex + 1, total: totalSegments })}
               </p>
-            </>
+            </div>
           )}
         </div>
 
-        {/* Detection Box Visualization */}
+        {/* Detection Box - 仅显示边框，不叠加内容在皮影人物上 */}
         <div 
           className={`detection-box ${isStableInBox ? 'active' : ''} ${isCalibrated ? 'calibrated' : ''}`}
           style={{
@@ -330,27 +457,26 @@ export const SegmentGuidancePage = ({
           <div className="box-corner top-right" />
           <div className="box-corner bottom-left" />
           <div className="box-corner bottom-right" />
-          
-          {/* Countdown or Prompt */}
-          <div className="box-status">
-            {isStableInBox && isCalibrated ? (
-              <div key={countdown} className="countdown-number">{countdown}</div>
-            ) : isStableInBox && !isCalibrated ? (
-              <div className="calibrating-prompt">校准中...</div>
-            ) : (
-              <div className="stand-here-prompt">请站在这里</div>
-            )}
+        </div>
+        
+        {/* 倒计时显示 - 只在校准完成后显示，位于检测框下方 */}
+        {isStableInBox && isCalibrated && countdown !== null && (
+          <div className="countdown-display">
+            <div key={countdown} className="countdown-number">{countdown}</div>
           </div>
-        </div>
+        )}
 
-        <div className="guidance-content">
-          <h2 className="guidance-action">
-            {t(`guidance.segment${segmentIndex + 1}.action`)}
-          </h2>
-          <p className="guidance-description">
-            {t(`guidance.segment${segmentIndex + 1}.description`)}
-          </p>
-        </div>
+        {/* 底部内容 - 校准完成后显示段落信息 */}
+        {isCalibrated && (
+          <div className="guidance-content">
+            <h2 className="guidance-action">
+              {t(`guidance.segment${segmentIndex + 1}.action`)}
+            </h2>
+            <p className="guidance-description">
+              {t(`guidance.segment${segmentIndex + 1}.description`)}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
