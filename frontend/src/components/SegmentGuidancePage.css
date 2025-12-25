@@ -680,3 +680,83 @@
   color: #8b4513;
   text-shadow: 0 0 10px rgba(139, 69, 19, 0.3);
 }
+
+/* ========================================
+   校准超时横幅样式
+======================================== */
+.calibration-timeout-banner {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 32px;
+  background: linear-gradient(145deg, rgba(139, 0, 0, 0.9) 0%, rgba(80, 0, 0, 0.95) 100%);
+  border: 2px solid #ff6b6b;
+  border-radius: 12px;
+  box-shadow: 
+    0 0 30px rgba(255, 107, 107, 0.4),
+    inset 0 0 15px rgba(255, 107, 107, 0.1);
+  z-index: 100;
+  animation: timeoutBannerSlideIn 0.4s ease-out, timeoutBannerPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes timeoutBannerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes timeoutBannerPulse {
+  0%, 100% { 
+    box-shadow: 0 0 30px rgba(255, 107, 107, 0.4), inset 0 0 15px rgba(255, 107, 107, 0.1); 
+  }
+  50% { 
+    box-shadow: 0 0 50px rgba(255, 107, 107, 0.6), inset 0 0 25px rgba(255, 107, 107, 0.2); 
+  }
+}
+
+.calibration-timeout-banner .timeout-icon {
+  font-size: 28px;
+  animation: timeoutIconShake 0.5s ease-in-out infinite;
+}
+
+@keyframes timeoutIconShake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+.calibration-timeout-banner .timeout-text {
+  font-size: 18px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.calibration-timeout-banner .timeout-timer {
+  font-size: 20px;
+  color: #ff6b6b;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+/* 浅色主题 */
+[data-theme='light'] .calibration-timeout-banner {
+  background: linear-gradient(145deg, rgba(220, 53, 69, 0.95) 0%, rgba(180, 40, 50, 0.95) 100%);
+  border-color: #dc3545;
+  box-shadow: 
+    0 0 30px rgba(220, 53, 69, 0.4),
+    inset 0 0 15px rgba(220, 53, 69, 0.1);
+}
+
+[data-theme='light'] .calibration-timeout-banner .timeout-timer {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}

@@ -13,8 +13,8 @@ export interface SegmentGuidancePageProps {
   characterId?: string;
   onGuidanceComplete?: () => void;
   onBack?: () => void;
-  inactivityShowBackSeconds?: number;
-  inactivityAutoBackSeconds?: number;
+  inactivityAutoBackSeconds?: number; // 多少秒后自动返回（用户不在检测框内时），倒计时在一半时间后开始显示
+  calibrationTimeoutSeconds?: number; // 校准单个动作的超时时间（默认60秒），倒计时在一半时间后开始显示
 }
 
 // 4个校准动作定义
@@ -44,8 +44,8 @@ export const SegmentGuidancePage = ({
   characterId,
   onGuidanceComplete,
   onBack,
-  inactivityShowBackSeconds = 15,
   inactivityAutoBackSeconds = 30,
+  calibrationTimeoutSeconds = 60,
 }: SegmentGuidancePageProps) => {
   const { t } = useTranslation();
   const [isInBox, setIsInBox] = useState(false);
@@ -65,6 +65,11 @@ export const SegmentGuidancePage = ({
   const [actionHoldProgress, setActionHoldProgress] = useState(0);
   const [isCalibrated, setIsCalibrated] = useState(false);
   const actionHoldCountRef = useRef(0);
+  
+  // 校准超时状态
+  const [calibrationSeconds, setCalibrationSeconds] = useState(0);
+  const [showCalibrationTimeout, setShowCalibrationTimeout] = useState(false);
+  const calibrationStartTimeRef = useRef<number | null>(null);
   
   // 皮影人物渲染相关
   const characterCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -215,6 +220,9 @@ export const SegmentGuidancePage = ({
     return () => clearTimeout(timeout);
   }, [isInBox]);
 
+  // 动态计算倒计时显示时间点（总时间的一半）
+  const inactivityShowBackSeconds = Math.floor(inactivityAutoBackSeconds / 2);
+
   // 无操作计时器 - 当没有检测到用户时自动返回首页
   useEffect(() => {
     const timer = setInterval(() => {
@@ -232,13 +240,13 @@ export const SegmentGuidancePage = ({
       const elapsed = Math.floor((Date.now() - lastPoseDetectedTimeRef.current) / 1000);
       setInactivitySeconds(elapsed);
       
-      // 超过显示倒计时时间后显示倒计时
+      // 一半时间后显示倒计时
       if (elapsed >= inactivityShowBackSeconds && !showInactivityCountdown) {
         setShowInactivityCountdown(true);
         console.log('[SegmentGuidance] Showing inactivity countdown after', elapsed, 'seconds');
       }
       
-      // 超过自动返回时间后自动返回
+      // 超时后自动返回
       if (elapsed >= inactivityAutoBackSeconds && onBackRef.current && !isReturningRef.current) {
         console.log('[SegmentGuidance] Auto-returning after', elapsed, 'seconds of inactivity');
         isReturningRef.current = true;
@@ -248,6 +256,56 @@ export const SegmentGuidancePage = ({
 
     return () => clearInterval(timer);
   }, [isStableInBox, inactivityShowBackSeconds, inactivityAutoBackSeconds, showInactivityCountdown]);
+
+  // 动态计算校准超时显示时间点（总时间的一半）
+  const calibrationShowTimeoutSeconds = Math.floor(calibrationTimeoutSeconds / 2);
+
+  // 校准超时计时器 - 当用户在检测框内但长时间没有完成当前动作时
+  useEffect(() => {
+    // 只在校准阶段且用户在检测框内时启动
+    if (!isStableInBox || isCalibrated || isReturningRef.current) {
+      // 重置校准计时器
+      calibrationStartTimeRef.current = null;
+      setCalibrationSeconds(0);
+      setShowCalibrationTimeout(false);
+      return;
+    }
+
+    // 开始校准计时
+    if (calibrationStartTimeRef.current === null) {
+      calibrationStartTimeRef.current = Date.now();
+    }
+
+    const timer = setInterval(() => {
+      if (isReturningRef.current || !calibrationStartTimeRef.current) return;
+
+      const elapsed = Math.floor((Date.now() - calibrationStartTimeRef.current) / 1000);
+      setCalibrationSeconds(elapsed);
+
+      // 一半时间后显示超时警告
+      if (elapsed >= calibrationShowTimeoutSeconds && !showCalibrationTimeout) {
+        setShowCalibrationTimeout(true);
+        console.log('[SegmentGuidance] Showing calibration timeout warning after', elapsed, 'seconds');
+      }
+
+      // 超时后自动返回
+      if (elapsed >= calibrationTimeoutSeconds && onBackRef.current && !isReturningRef.current) {
+        console.log('[SegmentGuidance] Calibration timeout - auto-returning after', elapsed, 'seconds');
+        isReturningRef.current = true;
+        onBackRef.current();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isStableInBox, isCalibrated, calibrationShowTimeoutSeconds, calibrationTimeoutSeconds, showCalibrationTimeout]);
+
+  // 当完成一个校准动作时，重置校准计时器
+  useEffect(() => {
+    // 每次 currentActionIndex 改变时重置计时器
+    calibrationStartTimeRef.current = isStableInBox && !isCalibrated ? Date.now() : null;
+    setCalibrationSeconds(0);
+    setShowCalibrationTimeout(false);
+  }, [currentActionIndex, isStableInBox, isCalibrated]);
 
   // 初始化皮影人物渲染器和姿态处理器
   useEffect(() => {
@@ -534,6 +592,19 @@ export const SegmentGuidancePage = ({
               <div className="inactivity-countdown-timer">
                 {inactivityAutoBackSeconds - inactivitySeconds}s 后自动返回首页
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 校准超时提示 - 用户在检测框内但长时间没有完成动作 */}
+        {showCalibrationTimeout && isStableInBox && !isCalibrated && (
+          <div className="calibration-timeout-banner">
+            <div className="timeout-icon">⏰</div>
+            <div className="timeout-text">
+              {t('guidance.calibrationTimeout', { defaultValue: '请尽快完成当前动作' })}
+            </div>
+            <div className="timeout-timer">
+              {calibrationTimeoutSeconds - calibrationSeconds}s 后自动返回
             </div>
           </div>
         )}

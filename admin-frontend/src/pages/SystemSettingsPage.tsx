@@ -26,8 +26,8 @@ interface TimeoutSettings {
   final_result_auto_reset_seconds: number
   exit_gesture_duration_seconds: number
   exit_confirmation_duration_seconds: number
-  inactivity_show_countdown_seconds: number
   segment_review_inactivity_seconds: number
+  calibration_timeout_seconds: number  // 校准动作超时时间
 }
 
 interface RenderingSettings {
@@ -83,8 +83,8 @@ export default function SystemSettingsPage() {
       final_result_auto_reset_seconds: 30,
       exit_gesture_duration_seconds: 3,
       exit_confirmation_duration_seconds: 2,
-      inactivity_show_countdown_seconds: 10,
       segment_review_inactivity_seconds: 30,
+      calibration_timeout_seconds: 60,
     },
     rendering: {
       target_fps: 30,
@@ -493,27 +493,6 @@ export default function SystemSettingsPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="inactivity_show_countdown">
-                {t('settings.system.inactivityShowCountdown')}
-              </label>
-              <div className="input-with-unit">
-                <input
-                  id="inactivity_show_countdown"
-                  type="number"
-                  min="1"
-                  max="300"
-                  value={settings.timeouts.inactivity_show_countdown_seconds}
-                  onChange={(e) => handleTimeoutChange('inactivity_show_countdown_seconds', e.target.value)}
-                  className={validationErrors.inactivity_show_countdown_seconds ? 'error' : ''}
-                />
-                <span className="unit">{t('settings.system.seconds')}</span>
-              </div>
-              {validationErrors.inactivity_show_countdown_seconds && (
-                <span className="field-error">{validationErrors.inactivity_show_countdown_seconds}</span>
-              )}
-            </div>
-
-            <div className="form-group">
               <label htmlFor="segment_review_inactivity">
                 {t('settings.system.segmentReviewInactivity')}
               </label>
@@ -531,6 +510,27 @@ export default function SystemSettingsPage() {
               </div>
               {validationErrors.segment_review_inactivity_seconds && (
                 <span className="field-error">{validationErrors.segment_review_inactivity_seconds}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="calibration_timeout">
+                {t('settings.system.calibrationTimeout')}
+              </label>
+              <div className="input-with-unit">
+                <input
+                  id="calibration_timeout"
+                  type="number"
+                  min="10"
+                  max="300"
+                  value={settings.timeouts.calibration_timeout_seconds}
+                  onChange={(e) => handleTimeoutChange('calibration_timeout_seconds', e.target.value)}
+                  className={validationErrors.calibration_timeout_seconds ? 'error' : ''}
+                />
+                <span className="unit">{t('settings.system.seconds')}</span>
+              </div>
+              {validationErrors.calibration_timeout_seconds && (
+                <span className="field-error">{validationErrors.calibration_timeout_seconds}</span>
               )}
             </div>
           </div>

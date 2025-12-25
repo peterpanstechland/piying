@@ -10,8 +10,10 @@ export interface TimeoutSettings {
   final_result_auto_reset_seconds: number;
   exit_gesture_duration_seconds: number;
   exit_confirmation_duration_seconds: number;
-  inactivity_show_countdown_seconds: number;
   segment_review_inactivity_seconds: number;
+  calibration_timeout_seconds: number;  // 校准动作超时时间
+  // 注意：inactivity_show_countdown_seconds 已移除
+  // 倒计时显示时间现在自动计算为超时时间的一半
 }
 
 /**
@@ -33,8 +35,8 @@ const DEFAULT_TIMEOUTS: TimeoutSettings = {
   final_result_auto_reset_seconds: 30,
   exit_gesture_duration_seconds: 3,
   exit_confirmation_duration_seconds: 2,
-  inactivity_show_countdown_seconds: 10,
   segment_review_inactivity_seconds: 30,
+  calibration_timeout_seconds: 60,
 };
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -72,7 +74,6 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
             final_result_auto_reset_seconds: data.timeouts?.final_result_auto_reset_seconds ?? DEFAULT_TIMEOUTS.final_result_auto_reset_seconds,
             exit_gesture_duration_seconds: data.timeouts?.exit_gesture_duration_seconds ?? DEFAULT_TIMEOUTS.exit_gesture_duration_seconds,
             exit_confirmation_duration_seconds: data.timeouts?.exit_confirmation_duration_seconds ?? DEFAULT_TIMEOUTS.exit_confirmation_duration_seconds,
-            inactivity_show_countdown_seconds: data.timeouts?.inactivity_show_countdown_seconds ?? DEFAULT_TIMEOUTS.inactivity_show_countdown_seconds,
             segment_review_inactivity_seconds: data.timeouts?.segment_review_inactivity_seconds ?? DEFAULT_TIMEOUTS.segment_review_inactivity_seconds,
           },
         });

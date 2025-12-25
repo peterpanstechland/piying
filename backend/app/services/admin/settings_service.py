@@ -105,8 +105,8 @@ class SettingsService:
                 final_result_auto_reset_seconds=timeouts.get("final_result_auto_reset_seconds", 30),
                 exit_gesture_duration_seconds=timeouts.get("exit_gesture_duration_seconds", 3),
                 exit_confirmation_duration_seconds=timeouts.get("exit_confirmation_duration_seconds", 2),
-                inactivity_show_countdown_seconds=timeouts.get("inactivity_show_countdown_seconds", 10),
                 segment_review_inactivity_seconds=timeouts.get("segment_review_inactivity_seconds", 30),
+                calibration_timeout_seconds=timeouts.get("calibration_timeout_seconds", 60),
             ),
             rendering=RenderingSettings(
                 target_fps=rendering.get("target_fps", 30),
@@ -139,8 +139,8 @@ class SettingsService:
                 "final_result_auto_reset_seconds": settings.timeouts.final_result_auto_reset_seconds,
                 "exit_gesture_duration_seconds": settings.timeouts.exit_gesture_duration_seconds,
                 "exit_confirmation_duration_seconds": settings.timeouts.exit_confirmation_duration_seconds,
-                "inactivity_show_countdown_seconds": settings.timeouts.inactivity_show_countdown_seconds,
                 "segment_review_inactivity_seconds": settings.timeouts.segment_review_inactivity_seconds,
+                "calibration_timeout_seconds": settings.timeouts.calibration_timeout_seconds,
             },
             "storage": {
                 "mode": settings.storage.mode,
@@ -280,10 +280,10 @@ class SettingsService:
                 current.timeouts.exit_gesture_duration_seconds = update.timeouts.exit_gesture_duration_seconds
             if update.timeouts.exit_confirmation_duration_seconds is not None:
                 current.timeouts.exit_confirmation_duration_seconds = update.timeouts.exit_confirmation_duration_seconds
-            if update.timeouts.inactivity_show_countdown_seconds is not None:
-                current.timeouts.inactivity_show_countdown_seconds = update.timeouts.inactivity_show_countdown_seconds
             if update.timeouts.segment_review_inactivity_seconds is not None:
                 current.timeouts.segment_review_inactivity_seconds = update.timeouts.segment_review_inactivity_seconds
+            if update.timeouts.calibration_timeout_seconds is not None:
+                current.timeouts.calibration_timeout_seconds = update.timeouts.calibration_timeout_seconds
         
         # Update rendering settings
         if update.rendering is not None:

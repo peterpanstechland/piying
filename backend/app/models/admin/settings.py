@@ -79,9 +79,8 @@ class TimeoutSettings(BaseModel):
     final_result_auto_reset_seconds: int = Field(default=30, ge=1, le=300, description="Final result auto-reset timeout")
     exit_gesture_duration_seconds: int = Field(default=3, ge=1, le=300, description="Exit gesture duration")
     exit_confirmation_duration_seconds: int = Field(default=2, ge=1, le=300, description="Exit confirmation duration")
-    # New timeout settings for countdown display
-    inactivity_show_countdown_seconds: int = Field(default=10, ge=1, le=300, description="Seconds before showing countdown")
     segment_review_inactivity_seconds: int = Field(default=30, ge=1, le=300, description="Segment review page inactivity timeout")
+    calibration_timeout_seconds: int = Field(default=60, ge=10, le=300, description="Calibration action timeout")
 
     class Config:
         json_schema_extra = {
@@ -92,8 +91,8 @@ class TimeoutSettings(BaseModel):
                 "final_result_auto_reset_seconds": 30,
                 "exit_gesture_duration_seconds": 3,
                 "exit_confirmation_duration_seconds": 2,
-                "inactivity_show_countdown_seconds": 10,
-                "segment_review_inactivity_seconds": 30
+                "segment_review_inactivity_seconds": 30,
+                "calibration_timeout_seconds": 60
             }
         }
 
@@ -288,8 +287,8 @@ class TimeoutSettingsUpdate(BaseModel):
     final_result_auto_reset_seconds: Optional[int] = Field(default=None, ge=1, le=300)
     exit_gesture_duration_seconds: Optional[int] = Field(default=None, ge=1, le=300)
     exit_confirmation_duration_seconds: Optional[int] = Field(default=None, ge=1, le=300)
-    inactivity_show_countdown_seconds: Optional[int] = Field(default=None, ge=1, le=300)
     segment_review_inactivity_seconds: Optional[int] = Field(default=None, ge=1, le=300)
+    calibration_timeout_seconds: Optional[int] = Field(default=None, ge=10, le=300)
 
 
 class RenderingSettingsUpdate(BaseModel):

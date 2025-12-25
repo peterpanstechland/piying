@@ -19,8 +19,7 @@ interface CharacterSelectionPageProps {
   onCharacterSelect?: (characterId: string) => void;
   onBack?: () => void;
   apiBaseUrl?: string;
-  inactivityShowCountdownSeconds?: number; // 多少秒后显示倒计时（默认10秒）
-  inactivityAutoBackSeconds?: number; // 多少秒后自动返回（默认20秒）
+  inactivityAutoBackSeconds?: number; // 多少秒后自动返回（默认20秒），倒计时在一半时间后开始显示
 }
 
 /**
@@ -36,7 +35,6 @@ export const CharacterSelectionPage = ({
   onCharacterSelect,
   onBack,
   apiBaseUrl = '',
-  inactivityShowCountdownSeconds = 10,
   inactivityAutoBackSeconds = 20,
 }: CharacterSelectionPageProps) => {
   const { t, i18n } = useTranslation();
@@ -72,6 +70,9 @@ export const CharacterSelectionPage = ({
     return a.display_order - b.display_order;
   });
 
+  // 动态计算倒计时显示时间点（总时间的一半）
+  const inactivityShowCountdownSeconds = Math.floor(inactivityAutoBackSeconds / 2);
+
   // 无操作计时器 - 页面级别的自动返回
   useEffect(() => {
     const timer = setInterval(() => {
@@ -81,13 +82,13 @@ export const CharacterSelectionPage = ({
       const elapsed = Math.floor((Date.now() - lastInteractionTimeRef.current) / 1000);
       setInactivitySeconds(elapsed);
       
-      // 10秒后显示倒计时
+      // 一半时间后显示倒计时
       if (elapsed >= inactivityShowCountdownSeconds && !showCountdown) {
         setShowCountdown(true);
         console.log('[CharacterSelection] Showing countdown after', elapsed, 'seconds of inactivity');
       }
       
-      // 20秒后自动返回
+      // 超时后自动返回
       if (elapsed >= inactivityAutoBackSeconds && onBackRef.current && !isReturningRef.current) {
         console.log('[CharacterSelection] Auto-returning after', elapsed, 'seconds of inactivity');
         isReturningRef.current = true; // 标记正在返回，防止重复调用

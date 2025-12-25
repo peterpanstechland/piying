@@ -18,8 +18,7 @@ export interface SegmentReviewPageProps {
   cursorPosition?: { x: number; y: number } | null;
   hoverDurationMs?: number;
   characterId?: string;
-  inactivityShowCountdownSeconds?: number;
-  inactivityAutoBackSeconds?: number;
+  inactivityAutoBackSeconds?: number; // 多少秒后自动返回，倒计时在一半时间后开始显示
 }
 
 // Walk cycle poses (copied from CharacterPreview)
@@ -68,7 +67,6 @@ export const SegmentReviewPage = ({
   cursorPosition,
   hoverDurationMs = 3000,
   characterId,
-  inactivityShowCountdownSeconds = 20,
   inactivityAutoBackSeconds = 30,
 }: SegmentReviewPageProps) => {
   const { t } = useTranslation();
@@ -185,6 +183,9 @@ export const SegmentReviewPage = ({
     };
   }, [isCursorOverElement, hoverDurationMs, onReRecord, onContinue, isUploading]);
 
+  // 动态计算倒计时显示时间点（总时间的一半）
+  const inactivityShowCountdownSeconds = Math.floor(inactivityAutoBackSeconds / 2);
+
   // 无操作计时器 - 自动返回首页
   useEffect(() => {
     const timer = setInterval(() => {
@@ -194,13 +195,13 @@ export const SegmentReviewPage = ({
       const elapsed = Math.floor((Date.now() - lastInteractionTimeRef.current) / 1000);
       setInactivitySeconds(elapsed);
       
-      // 超过显示倒计时时间后显示倒计时
+      // 一半时间后显示倒计时
       if (elapsed >= inactivityShowCountdownSeconds && !showInactivityCountdown) {
         setShowInactivityCountdown(true);
         console.log('[SegmentReview] Showing inactivity countdown after', elapsed, 'seconds');
       }
       
-      // 超过自动返回时间后自动返回
+      // 超时后自动返回
       if (elapsed >= inactivityAutoBackSeconds && onTimeoutRef.current && !isReturningRef.current) {
         console.log('[SegmentReview] Auto-returning after', elapsed, 'seconds of inactivity');
         isReturningRef.current = true;

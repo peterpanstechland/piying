@@ -885,7 +885,6 @@ function App() {
               onSceneSelect={handleSceneSelect}
               onBack={handleBackToIdle}
               apiBaseUrl={apiClientRef.current.getBaseUrl()}
-              inactivityShowCountdownSeconds={timeouts.inactivity_show_countdown_seconds}
               inactivityAutoBackSeconds={timeouts.scene_select_inactivity_seconds}
             />
           </div>
@@ -901,7 +900,6 @@ function App() {
             onCharacterSelect={handleCharacterSelect}
             onBack={handleBackToSceneSelect}
             apiBaseUrl={apiClientRef.current.getBaseUrl()}
-            inactivityShowCountdownSeconds={timeouts.inactivity_show_countdown_seconds}
             inactivityAutoBackSeconds={timeouts.scene_select_inactivity_seconds}
           />
         );
@@ -916,8 +914,8 @@ function App() {
             characterId={context?.characterId} // 传递角色ID用于皮影人物渲染
             onGuidanceComplete={handleGuidanceComplete}
             onBack={handleBackFromSegmentGuide}
-            inactivityShowBackSeconds={timeouts.motion_capture_inactivity_seconds} // 使用配置的超时时间
-            inactivityAutoBackSeconds={timeouts.motion_capture_inactivity_seconds * 2} // 自动返回时间为显示时间的2倍
+            inactivityAutoBackSeconds={timeouts.motion_capture_inactivity_seconds}
+            calibrationTimeoutSeconds={timeouts.calibration_timeout_seconds}
           />
         );
       
@@ -1001,7 +999,6 @@ function App() {
             cursorPosition={handPosition}
             hoverDurationMs={3000}
             characterId={context?.characterId}
-            inactivityShowCountdownSeconds={timeouts.inactivity_show_countdown_seconds}
             inactivityAutoBackSeconds={timeouts.segment_review_inactivity_seconds}
           />
         );

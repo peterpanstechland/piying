@@ -13,8 +13,8 @@ class PublicTimeoutSettings(BaseModel):
     final_result_auto_reset_seconds: int
     exit_gesture_duration_seconds: int
     exit_confirmation_duration_seconds: int
-    inactivity_show_countdown_seconds: int
     segment_review_inactivity_seconds: int
+    calibration_timeout_seconds: int
 
 
 class PublicSettings(BaseModel):
@@ -49,7 +49,7 @@ async def get_public_settings():
             final_result_auto_reset_seconds=settings.timeouts.final_result_auto_reset_seconds,
             exit_gesture_duration_seconds=settings.timeouts.exit_gesture_duration_seconds,
             exit_confirmation_duration_seconds=settings.timeouts.exit_confirmation_duration_seconds,
-            inactivity_show_countdown_seconds=settings.timeouts.inactivity_show_countdown_seconds,
             segment_review_inactivity_seconds=settings.timeouts.segment_review_inactivity_seconds,
+            calibration_timeout_seconds=settings.timeouts.calibration_timeout_seconds,
         )
     )
