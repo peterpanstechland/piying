@@ -7,6 +7,13 @@
 
 ---
 
+## [1.2.29] - 2025-12-26
+
+### 修复
+- **构建错误修复**: 修复 `SystemSettingsContext` 中 `loadSettings` 函数缺少 `calibration_timeout_seconds` 字段导致的 TypeScript 编译错误
+
+---
+
 ## [1.2.28] - 2025-12-26
 
 ### 变更
