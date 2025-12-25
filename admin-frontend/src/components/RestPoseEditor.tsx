@@ -272,13 +272,19 @@ export default function RestPoseEditor({ characterId, onSave, onCancel }: Props)
             <div className="facing-selector">
               <button
                 className={`facing-btn ${defaultFacing === 'left' ? 'active' : ''}`}
-                onClick={() => setDefaultFacing('left')}
+                onClick={() => {
+                  setDefaultFacing('left')
+                  rendererRef.current?.setDefaultFacing('left')
+                }}
               >
                 ← 面向左
               </button>
               <button
                 className={`facing-btn ${defaultFacing === 'right' ? 'active' : ''}`}
-                onClick={() => setDefaultFacing('right')}
+                onClick={() => {
+                  setDefaultFacing('right')
+                  rendererRef.current?.setDefaultFacing('right')
+                }}
               >
                 面向右 →
               </button>

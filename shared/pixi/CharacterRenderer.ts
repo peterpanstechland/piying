@@ -2378,6 +2378,8 @@ export class CharacterRenderer {
    */
   setDefaultFacing(facing: CharacterFacing): void {
     this.defaultFacing = facing
+    // 更新 z-index 以反映新的朝向
+    this.updateZIndices()
   }
 
   /**
