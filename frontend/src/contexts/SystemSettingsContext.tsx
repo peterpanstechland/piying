@@ -75,6 +75,7 @@ export const SystemSettingsProvider: React.FC<{ children: React.ReactNode }> = (
             exit_gesture_duration_seconds: data.timeouts?.exit_gesture_duration_seconds ?? DEFAULT_TIMEOUTS.exit_gesture_duration_seconds,
             exit_confirmation_duration_seconds: data.timeouts?.exit_confirmation_duration_seconds ?? DEFAULT_TIMEOUTS.exit_confirmation_duration_seconds,
             segment_review_inactivity_seconds: data.timeouts?.segment_review_inactivity_seconds ?? DEFAULT_TIMEOUTS.segment_review_inactivity_seconds,
+            calibration_timeout_seconds: data.timeouts?.calibration_timeout_seconds ?? DEFAULT_TIMEOUTS.calibration_timeout_seconds,
           },
         });
       } else {
