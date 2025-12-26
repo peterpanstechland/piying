@@ -522,8 +522,8 @@ class ExportImportService:
                 "final_result_auto_reset_seconds": settings.timeouts.final_result_auto_reset_seconds,
                 "exit_gesture_duration_seconds": settings.timeouts.exit_gesture_duration_seconds,
                 "exit_confirmation_duration_seconds": settings.timeouts.exit_confirmation_duration_seconds,
-                "inactivity_show_countdown_seconds": settings.timeouts.inactivity_show_countdown_seconds,
                 "segment_review_inactivity_seconds": settings.timeouts.segment_review_inactivity_seconds,
+                "calibration_timeout_seconds": settings.timeouts.calibration_timeout_seconds,
             },
             "rendering": {
                 "target_fps": settings.rendering.target_fps,
@@ -1156,8 +1156,8 @@ class ExportImportService:
                 final_result_auto_reset_seconds=timeouts.get("final_result_auto_reset_seconds"),
                 exit_gesture_duration_seconds=timeouts.get("exit_gesture_duration_seconds"),
                 exit_confirmation_duration_seconds=timeouts.get("exit_confirmation_duration_seconds"),
-                inactivity_show_countdown_seconds=timeouts.get("inactivity_show_countdown_seconds"),
                 segment_review_inactivity_seconds=timeouts.get("segment_review_inactivity_seconds"),
+                calibration_timeout_seconds=timeouts.get("calibration_timeout_seconds"),
             )
         
         if "rendering" in settings_data:

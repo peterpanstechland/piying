@@ -7,6 +7,15 @@
 
 ---
 
+## [1.2.30] - 2025-12-26
+
+### 修复
+- **导出配置修复**: 修复 `export_import_service.py` 中导出配置失败的问题
+  - 移除不存在的 `inactivity_show_countdown_seconds` 属性引用
+  - 添加缺失的 `calibration_timeout_seconds` 属性到导出和导入逻辑
+
+---
+
 ## [1.2.29] - 2025-12-26
 
 ### 修复
